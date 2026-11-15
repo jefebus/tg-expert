@@ -1392,9 +1392,9 @@ static GtkWidget *make_calibration_instructions(void)
 		"<b>cal (fail)</b>: the signal was too irregular. Improve the setup and start again.\n"
 		"\n"
 		"<b>4. Finish</b>\n"
-		"When it shows <b>done</b>, untick <b>Calibrate</b> in the menu to return to "
-		"normal measurement. Repeat once to confirm the result is consistent, and "
-		"calibrate again whenever you change the audio input or the sample rate.";
+		"When it shows <b>done</b>, Select <b>Stop Calibration</b> in the menu to "
+		"return to normal measurement. Repeat once to confirm the result is consistent,"
+		"and calibrate again whenever you change the audio input or the sample rate.";
 
 	GtkWidget *label = gtk_label_new(NULL);
 	gtk_label_set_markup(GTK_LABEL(label), markup);
