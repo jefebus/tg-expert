@@ -1,0 +1,889 @@
+# Spanish translation of tg-expert.
+# Copyright (C) 2026 jefebus
+# This file is distributed under the same license as the tg-expert package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: tg-expert\n"
+"Report-Msgid-Bugs-To: https://github.com/jefebus/tg-expert/issues\n"
+"POT-Creation-Date: 2026-11-15 20:50+0100\n"
+"PO-Revision-Date: 2026-11-15 20:00+0100\n"
+"Last-Translator: jefebus <jefebus@users.noreply.github.com>\n"
+"Language-Team: Spanish\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: src/audio.c:148
+msgid "Failed to setup audio mutex"
+msgstr "No se pudo configurar el mutex de audio"
+
+#: src/audio.c:170
+msgid "No audio system available"
+msgstr "No hay ningún sistema de audio disponible"
+
+#: src/audio.c:205
+#, c-format
+msgid "No default audio input device found for %s"
+msgstr ""
+"No se encontró ningún dispositivo de entrada de audio predeterminado para %s"
+
+#: src/audio.c:212
+msgid "Unable to query selected audio input device"
+msgstr "No se pudo consultar el dispositivo de entrada de audio seleccionado"
+
+#: src/audio.c:218
+msgid "Selected audio device has no input channels"
+msgstr "El dispositivo de audio seleccionado no tiene canales de entrada"
+
+#: src/audio.c:284
+msgid ""
+"Audio device is busy. If JACK (jackd/PipeWire-JACK) is running, try "
+"selecting JACK in the audio settings or stop JACK first."
+msgstr ""
+"El dispositivo de audio está ocupado. Si JACK (jackd/PipeWire-JACK) se está "
+"ejecutando, pruebe a seleccionar JACK en los ajustes de audio o detenga JACK "
+"antes."
+
+#: src/audio.c:288
+msgid ""
+"Could not open audio input on macOS. Check System Settings > Privacy & "
+"Security > Microphone and allow access for this application."
+msgstr ""
+"No se pudo abrir la entrada de audio en macOS. Compruebe Ajustes del Sistema "
+"> Privacidad y seguridad > Micrófono y permita el acceso a esta aplicación."
+
+#: src/audio.c:322
+#, c-format
+msgid "Error opening audio input: %s"
+msgstr "Error al abrir la entrada de audio: %s"
+
+#: src/audio.c:359
+msgid "Unknown device"
+msgstr "Dispositivo desconocido"
+
+#: src/audio.c:418
+msgid "Unknown audio system"
+msgstr "Sistema de audio desconocido"
+
+#: src/audio.c:570
+#, c-format
+msgid "Error closing audio: %s"
+msgstr "Error al cerrar el audio: %s"
+
+#: src/audio_settings.c:102
+msgid "Opening audio input…"
+msgstr "Abriendo la entrada de audio…"
+
+#: src/audio_settings.c:105
+msgid "No audio input"
+msgstr "Sin entrada de audio"
+
+#. TRANSLATORS: %s is the name of the audio input device that the system uses by default
+#: src/audio_settings.c:139
+#, c-format
+msgid "%s (default)"
+msgstr "%s (predeterminado)"
+
+#: src/audio_settings.c:170
+msgid "Audio settings are locked during calibration."
+msgstr "Los ajustes de audio están bloqueados durante la calibración."
+
+#: src/audio_settings.c:172
+msgid "Switch to the real-time tab to change audio settings."
+msgstr ""
+"Cambie a la pestaña de tiempo real para modificar los ajustes de audio."
+
+#: src/audio_settings.c:295
+msgid "Audio settings"
+msgstr "Ajustes de audio"
+
+#: src/audio_settings.c:296 src/interface.c:468
+msgid "_Close"
+msgstr "_Cerrar"
+
+#: src/audio_settings.c:305
+msgid "Audio system"
+msgstr "Sistema de audio"
+
+#: src/audio_settings.c:308
+msgid ""
+"The sound system used to record.\n"
+"Choosing another one selects its\n"
+"default input and the default rate."
+msgstr ""
+"El sistema de sonido usado para grabar.\n"
+"Al elegir otro se selecciona su\n"
+"entrada y frecuencia predeterminadas."
+
+#: src/audio_settings.c:313
+msgid "Input device"
+msgstr "Dispositivo de entrada"
+
+#: src/audio_settings.c:318
+msgid "Sample rate"
+msgstr "Frecuencia de muestreo"
+
+#: src/audio_settings.c:320
+msgid "Only the rates the input device accepts are listed."
+msgstr "Solo se muestran las frecuencias que admite el dispositivo de entrada."
+
+#: src/audio_settings.c:323
+msgid "Input level"
+msgstr "Nivel de entrada"
+
+#: src/audio_settings.c:361
+msgid "Click to change the audio settings."
+msgstr "Haga clic para cambiar los ajustes de audio."
+
+#: src/computer.c:385
+msgid "Unable to initialize computing thread"
+msgstr "No se pudo iniciar el hilo de cálculo"
+
+#. TRANSLATORS: entry of the saved watches list meaning that no watch is selected
+#: src/interface.c:140
+msgid "(none)"
+msgstr "(ninguno)"
+
+#: src/interface.c:285
+msgid "Save watch"
+msgstr "Guardar reloj"
+
+#: src/interface.c:287
+msgid "_Cancel"
+msgstr "_Cancelar"
+
+#: src/interface.c:288
+msgid "_Save"
+msgstr "_Guardar"
+
+#. TRANSLATORS: "bph guess" is the text shown for automatic beat rate detection; it replaces %s in the next message
+#: src/interface.c:297
+msgid "bph guess"
+msgstr "bph automático"
+
+#: src/interface.c:298
+#, c-format
+msgid "Save the current settings (%s, lift angle %g deg) as:"
+msgstr "Guardar los ajustes actuales (%s, ángulo de alzamiento %g deg) como:"
+
+#: src/interface.c:308
+msgid "Watch name"
+msgstr "Nombre del reloj"
+
+#: src/interface.c:320
+#, c-format
+msgid "Please enter a name of up to %d characters, without '[' or ']'."
+msgstr "Introduzca un nombre de hasta %d caracteres, sin «[» ni «]»."
+
+#: src/interface.c:327
+#, c-format
+msgid ""
+"A watch named \"%s\" already exists.\n"
+"Replace it with the current settings?"
+msgstr ""
+"Ya existe un reloj llamado \"%s\".\n"
+"¿Reemplazarlo con los ajustes actuales?"
+
+#: src/interface.c:356
+#, c-format
+msgid ""
+"Delete the saved watch \"%s\"?\n"
+"The current bph and lift angle are kept."
+msgstr ""
+"¿Eliminar el reloj guardado \"%s\"?\n"
+"Se conservan los bph y el ángulo de alzamiento actuales."
+
+#: src/interface.c:463
+msgid "No audio input could be opened."
+msgstr "No se pudo abrir ninguna entrada de audio."
+
+#: src/interface.c:465
+msgid ""
+"Choose an audio system and input device in the audio settings, or check the "
+"system's microphone settings."
+msgstr ""
+"Elija un sistema de audio y un dispositivo de entrada en los ajustes de "
+"audio, o compruebe los ajustes de micrófono del sistema."
+
+#: src/interface.c:469
+msgid "_Audio settings…"
+msgstr "_Ajustes de audio…"
+
+#: src/interface.c:520
+msgid "Could not open this input. It may be in use or disabled."
+msgstr "No se pudo abrir esta entrada. Puede estar en uso o desactivada."
+
+#: src/interface.c:529
+msgid "The chosen input could not be opened; using the default input."
+msgstr "No se pudo abrir la entrada elegida; se usa la entrada predeterminada."
+
+#: src/interface.c:531
+msgid "The chosen rate is not available; using the default rate."
+msgstr ""
+"La frecuencia elegida no está disponible; se usa la frecuencia "
+"predeterminada."
+
+#: src/interface.c:548
+msgid "Failed to restart computation thread"
+msgstr "No se pudo reiniciar el hilo de cálculo"
+
+#: src/interface.c:663
+msgid "Stop calibration"
+msgstr "Detener calibración"
+
+#: src/interface.c:663 src/interface.c:1516
+msgid "Start calibration"
+msgstr "Iniciar calibración"
+
+#: src/interface.c:788
+msgid "(not set)"
+msgstr "(sin definir)"
+
+#. TRANSLATORS: watch position. Translate the words, keep the code (DU) unchanged
+#: src/interface.c:790
+msgid "Dial up (DU)"
+msgstr "Esfera arriba (DU)"
+
+#. TRANSLATORS: watch position. Translate the words, keep the code (DD) unchanged
+#: src/interface.c:792
+msgid "Dial down (DD)"
+msgstr "Esfera abajo (DD)"
+
+#. TRANSLATORS: watch position. Translate the words, keep the code (CU) unchanged
+#: src/interface.c:794
+msgid "Crown up (CU)"
+msgstr "Corona arriba (CU)"
+
+#. TRANSLATORS: watch position. Translate the words, keep the code (CD) unchanged
+#: src/interface.c:796
+msgid "Crown down (CD)"
+msgstr "Corona abajo (CD)"
+
+#. TRANSLATORS: watch position. Translate the words, keep the code (CL) unchanged
+#: src/interface.c:798
+msgid "Crown left (CL)"
+msgstr "Corona izquierda (CL)"
+
+#. TRANSLATORS: watch position. Translate the words, keep the code (CR) unchanged
+#: src/interface.c:800
+msgid "Crown right (CR)"
+msgstr "Corona derecha (CR)"
+
+#. TRANSLATORS: default title of a snapshot tab, short (tab title)
+#. TRANSLATORS: tab titles, short. "Real time" is the live measurement tab, "Snapshot" a kept measurement
+#: src/interface.c:812 src/interface.c:923
+msgid "Snapshot"
+msgstr "Captura"
+
+#: src/interface.c:867
+#, c-format
+msgid "Could not open the manual (%s): %s"
+msgstr "No se pudo abrir el manual (%s): %s"
+
+#: src/interface.c:867
+msgid "unknown error"
+msgstr "error desconocido"
+
+#: src/interface.c:923
+msgid "Real time"
+msgstr "Tiempo real"
+
+#: src/interface.c:1014
+msgid "All files"
+msgstr "Todos los archivos"
+
+#: src/interface.c:1047
+msgid "Error opening file\n"
+msgstr "Error al abrir el archivo\n"
+
+#: src/interface.c:1061 src/interface.c:1242
+msgid "Cancel"
+msgstr "Cancelar"
+
+#: src/interface.c:1063
+msgid "Save"
+msgstr "Guardar"
+
+#: src/interface.c:1094
+#, c-format
+msgid "File %s already exists. Do you want to replace it?"
+msgstr "El archivo %s ya existe. ¿Desea reemplazarlo?"
+
+#: src/interface.c:1136 src/interface.c:1474
+msgid "Save current display"
+msgstr "Guardar la pantalla actual"
+
+#: src/interface.c:1141 src/interface.c:1188
+msgid "Error writing file"
+msgstr "Error al escribir el archivo"
+
+#: src/interface.c:1169 src/interface.c:1480
+msgid "Save all snapshots"
+msgstr "Guardar todas las capturas"
+
+#: src/interface.c:1214
+#, c-format
+msgid "Error reading file: %s"
+msgstr "Error al leer el archivo: %s"
+
+#: src/interface.c:1239 src/interface.c:1244 src/interface.c:1469
+msgid "Open"
+msgstr "Abrir"
+
+#: src/interface.c:1322
+msgid "Saved watches (bph and lift angle)"
+msgstr "Relojes guardados (bph y ángulo de alzamiento)"
+
+#: src/interface.c:1325
+msgid "Save the current bph and lift angle as a watch"
+msgstr "Guardar los bph y el ángulo de alzamiento actuales como reloj"
+
+#: src/interface.c:1328
+msgid "Delete the selected watch"
+msgstr "Eliminar el reloj seleccionado"
+
+#: src/interface.c:1333
+msgid "Beats per hour (bph)"
+msgstr "Frecuencia (bph)"
+
+#. TRANSLATORS: first entry of the beats-per-hour list: the program detects the beat rate by itself. Short.
+#. * The program reads the entry back as a number and treats any non-numeric text as "guess".
+#: src/interface.c:1343
+msgid "guess"
+msgstr "auto"
+
+#: src/interface.c:1363
+msgid "Lift angle (degrees)"
+msgstr "Ángulo de alzamiento (grados)"
+
+#: src/interface.c:1420
+msgid ""
+"Position of the watch.\n"
+"\n"
+"Real time: applied to\n"
+"the next snapshot.\n"
+"Snapshot: changes the\n"
+"position of this one.\n"
+"\n"
+"Shown in the tab title\n"
+"and saved with the\n"
+"snapshot."
+msgstr ""
+"Posición del reloj.\n"
+"\n"
+"Tiempo real: se aplica a\n"
+"la siguiente captura.\n"
+"Captura: cambia la\n"
+"posición de esta.\n"
+"\n"
+"Se muestra en el título\n"
+"de la pestaña y se guarda\n"
+"con la captura."
+
+#: src/interface.c:1434
+msgid "Take Snapshot"
+msgstr "Capturar medición"
+
+#: src/interface.c:1436
+msgid ""
+"Keep the current\n"
+"measurement in a\n"
+"new tab.\n"
+"\n"
+"Shortcut: Ctrl+Space"
+msgstr ""
+"Conserva la medición\n"
+"actual en una\n"
+"pestaña nueva.\n"
+"\n"
+"Atajo: Ctrl+Espacio"
+
+#: src/interface.c:1446
+msgid "Current snapshot:"
+msgstr "Captura actual:"
+
+#: src/interface.c:1488
+msgid "Light algorithm"
+msgstr "Algoritmo ligero"
+
+#: src/interface.c:1491
+msgid ""
+"Reduces CPU load, \n"
+"for slow computers.\n"
+"\n"
+"It processes half of\n"
+"the audio samples, \n"
+"uses shorter analysis\n"
+"windows and skips the\n"
+"noise suppressor.\n"
+"Results update faster,\n"
+"but they are less stable\n"
+"and more sensitive to \n"
+"background noise.\n"
+"Toggling this setting will\n"
+"restart your measurement."
+msgstr ""
+"Reduce la carga de CPU, \n"
+"para equipos lentos.\n"
+"\n"
+"Procesa la mitad de\n"
+"las muestras de audio, \n"
+"usa ventanas de análisis\n"
+"más cortas y omite el\n"
+"supresor de ruido.\n"
+"Los resultados se actualizan\n"
+"más rápido, pero son menos\n"
+"estables y más sensibles \n"
+"al ruido de fondo.\n"
+"Al cambiar este ajuste se\n"
+"reiniciará la medición."
+
+#: src/interface.c:1511
+msgid "Audio settings…"
+msgstr "Ajustes de audio…"
+
+#: src/interface.c:1518
+msgid ""
+"Measures the error of\n"
+"your sound card clock,\n"
+"using a quartz watch\n"
+"ticking once per second\n"
+"as reference.\n"
+"\n"
+"Takes about 15 minutes.\n"
+"The result is stored\n"
+"in the cal field."
+msgstr ""
+"Mide el error del reloj\n"
+"de su tarjeta de sonido,\n"
+"usando como referencia\n"
+"un reloj de cuarzo que\n"
+"hace tic una vez por segundo.\n"
+"\n"
+"Dura unos 15 minutos.\n"
+"El resultado se guarda\n"
+"en el campo cal."
+
+#: src/interface.c:1532
+msgid "User manual"
+msgstr "Manual de usuario"
+
+#: src/interface.c:1533
+msgid "Open the user manual (PDF)."
+msgstr "Abrir el manual de usuario (PDF)."
+
+#: src/interface.c:1540
+msgid "Close all snapshots"
+msgstr "Cerrar todas las capturas"
+
+#: src/interface.c:1546
+msgid "Quit"
+msgstr "Salir"
+
+#: src/interface.c:1704
+msgid "The saved input was not found; using the default input."
+msgstr "No se encontró la entrada guardada; se usa la entrada predeterminada."
+
+#: src/interface.c:1706
+msgid "The saved rate is not available; using the default rate."
+msgstr ""
+"La frecuencia guardada no está disponible; se usa la frecuencia "
+"predeterminada."
+
+#: src/interface.c:1720
+msgid "Error starting computation thread"
+msgstr "Error al iniciar el hilo de cálculo"
+
+#. TRANSLATORS: status tooltip. Keep the leading "0:"
+#: src/output_panel.c:418
+msgid ""
+"0: no audio input. The four squares by the clock show analysis windows with "
+"a valid period."
+msgstr ""
+"0: sin entrada de audio. Los cuatro cuadrados junto al reloj indican las "
+"ventanas de análisis con un período válido."
+
+#. TRANSLATORS: status tooltip. Keep the leading "?:"
+#: src/output_panel.c:420
+msgid ""
+"?: audio is present, but no beat rate has been recognized yet. The four "
+"squares show analysis windows with a valid period."
+msgstr ""
+"?: hay audio, pero aún no se ha reconocido ninguna frecuencia de batido. Los "
+"cuatro cuadrados indican las ventanas de análisis con un período válido."
+
+#. TRANSLATORS: status tooltip. Keep the leading "!:" and the column name BEAT, it is not translated
+#: src/output_panel.c:422
+msgid ""
+"!: no valid rhythm at the selected beat rate. A free estimate, when "
+"available, is marked with ~ in the BEAT column. The four squares show "
+"analysis windows with a valid period."
+msgstr ""
+"!: no hay un ritmo válido a la frecuencia de batido seleccionada. Si hay una "
+"estimación libre, se marca con ~ en la columna BEAT. Los cuatro cuadrados "
+"indican las ventanas de análisis con un período válido."
+
+#. TRANSLATORS: status tooltip
+#: src/output_panel.c:424
+msgid ""
+"Audio input and a valid beat period are detected. The four squares show "
+"analysis windows with a valid period."
+msgstr ""
+"Se detecta entrada de audio y un período de batido válido. Los cuatro "
+"cuadrados indican las ventanas de análisis con un período válido."
+
+#. TRANSLATORS: legend of the paper strip, short, shown in a narrow row
+#: src/output_panel.c:1211
+msgid "reference tick"
+msgstr "tic de referencia"
+
+#. TRANSLATORS: legend of the paper strip, short, shown in a narrow row. "cal" is the calibration value and stays as is
+#: src/output_panel.c:1213
+msgid "current cal"
+msgstr "cal actual"
+
+#. TRANSLATORS: legend of the paper strip: the first sound of a watch beat (tic-toc). Short, shown in a narrow row
+#: src/output_panel.c:1216
+msgid "tic"
+msgstr "tic"
+
+#. TRANSLATORS: legend of the paper strip: the second sound of a watch beat (tic-toc). Short, shown in a narrow row
+#: src/output_panel.c:1218
+msgid "toc"
+msgstr "toc"
+
+#. TRANSLATORS: legend of the paper strip, short, shown in a narrow row
+#: src/output_panel.c:1220
+msgid "amplitude"
+msgstr "amplitud"
+
+#. TRANSLATORS: legend of the paper strip: dashed guide line showing the rate. Short, shown in a narrow row
+#: src/output_panel.c:1222
+msgid "rate guide"
+msgstr "guía de marcha"
+
+#. TRANSLATORS: title of the paper strip panel
+#: src/output_panel.c:1404
+msgid "Paper strip: beat timing over time"
+msgstr "Diagrama de marcha: temporización del batido en el tiempo"
+
+#. TRANSLATORS: title of the paper strip panel while calibrating
+#: src/output_panel.c:1406
+msgid "Paper strip: reference ticks"
+msgstr "Diagrama de marcha: tics de referencia"
+
+#: src/output_panel.c:1538
+msgid "No long-term statistics"
+msgstr "Sin estadísticas a largo plazo"
+
+#: src/output_panel.c:1539
+msgid "This snapshot was saved without them."
+msgstr "Esta captura se guardó sin ellas."
+
+#: src/output_panel.c:1544
+msgid "Not recorded during calibration"
+msgstr "No se registra durante la calibración"
+
+#: src/output_panel.c:1546
+msgid "No readings were recorded"
+msgstr "No se registró ninguna lectura"
+
+#: src/output_panel.c:1548
+msgid "Waiting for a steady signal"
+msgstr "Esperando una señal estable"
+
+#: src/output_panel.c:1549
+msgid "A reading is recorded every 2 s while the signal is good."
+msgstr "Se registra una lectura cada 2 s mientras la señal sea buena."
+
+#. TRANSLATORS: Trend page column head: the latest reading. Short, shown in a narrow column
+#: src/output_panel.c:1566
+msgid "now"
+msgstr "actual"
+
+#. TRANSLATORS: Trend page column head: average. Short, shown in a narrow column
+#: src/output_panel.c:1568
+msgid "avg"
+msgstr "media"
+
+#. TRANSLATORS: Trend page column head: minimum. Short, shown in a narrow column
+#: src/output_panel.c:1570
+msgid "min"
+msgstr "mín."
+
+#. TRANSLATORS: Trend page column head: maximum. Short, shown in a narrow column
+#: src/output_panel.c:1572
+msgid "max"
+msgstr "máx."
+
+#. TRANSLATORS: Trend page column head: difference between maximum and minimum. Short, shown in a narrow column
+#: src/output_panel.c:1574
+msgid "spread"
+msgstr "rango"
+
+#. TRANSLATORS: Trend page row: rate in seconds per day (s/d). Short, shown in a narrow column
+#: src/output_panel.c:1591
+msgid "Rate s/d"
+msgstr "Marcha s/día"
+
+#. TRANSLATORS: Trend page row: amplitude in degrees. Keep the degree sign. Short, shown in a narrow column
+#: src/output_panel.c:1593
+msgid "Ampl. °"
+msgstr "Ampl. °"
+
+#. TRANSLATORS: Trend page row: beat error in milliseconds (ms). Short, shown in a narrow column
+#: src/output_panel.c:1595
+msgid "Beat err. ms"
+msgstr "Err. bat. ms"
+
+#. TRANSLATORS: Trend page. %s is a duration such as 2:15:03, the number is a percentage
+#: src/output_panel.c:1625
+#, c-format
+msgid "%s since the start, %.0f %% with signal (100 h limit reached)"
+msgstr "%s desde el inicio, %.0f %% con señal (límite de 100 h alcanzado)"
+
+#: src/output_panel.c:1626
+#, c-format
+msgid "%s since the start, %.0f %% with signal"
+msgstr "%s desde el inicio, %.0f %% con señal"
+
+#. TRANSLATORS: Trend page: the settings used for the readings. "cal" is the calibration value and stays as is
+#: src/output_panel.c:1630
+#, c-format
+msgid "%d bph, lift angle %.0f°, cal %+.1f s/d"
+msgstr "%d bph, ángulo de alzamiento %.0f°, cal %+.1f s/día"
+
+#. TRANSLATORS: Trend page column head: time spent in this position (duration). Short, shown in a narrow column
+#: src/output_panel.c:1643
+msgid "time"
+msgstr "tiempo"
+
+#. TRANSLATORS: Trend page column head: average rate in this position. Short, shown in a narrow column
+#: src/output_panel.c:1645
+msgid "rate"
+msgstr "marcha"
+
+#. TRANSLATORS: Trend page column head: average amplitude in this position. Short, shown in a narrow column
+#: src/output_panel.c:1647
+msgid "ampl."
+msgstr "ampl."
+
+#. TRANSLATORS: Trend page column head: beat error in this position. Short, shown in a narrow column
+#: src/output_panel.c:1649
+msgid "BE"
+msgstr "EB"
+
+#. TRANSLATORS: Trend page column head over the list of watch positions. Short, shown in a narrow column
+#: src/output_panel.c:1653
+msgid "Position"
+msgstr "Posición"
+
+#. TRANSLATORS: Trend page: readings taken while no watch position was set. Short, shown in a narrow column
+#: src/output_panel.c:1665
+msgid "not set"
+msgstr "sin definir"
+
+#: src/output_panel.c:1691
+#, c-format
+msgid "Positional error (largest difference in rate): %.1f s/d"
+msgstr "Error posicional (mayor diferencia de marcha): %.1f s/día"
+
+#: src/output_panel.c:1693
+msgid "Measure more positions to see the positional error."
+msgstr "Mida más posiciones para ver el error posicional."
+
+#: src/output_panel.c:1699
+msgid "Set the watch position to also get statistics per position."
+msgstr ""
+"Indique la posición del reloj para obtener también estadísticas por posición."
+
+#: src/output_panel.c:1785
+#, c-format
+msgid "Rate (s/d), dashed: average %+.1f"
+msgstr "Marcha (s/día), línea discontinua: media %+.1f"
+
+#: src/output_panel.c:1800
+msgid "Amplitude (°)"
+msgstr "Amplitud (°)"
+
+#. TRANSLATORS: keep cal (wait), cal (acq.), cal (done), cal (fail) in English, they are shown like that in the results bar.
+#. * Also keep the word "done" in English where it is mentioned as a status, and keep the markup tags.
+#: src/output_panel.c:1884
+msgid ""
+"<span size='x-large' weight='bold'>Calibration in progress</span>\n"
+"\n"
+"Calibration measures how fast your sound card clock really runs, so that "
+"rates are not skewed by the computer. It takes about 15 minutes (900 "
+"ticks).\n"
+"\n"
+"<b>1. Use a quartz reference</b>\n"
+"Place a quartz watch or clock that ticks once per second (an analog one with "
+"a seconds hand) very close to the microphone, ideally touching it. Its "
+"accuracy becomes your calibration accuracy.\n"
+"\n"
+"<b>2. Keep it quiet</b>\n"
+"Work in a quiet room, switch off nearby fans and speakers, and do not touch "
+"the desk while calibrating. Raise the microphone gain only as far as needed "
+"to hear the tick clearly without distortion.\n"
+"\n"
+"<b>3. Watch the status at the top</b>\n"
+"<b>cal (wait)</b>: no steady 1 tick per second found yet, check the setup.\n"
+"<b>cal (acq.) NN %</b>: collecting ticks, leave everything untouched.\n"
+"<b>cal (done) ±X.X s/d</b>: finished. The value is copied to the <b>cal</b> "
+"field and saved.\n"
+"<b>cal (fail)</b>: the signal was too irregular. Improve the setup and start "
+"again.\n"
+"\n"
+"<b>4. Finish</b>\n"
+"When it shows <b>done</b>, select <b>Stop calibration</b> in the menu to "
+"return to normal measurement. Repeat once to confirm the result is "
+"consistent, and calibrate again whenever you change the audio input or the "
+"sample rate."
+msgstr ""
+"<span size='x-large' weight='bold'>Calibración en curso</span>\n"
+"\n"
+"La calibración mide la velocidad real del reloj embarcado en su tarjeta de "
+"sonido, para que las mediciones de marcha no se vean alteradas por el error "
+"del reloj del ordenador. Dura unos 15 minutos (900 tics).\n"
+"\n"
+"<b>1. Use una referencia de cuarzo</b>\n"
+"Coloque un reloj de cuarzo que haga tic una vez por segundo (uno analógico "
+"con segundero) muy cerca del micrófono, a ser posible tocándolo. Su "
+"precisión será la precisión de su calibración.\n"
+"\n"
+"<b>2. Mantenga el silencio</b>\n"
+"Trabaje en una sala silenciosa, apague ventiladores y altavoces cercanos y "
+"no toque la mesa durante la calibración. Suba la ganancia del micrófono solo "
+"lo necesario para oír el tic con claridad y sin distorsión.\n"
+"\n"
+"<b>3. Observe el estado en la parte superior</b>\n"
+"<b>cal (wait)</b>: aún no se detecta un tic estable por segundo, revise la "
+"instalación.\n"
+"<b>cal (acq.) NN %</b>: recopilando tics, no toque nada.\n"
+"<b>cal (done) ±X.X s/d</b>: terminado. El valor se copia en el campo <b>cal</"
+"b> y se guarda.\n"
+"<b>cal (fail)</b>: la señal fue demasiado irregular. Mejore la instalación y "
+"empiece de nuevo.\n"
+"\n"
+"<b>4. Finalizar</b>\n"
+"Cuando aparezca <b>done</b>, seleccione <b>Detener calibración</b> en el "
+"menú para volver a la medición normal. Repita una vez para confirmar que el "
+"resultado es coherente, y vuelva a calibrar siempre que cambie la entrada de "
+"audio o la frecuencia de muestreo."
+
+#. TRANSLATORS: paper strip button: erase the trace. Short, shown in a narrow button
+#: src/output_panel.c:2030
+msgid "Clear"
+msgstr "Borrar"
+
+#. TRANSLATORS: paper strip button: center the trace. Short, shown in a narrow button
+#: src/output_panel.c:2038
+msgid "Center"
+msgstr "Centrar"
+
+#. TRANSLATORS: paper strip setting: time between marks on the vertical (Y) axis. Short
+#: src/output_panel.c:2062
+msgid "Y mark (s)"
+msgstr "Marca Y (s)"
+
+#: src/output_panel.c:2070
+msgid "Time between marks on the vertical axis, in seconds."
+msgstr "Tiempo entre marcas en el eje vertical, en segundos."
+
+#. TRANSLATORS: paper strip setting: time span shown on the vertical (Y) axis. Short
+#: src/output_panel.c:2076
+msgid "Y window (s)"
+msgstr "Ventana Y (s)"
+
+#: src/output_panel.c:2082
+msgid "Fixed time span shown vertically. It does not change automatically."
+msgstr ""
+"Intervalo de tiempo fijo mostrado en vertical. No cambia automáticamente."
+
+#: src/output_panel.c:2099
+msgid "Waveforms"
+msgstr "Formas de onda"
+
+#: src/output_panel.c:2103
+msgid "Trend"
+msgstr "Tendencia"
+
+#: src/output_panel.c:2107
+msgid "Trend: rate and amplitude since the start"
+msgstr "Tendencia: marcha y amplitud desde el inicio"
+
+#. TRANSLATORS: Trend page button: start the statistics over. Short, shown in a narrow button
+#: src/output_panel.c:2115
+msgid "Reset"
+msgstr "Reiniciar"
+
+#: src/output_panel.c:2116
+msgid ""
+"Start the statistics over.\n"
+"They also start over when bph, lift angle,\n"
+"cal or the audio input change."
+msgstr ""
+"Reinicia las estadísticas.\n"
+"También se reinician al cambiar los bph,\n"
+"el ángulo de alzamiento, cal o la entrada de audio."
+
+#. TRANSLATORS: Trend page: label of the rate range selector (Auto, +-10 s/d, +-50 s/d). Short
+#: src/output_panel.c:2123
+msgid "Rate"
+msgstr "Marcha"
+
+#. TRANSLATORS: Trend page rate range: chosen automatically. Short, shown in a narrow combo box
+#: src/output_panel.c:2126
+msgid "Auto"
+msgstr "Auto"
+
+#. TRANSLATORS: Trend page rate range; translate the unit s/d as in the other Trend page texts
+#: src/output_panel.c:2128
+msgid "±10 s/d"
+msgstr "±10 s/día"
+
+#. TRANSLATORS: Trend page rate range; translate the unit s/d as in the other Trend page texts
+#: src/output_panel.c:2130
+msgid "±50 s/d"
+msgstr "±50 s/día"
+
+#. TRANSLATORS: Trend page: label of the time span selector (All, Last 1 h, ...). Short
+#: src/output_panel.c:2135
+msgid "Show"
+msgstr "Mostrar"
+
+#. TRANSLATORS: Trend page time span: everything since the start. Short, shown in a narrow combo box
+#: src/output_panel.c:2138
+msgid "All"
+msgstr "Todo"
+
+#: src/output_panel.c:2139
+msgid "Last 1 h"
+msgstr "Últ. 1 h"
+
+#: src/output_panel.c:2140
+msgid "Last 6 h"
+msgstr "Últ. 6 h"
+
+#: src/output_panel.c:2141
+msgid "Last 24 h"
+msgstr "Últ. 24 h"
+
+#: src/output_panel.c:2147
+msgid "Calibration instructions"
+msgstr "Instrucciones de calibración"
+
+#: src/output_panel.c:2153
+msgid "Tic: averaged sound of the first beat"
+msgstr "Tic: sonido promediado del primer batido"
+
+#: src/output_panel.c:2160
+msgid "Toc: averaged sound of the second beat"
+msgstr "Toc: sonido promediado del segundo batido"
+
+#: src/output_panel.c:2167
+msgid "Full period: tic and toc (highlighted)"
+msgstr "Período completo: tic y toc (resaltado)"

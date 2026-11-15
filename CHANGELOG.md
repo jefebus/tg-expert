@@ -1,6 +1,26 @@
 # Changelog
 
-## 0.9.0 (unreleased)
+## Unreleased
+
+### Added
+
+- Spanish and German translations of the interface. The language follows the
+  system. Numbers always use a point as the decimal separator, and the
+  results table headers, position codes and calibration status stay in
+  English in every language.
+
+### Changed
+
+- The paperstrip Y mark goes up and down by 1 s with + and -.
+- The Y mark and Y window labels show their unit (s).
+
+### Fixed
+
+- With the bph set to "guess", the Trend statistics no longer start over
+  when the guessed beat rate changes for a short time, for example while the
+  watch is turned to another position. Those readings are left out.
+
+## 0.9.0
 
 First release under the name tg-expert.
 

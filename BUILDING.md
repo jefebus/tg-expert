@@ -7,6 +7,12 @@ Runtime and build: GTK+ 3, GLib 2.0, PortAudio, FFTW3 (single precision,
 
 Tools: a C99 compiler, autoconf, automake, libtool, make, pkg-config, git.
 
+Translations: `msgfmt`, `msgmerge` and `xgettext` from GNU gettext (package
+`gettext` in MSYS2, Debian, Fedora and Homebrew). Without them the program
+builds in English only. The translations are in `po/`: after changing
+translatable strings in the sources, run `make -C po update-po`, then edit
+`po/<language>.po`. `po/GLOSSARY.md` lists the terms to use.
+
 User manual: [Typst](https://typst.app). It's needed only to build the PDF
 manual, which is also required for the Windows installer. Install it with
 `winget install --id Typst.Typst` on Windows, `brew install typst` on macOS,

@@ -1,4 +1,4 @@
-SUBDIRS = icons
+SUBDIRS = icons po
 bin_PROGRAMS = tg-expert
 EXTRA_PROGRAMS = tg-expert-dbg \
 		 tg-expert-prf \
@@ -28,7 +28,7 @@ LIBS = $(GTK_LIBS) \
        -lm
 
 AM_CPPFLAGS = -DPROGRAM_NAME=\"Tg\ Expert\" -DVERSION=\"$(PACKAGE_VERSION)\" \
-	      -DDOCDIR=\"$(docdir)\"
+	      -DDOCDIR=\"$(docdir)\" -DLOCALEDIR=\"$(localedir)\"
 tg_expert_dbg_CPPFLAGS = $(AM_CPPFLAGS) -DDEBUG
 
 AM_CFLAGS = $(GTK_CFLAGS) \

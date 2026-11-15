@@ -18,6 +18,12 @@ good signal are left out.
 The recording starts over when a setting that changes the results changes:
 bph, lift angle, cal, the audio input, the sample rate or the light
 algorithm. #ui[Reset] starts it over by hand. Recording stops after 100 hours.
+
+With #ui[BEAT] set to #ui[guess], the program can briefly recognize another
+beat rate while the watch is turned or the signal is weak. Those readings are
+left out, and the recording continues. Only a guessed beat rate that stays
+different for a minute starts the recording over. For long recordings, set
+the beat rate by hand.
 Nothing is recorded during calibration.
 
 == Statistics since the start

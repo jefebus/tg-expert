@@ -382,7 +382,7 @@ struct computer *start_computer(int nominal_sr, int bph, double la, int cal, int
 	return c;
 
 thread_init_error:
-	error("Unable to initialize computing thread");
+	error(_("Unable to initialize computing thread"));
 error:
 	if(cond_initialized)
 		pthread_cond_destroy(&c->cond);

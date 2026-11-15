@@ -414,14 +414,18 @@ static gboolean output_draw_event(GtkWidget *widget, cairo_t *c, struct output_p
 	}
 	if(show_audio_status) {
 		const char *message[] = {
-			"0: no audio input. The four squares by the clock show analysis windows with a valid period.",
-			"?: audio is present, but no beat rate has been recognized yet. The four squares show analysis windows with a valid period.",
-			"!: no valid rhythm at the selected beat rate. A free estimate, when available, is marked with ~ in the BEAT column. The four squares show analysis windows with a valid period.",
-			"Audio input and a valid beat period are detected. The four squares show analysis windows with a valid period."
+			/* TRANSLATORS: status tooltip. Keep the leading "0:" */
+			N_("0: no audio input. The four squares by the clock show analysis windows with a valid period."),
+			/* TRANSLATORS: status tooltip. Keep the leading "?:" */
+			N_("?: audio is present, but no beat rate has been recognized yet. The four squares show analysis windows with a valid period."),
+			/* TRANSLATORS: status tooltip. Keep the leading "!:" and the column name BEAT, it is not translated */
+			N_("!: no valid rhythm at the selected beat rate. A free estimate, when available, is marked with ~ in the BEAT column. The four squares show analysis windows with a valid period."),
+			/* TRANSLATORS: status tooltip */
+			N_("Audio input and a valid beat period are detected. The four squares show analysis windows with a valid period.")
 		};
 		x = draw_input_status(c, x + 3, status);
 		if(op->audio_status != status) {
-			gtk_widget_set_tooltip_text(widget, message[status]);
+			gtk_widget_set_tooltip_text(widget, _(message[status]));
 			op->audio_status = status;
 		}
 	}
@@ -1203,13 +1207,19 @@ static gboolean paperstrip_draw_event(GtkWidget *widget, cairo_t *c, struct outp
 	double lx = left_margin;
 	const double ly = height - 5;
 	if(snst->calibrate) {
-		lx = legend_item(c, lx, ly, LEGEND_DOT, COL_WAVE, "reference tick");
-		lx = legend_item(c, lx, ly, LEGEND_DASH, COL_RATE, "current cal");
+		/* TRANSLATORS: legend of the paper strip, short, shown in a narrow row */
+		lx = legend_item(c, lx, ly, LEGEND_DOT, COL_WAVE, _("reference tick"));
+		/* TRANSLATORS: legend of the paper strip, short, shown in a narrow row. "cal" is the calibration value and stays as is */
+		lx = legend_item(c, lx, ly, LEGEND_DASH, COL_RATE, _("current cal"));
 	} else {
-		lx = legend_item(c, lx, ly, LEGEND_DOT, COL_TIC, "tic");
-		lx = legend_item(c, lx, ly, LEGEND_DOT, COL_TOC, "toc");
-		lx = legend_item(c, lx, ly, LEGEND_LINE, COL_AMP, "amplitude");
-		lx = legend_item(c, lx, ly, LEGEND_DASH, COL_RATE, "rate guide");
+		/* TRANSLATORS: legend of the paper strip: the first sound of a watch beat (tic-toc). Short, shown in a narrow row */
+		lx = legend_item(c, lx, ly, LEGEND_DOT, COL_TIC, _("tic"));
+		/* TRANSLATORS: legend of the paper strip: the second sound of a watch beat (tic-toc). Short, shown in a narrow row */
+		lx = legend_item(c, lx, ly, LEGEND_DOT, COL_TOC, _("toc"));
+		/* TRANSLATORS: legend of the paper strip, short, shown in a narrow row */
+		lx = legend_item(c, lx, ly, LEGEND_LINE, COL_AMP, _("amplitude"));
+		/* TRANSLATORS: legend of the paper strip: dashed guide line showing the rate. Short, shown in a narrow row */
+		lx = legend_item(c, lx, ly, LEGEND_DASH, COL_RATE, _("rate guide"));
 	}
 
 #undef AMP_X
@@ -1390,8 +1400,10 @@ static void handle_right(GtkButton *b, struct output_panel *op)
 }
 
 /* While calibrating, the waveform panels are meaningless: show instructions instead */
-#define TITLE_PAPERSTRIP  "Paper strip: beat timing over time"
-#define TITLE_PAPERSTRIP_CAL "Paper strip: reference ticks"
+/* TRANSLATORS: title of the paper strip panel */
+#define TITLE_PAPERSTRIP  N_("Paper strip: beat timing over time")
+/* TRANSLATORS: title of the paper strip panel while calibrating */
+#define TITLE_PAPERSTRIP_CAL N_("Paper strip: reference ticks")
 
 /* ---- Trend page: long-term statistics recorded by trend.c ---- */
 
@@ -1523,18 +1535,18 @@ static gboolean trend_draw_event(GtkWidget *widget, cairo_t *c, struct output_pa
 
 	const struct trend *t = op->trend;
 	if(!t) {
-		trend_message(c, width, height, font, "No long-term statistics",
-			"This snapshot was saved without them.");
+		trend_message(c, width, height, font, _("No long-term statistics"),
+			_("This snapshot was saved without them."));
 		return FALSE;
 	}
 	if(!t->count) {
 		if(op->snst && op->snst->calibrate)
-			trend_message(c, width, height, font, "Not recorded during calibration", NULL);
+			trend_message(c, width, height, font, _("Not recorded during calibration"), NULL);
 		else if(t->frozen)
-			trend_message(c, width, height, font, "No readings were recorded", NULL);
+			trend_message(c, width, height, font, _("No readings were recorded"), NULL);
 		else
-			trend_message(c, width, height, font, "Waiting for a steady signal",
-				"A reading is recorded every 2 s while the signal is good.");
+			trend_message(c, width, height, font, _("Waiting for a steady signal"),
+				_("A reading is recorded every 2 s while the signal is good."));
 		return FALSE;
 	}
 
@@ -1548,11 +1560,24 @@ static gboolean trend_draw_event(GtkWidget *widget, cairo_t *c, struct output_pa
 	// Statistics since the start
 	const double label_w = width * 0.24;
 	double col_w = (width - label_w - 6) / 6;
-	static const char *heads[6] = {"now", "avg", "min", "max", "spread", "\xCF\x83"};
+	/* The last head is the sigma symbol: not translated, it is not marked */
+	static const char *heads[6] = {
+		/* TRANSLATORS: Trend page column head: the latest reading. Short, shown in a narrow column */
+		N_("now"),
+		/* TRANSLATORS: Trend page column head: average. Short, shown in a narrow column */
+		N_("avg"),
+		/* TRANSLATORS: Trend page column head: minimum. Short, shown in a narrow column */
+		N_("min"),
+		/* TRANSLATORS: Trend page column head: maximum. Short, shown in a narrow column */
+		N_("max"),
+		/* TRANSLATORS: Trend page column head: difference between maximum and minimum. Short, shown in a narrow column */
+		N_("spread"),
+		"\xCF\x83"
+	};
 	cairo_set_font_size(c, font * 0.8);
 	set_color(c, COL_AXIS, 0.6);
 	for(i = 0; i < 6; i++)
-		trend_text(c, label_w + (i + 1) * col_w, y, 1, heads[i]);
+		trend_text(c, label_w + (i + 1) * col_w, y, 1, _(heads[i]));
 	y += line;
 
 	const struct {
@@ -1562,15 +1587,18 @@ static gboolean trend_draw_event(GtkWidget *widget, cairo_t *c, struct output_pa
 		double now;
 		int digits, sign;
 	} rows[3] = {
-		{"Rate s/d", COL_RATE, &t->rate, last->rate, 1, 1},
-		{"Ampl. \xC2\xB0", COL_AMP, &t->amp, last->amp, 0, 0},
-		{"Beat err. ms", COL_AXIS, &t->be, last->be, 1, 0},
+		/* TRANSLATORS: Trend page row: rate in seconds per day (s/d). Short, shown in a narrow column */
+		{N_("Rate s/d"), COL_RATE, &t->rate, last->rate, 1, 1},
+		/* TRANSLATORS: Trend page row: amplitude in degrees. Keep the degree sign. Short, shown in a narrow column */
+		{N_("Ampl. \xC2\xB0"), COL_AMP, &t->amp, last->amp, 0, 0},
+		/* TRANSLATORS: Trend page row: beat error in milliseconds (ms). Short, shown in a narrow column */
+		{N_("Beat err. ms"), COL_AXIS, &t->be, last->be, 1, 0},
 	};
 	cairo_set_font_size(c, font);
 	for(int r = 0; r < 3; r++) {
 		const struct trend_stats *st = rows[r].st;
 		set_color(c, rows[r].col, 1);
-		trend_text(c, 4, y, 0, rows[r].name);
+		trend_text(c, 4, y, 0, _(rows[r].name));
 		set_color(c, COL_AXIS, 0.9);
 		double values[6] = {rows[r].now, trend_stats_mean(st), st->min, st->max,
 			st->max - st->min, trend_stats_sd(st)};
@@ -1593,11 +1621,13 @@ static gboolean trend_draw_event(GtkWidget *widget, cairo_t *c, struct output_pa
 	double coverage = elapsed > 0 ? fmin(100, t->count * TREND_INTERVAL_S * 100.0 / elapsed) : 100;
 	cairo_set_font_size(c, font * 0.8);
 	set_color(c, COL_AXIS, 0.7);
-	snprintf(s, sizeof(s), "%s since the start, %.0f %% with signal%s", d, coverage,
-		t->full ? " (100 h limit reached)" : "");
+	/* TRANSLATORS: Trend page. %s is a duration such as 2:15:03, the number is a percentage */
+	snprintf(s, sizeof(s), t->full ? _("%s since the start, %.0f %% with signal (100 h limit reached)")
+		: _("%s since the start, %.0f %% with signal"), d, coverage);
 	trend_text(c, 4, y, 0, s);
 	y += line * 0.85;
-	snprintf(s, sizeof(s), "%d bph, lift angle %.0f\xC2\xB0, cal %+.1f s/d", t->bph, t->la, t->cal / 10.0);
+	/* TRANSLATORS: Trend page: the settings used for the readings. "cal" is the calibration value and stays as is */
+	snprintf(s, sizeof(s), _("%d bph, lift angle %.0f\xC2\xB0, cal %+.1f s/d"), t->bph, t->la, t->cal / 10.0);
 	trend_text(c, 4, y, 0, s);
 	y += line * 1.2;
 
@@ -1608,11 +1638,21 @@ static gboolean trend_draw_event(GtkWidget *widget, cairo_t *c, struct output_pa
 			set_positions++;
 	if(set_positions) {
 		col_w = (width - label_w - 6) / 4;
-		static const char *pos_heads[4] = {"time", "rate", "ampl.", "BE"};
+		static const char *pos_heads[4] = {
+		/* TRANSLATORS: Trend page column head: time spent in this position (duration). Short, shown in a narrow column */
+		N_("time"),
+		/* TRANSLATORS: Trend page column head: average rate in this position. Short, shown in a narrow column */
+		N_("rate"),
+		/* TRANSLATORS: Trend page column head: average amplitude in this position. Short, shown in a narrow column */
+		N_("ampl."),
+		/* TRANSLATORS: Trend page column head: beat error in this position. Short, shown in a narrow column */
+		N_("BE")
+	};
 		set_color(c, COL_AXIS, 0.6);
-		trend_text(c, 4, y, 0, "Position");
+		/* TRANSLATORS: Trend page column head over the list of watch positions. Short, shown in a narrow column */
+		trend_text(c, 4, y, 0, _("Position"));
 		for(i = 0; i < 4; i++)
-			trend_text(c, label_w + (i + 1) * col_w, y, 1, pos_heads[i]);
+			trend_text(c, label_w + (i + 1) * col_w, y, 1, _(pos_heads[i]));
 		y += line;
 		cairo_set_font_size(c, font);
 		double best = 0, worst = 0;
@@ -1621,7 +1661,8 @@ static gboolean trend_draw_event(GtkWidget *widget, cairo_t *c, struct output_pa
 			if(!t->pos_rate[p].n) continue;
 			const char *code = watch_position_code(p);
 			set_color(c, COL_AXIS, code ? 0.9 : 0.6);
-			trend_text(c, 4, y, 0, code ? code : "not set");
+			/* TRANSLATORS: Trend page: readings taken while no watch position was set. Short, shown in a narrow column */
+			trend_text(c, 4, y, 0, code ? code : _("not set"));
 			format_duration(d, sizeof(d), t->pos_rate[p].n * TREND_INTERVAL_S);
 			trend_text(c, label_w + col_w, y, 1, d);
 			double rate = trend_stats_mean(&t->pos_rate[p]);
@@ -1647,15 +1688,15 @@ static gboolean trend_draw_event(GtkWidget *widget, cairo_t *c, struct output_pa
 		cairo_set_font_size(c, font * 0.8);
 		set_color(c, COL_AXIS, 0.7);
 		if(set_positions >= 2)
-			snprintf(s, sizeof(s), "Positional error (largest difference in rate): %.1f s/d", best - worst);
+			snprintf(s, sizeof(s), _("Positional error (largest difference in rate): %.1f s/d"), best - worst);
 		else
-			snprintf(s, sizeof(s), "Measure more positions to see the positional error.");
+			snprintf(s, sizeof(s), "%s", _("Measure more positions to see the positional error."));
 		trend_text(c, 4, y, 0, s);
 		y += line * 1.2;
 	} else {
 		cairo_set_font_size(c, font * 0.8);
 		set_color(c, COL_AXIS, 0.6);
-		trend_text(c, 4, y, 0, "Set the watch position to also get statistics per position.");
+		trend_text(c, 4, y, 0, _("Set the watch position to also get statistics per position."));
 		y += line * 1.2;
 	}
 
@@ -1741,7 +1782,7 @@ static gboolean trend_draw_event(GtkWidget *widget, cairo_t *c, struct output_pa
 	trend_draw_series(c, cols, n, rate_top, rate_bottom, -range, range, COL_RATE);
 	cairo_set_font_size(c, font * 0.9);
 	set_color(c, COL_RATE, 1);
-	snprintf(s, sizeof(s), "Rate (s/d), dashed: average %+.1f", mean);
+	snprintf(s, sizeof(s), _("Rate (s/d), dashed: average %+.1f"), mean);
 	trend_text(c, gx, rate_top - font * 0.4, 0, s);
 
 	// Amplitude, 120 to 360 deg
@@ -1756,7 +1797,7 @@ static gboolean trend_draw_event(GtkWidget *widget, cairo_t *c, struct output_pa
 	free(cols);
 	cairo_set_font_size(c, font * 0.9);
 	set_color(c, COL_AMP, 1);
-	trend_text(c, gx, amp_top - font * 0.4, 0, "Amplitude (\xC2\xB0)");
+	trend_text(c, gx, amp_top - font * 0.4, 0, _("Amplitude (\xC2\xB0)"));
 
 	// Position changes: a line through both graphs, with the new position
 	cairo_set_font_size(c, font * 0.8);
@@ -1832,13 +1873,15 @@ static void update_right_side(struct output_panel *op)
 		gtk_stack_set_visible_child_name(GTK_STACK(op->right_stack), page);
 	gtk_widget_set_sensitive(op->right_switcher, !cal);
 
-	set_frame_title(op->paperstrip_frame, cal ? TITLE_PAPERSTRIP_CAL : TITLE_PAPERSTRIP);
+	set_frame_title(op->paperstrip_frame, cal ? _(TITLE_PAPERSTRIP_CAL) : _(TITLE_PAPERSTRIP));
 }
 
 static GtkWidget *make_calibration_instructions(void)
 {
-	static const char *markup =
-		"<span size='x-large' weight='bold'>Calibration in progress</span>\n"
+	const char *markup =
+		/* TRANSLATORS: keep cal (wait), cal (acq.), cal (done), cal (fail) in English, they are shown like that in the results bar.
+		 * Also keep the word "done" in English where it is mentioned as a status, and keep the markup tags. */
+		_("<span size='x-large' weight='bold'>Calibration in progress</span>\n"
 		"\n"
 		"Calibration measures how fast your sound card clock really runs, so that "
 		"rates are not skewed by the computer. It takes about 15 minutes (900 ticks).\n"
@@ -1861,9 +1904,9 @@ static GtkWidget *make_calibration_instructions(void)
 		"<b>cal (fail)</b>: the signal was too irregular. Improve the setup and start again.\n"
 		"\n"
 		"<b>4. Finish</b>\n"
-		"When it shows <b>done</b>, Select <b>Stop Calibration</b> in the menu to "
-		"return to normal measurement. Repeat once to confirm the result is consistent,"
-		"and calibrate again whenever you change the audio input or the sample rate.";
+		"When it shows <b>done</b>, select <b>Stop calibration</b> in the menu to "
+		"return to normal measurement. Repeat once to confirm the result is consistent, "
+		"and calibrate again whenever you change the audio input or the sample rate.");
 
 	GtkWidget *label = gtk_label_new(NULL);
 	gtk_label_set_markup(GTK_LABEL(label), markup);
@@ -1968,7 +2011,7 @@ struct output_panel *init_output_panel(struct computer *comp, struct snapshot *s
 	// Paperstrip
 	op->paperstrip_drawing_area = gtk_drawing_area_new();
 	gtk_widget_set_size_request(op->paperstrip_drawing_area, 300, 0);
-	op->paperstrip_frame = titled_frame(op->paperstrip_drawing_area, TITLE_PAPERSTRIP);
+	op->paperstrip_frame = titled_frame(op->paperstrip_drawing_area, _(TITLE_PAPERSTRIP));
 	gtk_box_pack_start(GTK_BOX(vbox2), op->paperstrip_frame, TRUE, TRUE, 0);
 	g_signal_connect (op->paperstrip_drawing_area, "draw", G_CALLBACK(paperstrip_draw_event), op);
 	gtk_widget_set_events(op->paperstrip_drawing_area, GDK_EXPOSURE_MASK);
@@ -1983,14 +2026,16 @@ struct output_panel *init_output_panel(struct computer *comp, struct snapshot *s
 
 	// CLEAR button
 	if(comp) {
-		op->clear_button = gtk_button_new_with_label("Clear");
+		/* TRANSLATORS: paper strip button: erase the trace. Short, shown in a narrow button */
+		op->clear_button = gtk_button_new_with_label(_("Clear"));
 		gtk_box_pack_start(GTK_BOX(hbox3), op->clear_button, TRUE, TRUE, 0);
 		g_signal_connect (op->clear_button, "clicked", G_CALLBACK(handle_clear_trace), op);
 		gtk_widget_set_sensitive(op->clear_button, !snst->calibrate);
 	}
 
 	// CENTER button
-	GtkWidget *center_button = gtk_button_new_with_label("Center");
+	/* TRANSLATORS: paper strip button: center the trace. Short, shown in a narrow button */
+	GtkWidget *center_button = gtk_button_new_with_label(_("Center"));
 	gtk_box_pack_start(GTK_BOX(hbox3), center_button, TRUE, TRUE, 0);
 	g_signal_connect (center_button, "clicked", G_CALLBACK(handle_center_trace), op);
 
@@ -2013,24 +2058,28 @@ struct output_panel *init_output_panel(struct computer *comp, struct snapshot *s
 
 	GtkWidget *settings_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
 	gtk_box_pack_start(GTK_BOX(vbox2), settings_box, FALSE, TRUE, 0);
-	GtkWidget *tick_label = gtk_label_new("Y mark");
+	/* TRANSLATORS: paper strip setting: time between marks on the vertical (Y) axis. Short */
+	GtkWidget *tick_label = gtk_label_new(_("Y mark (s)"));
 	gtk_box_pack_start(GTK_BOX(settings_box), tick_label, FALSE, FALSE, 0);
-	op->paperstrip_tick_spin = gtk_spin_button_new_with_range(0.01, 3600, 0.1);
+	op->paperstrip_tick_spin = gtk_spin_button_new_with_range(0.01, 3600, 1);
 	gtk_spin_button_set_digits(GTK_SPIN_BUTTON(op->paperstrip_tick_spin), 2);
+	// + and - change the mark by 1 s (page keys by 10 s); finer values can be typed
+	gtk_spin_button_set_increments(GTK_SPIN_BUTTON(op->paperstrip_tick_spin), 1, 10);
 	gtk_entry_set_width_chars(GTK_ENTRY(op->paperstrip_tick_spin), 6);
 	gtk_widget_set_tooltip_text(op->paperstrip_tick_spin,
-		"Time between marks on the vertical axis, in seconds.");
+		_("Time between marks on the vertical axis, in seconds."));
 	gtk_box_pack_start(GTK_BOX(settings_box), op->paperstrip_tick_spin, FALSE, FALSE, 0);
 	g_signal_connect(op->paperstrip_tick_spin, "value_changed",
 		G_CALLBACK(handle_paperstrip_setting_change), op);
 
-	GtkWidget *window_label = gtk_label_new("Y window");
+	/* TRANSLATORS: paper strip setting: time span shown on the vertical (Y) axis. Short */
+	GtkWidget *window_label = gtk_label_new(_("Y window (s)"));
 	gtk_box_pack_start(GTK_BOX(settings_box), window_label, FALSE, FALSE, 0);
 	op->paperstrip_window_spin = gtk_spin_button_new_with_range(10, 86400, 10);
 	gtk_spin_button_set_digits(GTK_SPIN_BUTTON(op->paperstrip_window_spin), 0);
 	gtk_entry_set_width_chars(GTK_ENTRY(op->paperstrip_window_spin), 6);
 	gtk_widget_set_tooltip_text(op->paperstrip_window_spin,
-		"Fixed time span shown vertically. It does not change automatically.");
+		_("Fixed time span shown vertically. It does not change automatically."));
 	gtk_box_pack_start(GTK_BOX(settings_box), op->paperstrip_window_spin, FALSE, FALSE, 0);
 	g_signal_connect(op->paperstrip_window_spin, "value_changed",
 		G_CALLBACK(handle_paperstrip_setting_change), op);
@@ -2047,68 +2096,75 @@ struct output_panel *init_output_panel(struct computer *comp, struct snapshot *s
 	gtk_box_pack_start(GTK_BOX(right_box), op->right_stack, TRUE, TRUE, 0);
 
 	GtkWidget *vbox3 = gtk_box_new(GTK_ORIENTATION_VERTICAL,10);
-	gtk_stack_add_titled(GTK_STACK(op->right_stack), vbox3, "panels", "Waveforms");
+	gtk_stack_add_titled(GTK_STACK(op->right_stack), vbox3, "panels", _("Waveforms"));
 
 	// Trend page: statistics and graphs since the start, controls below
 	GtkWidget *trend_page = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
-	gtk_stack_add_titled(GTK_STACK(op->right_stack), trend_page, "trend", "Trend");
+	gtk_stack_add_titled(GTK_STACK(op->right_stack), trend_page, "trend", _("Trend"));
 	op->trend_drawing_area = gtk_drawing_area_new();
 	gtk_widget_set_size_request(op->trend_drawing_area, 300, 0);
 	gtk_box_pack_start(GTK_BOX(trend_page),
-		titled_frame(op->trend_drawing_area, "Trend: rate and amplitude since the start"), TRUE, TRUE, 0);
+		titled_frame(op->trend_drawing_area, _("Trend: rate and amplitude since the start")), TRUE, TRUE, 0);
 	g_signal_connect(op->trend_drawing_area, "draw", G_CALLBACK(trend_draw_event), op);
 	gtk_widget_set_events(op->trend_drawing_area, GDK_EXPOSURE_MASK);
 
 	GtkWidget *trend_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
 	gtk_box_pack_start(GTK_BOX(trend_page), trend_box, FALSE, TRUE, 0);
 	if(comp) {
-		GtkWidget *reset = gtk_button_new_with_label("Reset");
-		gtk_widget_set_tooltip_text(reset, "Start the statistics over.\n"
+		/* TRANSLATORS: Trend page button: start the statistics over. Short, shown in a narrow button */
+		GtkWidget *reset = gtk_button_new_with_label(_("Reset"));
+		gtk_widget_set_tooltip_text(reset, _("Start the statistics over.\n"
 			"They also start over when bph, lift angle,\n"
-			"cal or the audio input change.");
+			"cal or the audio input change."));
 		gtk_box_pack_start(GTK_BOX(trend_box), reset, FALSE, FALSE, 0);
 		g_signal_connect(reset, "clicked", G_CALLBACK(handle_trend_reset), op);
 	}
-	gtk_box_pack_start(GTK_BOX(trend_box), gtk_label_new("Rate"), FALSE, FALSE, 0);
+	/* TRANSLATORS: Trend page: label of the rate range selector (Auto, +-10 s/d, +-50 s/d). Short */
+	gtk_box_pack_start(GTK_BOX(trend_box), gtk_label_new(_("Rate")), FALSE, FALSE, 0);
 	GtkWidget *range_combo = gtk_combo_box_text_new();
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(range_combo), "0", "Auto");
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(range_combo), "10", "\xC2\xB1" "10 s/d");
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(range_combo), "50", "\xC2\xB1" "50 s/d");
+	/* TRANSLATORS: Trend page rate range: chosen automatically. Short, shown in a narrow combo box */
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(range_combo), "0", _("Auto"));
+	/* TRANSLATORS: Trend page rate range; translate the unit s/d as in the other Trend page texts */
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(range_combo), "10", _("\xC2\xB1" "10 s/d"));
+	/* TRANSLATORS: Trend page rate range; translate the unit s/d as in the other Trend page texts */
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(range_combo), "50", _("\xC2\xB1" "50 s/d"));
 	gtk_combo_box_set_active_id(GTK_COMBO_BOX(range_combo), "0");
 	gtk_box_pack_start(GTK_BOX(trend_box), range_combo, FALSE, FALSE, 0);
 	g_signal_connect(range_combo, "changed", G_CALLBACK(handle_trend_rate_range), op);
-	gtk_box_pack_start(GTK_BOX(trend_box), gtk_label_new("Show"), FALSE, FALSE, 0);
+	/* TRANSLATORS: Trend page: label of the time span selector (All, Last 1 h, ...). Short */
+	gtk_box_pack_start(GTK_BOX(trend_box), gtk_label_new(_("Show")), FALSE, FALSE, 0);
 	GtkWidget *span_combo = gtk_combo_box_text_new();
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(span_combo), "0", "All");
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(span_combo), "3600", "Last 1 h");
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(span_combo), "21600", "Last 6 h");
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(span_combo), "86400", "Last 24 h");
+	/* TRANSLATORS: Trend page time span: everything since the start. Short, shown in a narrow combo box */
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(span_combo), "0", _("All"));
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(span_combo), "3600", _("Last 1 h"));
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(span_combo), "21600", _("Last 6 h"));
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(span_combo), "86400", _("Last 24 h"));
 	gtk_combo_box_set_active_id(GTK_COMBO_BOX(span_combo), "0");
 	gtk_box_pack_start(GTK_BOX(trend_box), span_combo, FALSE, FALSE, 0);
 	g_signal_connect(span_combo, "changed", G_CALLBACK(handle_trend_span), op);
 
 	// No title: the switcher does not offer it, calibration shows it by itself
-	GtkWidget *cal_info = titled_frame(make_calibration_instructions(), "Calibration instructions");
+	GtkWidget *cal_info = titled_frame(make_calibration_instructions(), _("Calibration instructions"));
 	gtk_stack_add_named(GTK_STACK(op->right_stack), cal_info, "calibration");
 
 	// Tic waveform area
 	op->tic_drawing_area = gtk_drawing_area_new();
 	gtk_box_pack_start(GTK_BOX(vbox3), titled_frame(op->tic_drawing_area,
-			"Tic: averaged sound of the first beat"), TRUE, TRUE, 0);
+			_("Tic: averaged sound of the first beat")), TRUE, TRUE, 0);
 	g_signal_connect (op->tic_drawing_area, "draw", G_CALLBACK(tic_draw_event), op);
 	gtk_widget_set_events(op->tic_drawing_area, GDK_EXPOSURE_MASK);
 
 	// Toc waveform area
 	op->toc_drawing_area = gtk_drawing_area_new();
 	gtk_box_pack_start(GTK_BOX(vbox3), titled_frame(op->toc_drawing_area,
-			"Toc: averaged sound of the second beat"), TRUE, TRUE, 0);
+			_("Toc: averaged sound of the second beat")), TRUE, TRUE, 0);
 	g_signal_connect (op->toc_drawing_area, "draw", G_CALLBACK(toc_draw_event), op);
 	gtk_widget_set_events(op->toc_drawing_area, GDK_EXPOSURE_MASK);
 
 	// Period waveform area
 	op->period_drawing_area = gtk_drawing_area_new();
 	gtk_box_pack_start(GTK_BOX(vbox3), titled_frame(op->period_drawing_area,
-			"Full period: tic and toc (highlighted)"), TRUE, TRUE, 0);
+			_("Full period: tic and toc (highlighted)")), TRUE, TRUE, 0);
 	g_signal_connect (op->period_drawing_area, "draw", G_CALLBACK(period_draw_event), op);
 	gtk_widget_set_events(op->period_drawing_area, GDK_EXPOSURE_MASK);
 

@@ -145,7 +145,7 @@ int start_portaudio(int *nominal_sample_rate, double *real_sample_rate)
 
 	if(!audio_mutex_initialized) {
 		if(pthread_mutex_init(&audio_mutex,NULL)) {
-			audio_error("Failed to setup audio mutex");
+			audio_error(_("Failed to setup audio mutex"));
 			return 1;
 		}
 		audio_mutex_initialized = 1;
@@ -167,7 +167,7 @@ int start_portaudio(int *nominal_sample_rate, double *real_sample_rate)
 	PaHostApiIndex api = current_host_api();
 	const PaHostApiInfo *api_info = api >= 0 ? Pa_GetHostApiInfo(api) : NULL;
 	if(!api_info) {
-		audio_error("No audio system available");
+		audio_error(_("No audio system available"));
 		return 1;
 	}
 	if(selected_api_type != AUDIO_API_DEFAULT && api_info->type != (PaHostApiTypeId)selected_api_type)
@@ -202,20 +202,20 @@ int start_portaudio(int *nominal_sample_rate, double *real_sample_rate)
 	if(input_device == paNoDevice) {
 		input_device = api_info->defaultInputDevice;
 		if(input_device == paNoDevice) {
-			audio_error("No default audio input device found for %s", api_info->name);
+			audio_error(_("No default audio input device found for %s"), api_info->name);
 			return 1;
 		}
 	}
 
 	const PaDeviceInfo *input_info = Pa_GetDeviceInfo(input_device);
 	if(!input_info) {
-		audio_error("Unable to query selected audio input device");
+		audio_error(_("Unable to query selected audio input device"));
 		return 1;
 	}
 
 	long channels = input_info->maxInputChannels;
 	if(channels == 0) {
-		audio_error("Selected audio device has no input channels");
+		audio_error(_("Selected audio device has no input channels"));
 		return 1;
 	}
 	if(channels > 2) channels = 2;
@@ -281,12 +281,12 @@ int start_portaudio(int *nominal_sample_rate, double *real_sample_rate)
 		if(err != paNoError) {
 			/* Emit platform-specific hint before the generic error */
 			if(failed_api && failed_api->type == paALSA)
-				audio_error("Audio device is busy. If JACK (jackd/PipeWire-JACK) is running, "
-				      "try selecting JACK in the audio settings or stop JACK first.");
+				audio_error(_("Audio device is busy. If JACK (jackd/PipeWire-JACK) is running, "
+				      "try selecting JACK in the audio settings or stop JACK first."));
 #ifdef __APPLE__
 			if(failed_api && failed_api->type == paCoreAudio)
-				audio_error("Could not open audio input on macOS. Check System Settings > "
-				      "Privacy & Security > Microphone and allow access for this application.");
+				audio_error(_("Could not open audio input on macOS. Check System Settings > "
+				      "Privacy & Security > Microphone and allow access for this application."));
 #endif
 			goto error;
 		}
@@ -319,7 +319,7 @@ end:
 	return 0;
 
 error:
-	audio_error("Error opening audio input: %s", Pa_GetErrorText(err));
+	audio_error(_("Error opening audio input: %s"), Pa_GetErrorText(err));
 	return 1;
 }
 
@@ -356,7 +356,7 @@ int list_audio_input_devices(int **devices, char ***names, int *count, int *defa
 			continue;
 
 		devs[used] = i;
-		dev_names[used] = strdup(di->name ? di->name : "Unknown device");
+		dev_names[used] = strdup(di->name ? di->name : _("Unknown device"));
 		if(!dev_names[used]) {
 			for(int j = 0; j < used; j++)
 				free(dev_names[j]);
@@ -415,7 +415,7 @@ int list_audio_apis(int **types, char ***names, int *count, int *current_type)
 		if(!hi)
 			continue;
 		t[used] = (int)hi->type;
-		n[used] = strdup(hi->name ? hi->name : "Unknown audio system");
+		n[used] = strdup(hi->name ? hi->name : _("Unknown audio system"));
 		if(!n[used]) {
 			for(int j = 0; j < used; j++)
 				free(n[j]);
@@ -567,7 +567,7 @@ int terminate_portaudio()
 	pa_init_count--;
 	PaError err = Pa_Terminate();
 	if(err != paNoError) {
-		audio_error("Error closing audio: %s", Pa_GetErrorText(err));
+		audio_error(_("Error closing audio: %s"), Pa_GetErrorText(err));
 		return 1;
 	}
 	return 0;

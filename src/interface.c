@@ -136,7 +136,8 @@ static void set_bph_combo(struct main_window *w, int bph)
 
 /* ---- Saved watches (bph + lift angle presets stored in the config file) ---- */
 
-#define WATCH_NONE_LABEL "(none)"
+/* TRANSLATORS: entry of the saved watches list meaning that no watch is selected */
+#define WATCH_NONE_LABEL N_("(none)")
 
 /* Name of the watch selected in the combo box, or NULL for "(none)" */
 static const char *selected_watch(struct main_window *w)
@@ -192,7 +193,7 @@ static void watch_populate(struct main_window *w, const char *name)
 	GtkComboBoxText *c = GTK_COMBO_BOX_TEXT(w->watch_combo_box);
 	w->watch_updating++;
 	gtk_combo_box_text_remove_all(c);
-	gtk_combo_box_text_append(c, "", WATCH_NONE_LABEL);
+	gtk_combo_box_text_append(c, "", _(WATCH_NONE_LABEL));
 	gchar **names = list_watches(w);
 	int i;
 	for(i = 0; names[i]; i++)
@@ -281,10 +282,10 @@ static void handle_watch_save(GtkButton *b, struct main_window *w)
 	const char *sel = selected_watch(w);
 	gchar *prefill = sel ? g_strdup(sel) : watch_remembered(w);
 
-	GtkWidget *dialog = gtk_dialog_new_with_buttons("Save watch", GTK_WINDOW(w->window),
+	GtkWidget *dialog = gtk_dialog_new_with_buttons(_("Save watch"), GTK_WINDOW(w->window),
 			GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
-			"_Cancel", GTK_RESPONSE_CANCEL,
-			"_Save", GTK_RESPONSE_ACCEPT,
+			_("_Cancel"), GTK_RESPONSE_CANCEL,
+			_("_Save"), GTK_RESPONSE_ACCEPT,
 			NULL);
 	gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_ACCEPT);
 
@@ -292,8 +293,9 @@ static void handle_watch_save(GtkButton *b, struct main_window *w)
 	gtk_container_set_border_width(GTK_CONTAINER(area), 10);
 	gtk_box_set_spacing(GTK_BOX(area), 6);
 
-	gchar *bph_text = w->bph ? g_strdup_printf("%d bph", w->bph) : g_strdup("bph guess");
-	gchar *text = g_strdup_printf("Save the current settings (%s, lift angle %g deg) as:", bph_text, w->la);
+	/* TRANSLATORS: "bph guess" is the text shown for automatic beat rate detection; it replaces %s in the next message */
+	gchar *bph_text = w->bph ? g_strdup_printf("%d bph", w->bph) : g_strdup(_("bph guess"));
+	gchar *text = g_strdup_printf(_("Save the current settings (%s, lift angle %g deg) as:"), bph_text, w->la);
 	GtkWidget *label = gtk_label_new(text);
 	gtk_label_set_xalign(GTK_LABEL(label), 0);
 	gtk_box_pack_start(GTK_BOX(area), label, FALSE, FALSE, 0);
@@ -303,7 +305,7 @@ static void handle_watch_save(GtkButton *b, struct main_window *w)
 	GtkWidget *entry = gtk_entry_new();
 	gtk_entry_set_max_length(GTK_ENTRY(entry), WATCH_NAME_MAX);
 	gtk_entry_set_activates_default(GTK_ENTRY(entry), TRUE);
-	gtk_entry_set_placeholder_text(GTK_ENTRY(entry), "Watch name");
+	gtk_entry_set_placeholder_text(GTK_ENTRY(entry), _("Watch name"));
 	if(prefill) gtk_entry_set_text(GTK_ENTRY(entry), prefill);
 	gtk_box_pack_start(GTK_BOX(area), entry, FALSE, FALSE, 0);
 	g_free(prefill);
@@ -315,14 +317,14 @@ static void handle_watch_save(GtkButton *b, struct main_window *w)
 	while(gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_ACCEPT) {
 		gchar *t = g_strstrip(g_strdup(gtk_entry_get_text(GTK_ENTRY(entry))));
 		if(!watch_name_valid(t)) {
-			gchar *msg = g_strdup_printf("Please enter a name of up to %d characters, without '[' or ']'.", WATCH_NAME_MAX);
+			gchar *msg = g_strdup_printf(_("Please enter a name of up to %d characters, without '[' or ']'."), WATCH_NAME_MAX);
 			watch_message(w, GTK_MESSAGE_ERROR, msg);
 			g_free(msg);
 			g_free(t);
 			continue;
 		}
 		if(watch_exists(w, t)) {
-			gchar *msg = g_strdup_printf("A watch named \"%s\" already exists.\nReplace it with the current settings?", t);
+			gchar *msg = g_strdup_printf(_("A watch named \"%s\" already exists.\nReplace it with the current settings?"), t);
 			int ok = watch_confirm(w, msg);
 			g_free(msg);
 			if(!ok) {
@@ -351,7 +353,7 @@ static void handle_watch_delete(GtkButton *b, struct main_window *w)
 	if(!sel) return;
 
 	gchar *name = g_strdup(sel);
-	gchar *msg = g_strdup_printf("Delete the saved watch \"%s\"?\nThe current bph and lift angle are kept.", name);
+	gchar *msg = g_strdup_printf(_("Delete the saved watch \"%s\"?\nThe current bph and lift angle are kept."), name);
 	if(watch_confirm(w, msg)) {
 		gchar *remembered = watch_remembered(w);
 		if(remembered && !strcmp(remembered, name))
@@ -458,13 +460,13 @@ static void startup_audio_warning(struct main_window *w)
 {
 	GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(w->window),
 		GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
-		GTK_MESSAGE_WARNING, GTK_BUTTONS_NONE, "No audio input could be opened.");
+		GTK_MESSAGE_WARNING, GTK_BUTTONS_NONE, _("No audio input could be opened."));
 	gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog),
-		"Choose an audio system and input device in the audio settings, "
-		"or check the system's microphone settings.");
+		_("Choose an audio system and input device in the audio settings, "
+		"or check the system's microphone settings."));
 	gtk_dialog_add_buttons(GTK_DIALOG(dialog),
-		"_Close", GTK_RESPONSE_CLOSE,
-		"_Audio settings…", GTK_RESPONSE_ACCEPT,
+		_("_Close"), GTK_RESPONSE_CLOSE,
+		_("_Audio settings…"), GTK_RESPONSE_ACCEPT,
 		NULL);
 	gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_ACCEPT);
 	int response = gtk_dialog_run(GTK_DIALOG(dialog));
@@ -515,7 +517,7 @@ static guint computer_terminated(struct main_window *w)
 				/* PortAudio stays initialized so that devices can still be listed */
 				w->audio_device = AUDIO_DEVICE_DEFAULT;
 				w->nominal_sr = PA_SAMPLE_RATE;
-				w->audio_message = "Could not open this input. It may be in use or disabled.";
+				w->audio_message = _("Could not open this input. It may be in use or disabled.");
 			} else {
 				w->audio_device = get_audio_input_device();
 				w->nominal_sr = get_audio_sample_rate();
@@ -524,9 +526,9 @@ static guint computer_terminated(struct main_window *w)
 				w->audio_device_name = g_strdup(name ? name : "");
 				/* A request for the default input is met by whichever device that is */
 				if(requested_device != AUDIO_DEVICE_DEFAULT && w->audio_device != requested_device)
-					w->audio_message = "The chosen input could not be opened; using the default input.";
+					w->audio_message = _("The chosen input could not be opened; using the default input.");
 				else if(w->nominal_sr != requested_rate)
-					w->audio_message = "The chosen rate is not available; using the default rate.";
+					w->audio_message = _("The chosen rate is not available; using the default rate.");
 			}
 			w->pending_audio_api = w->audio_api;
 			w->pending_audio_device = w->audio_device;
@@ -543,7 +545,7 @@ static guint computer_terminated(struct main_window *w)
 		if(!c) {
 			remove_runtime_timers(w);
 			w->zombie = 1;
-			error("Failed to restart computation thread");
+			error(_("Failed to restart computation thread"));
 			gtk_widget_destroy(w->window);
 		} else {
 			computer_destroy(w->computer);
@@ -658,7 +660,7 @@ static void update_sensitivity(struct main_window *w)
 	// Always allow stopping a running calibration, whichever tab is shown
 	gtk_widget_set_sensitive(w->cal_button, live || w->calibrate);
 	gtk_menu_item_set_label(GTK_MENU_ITEM(w->cal_button),
-			w->calibrate ? "Stop calibration" : "Start calibration");
+			w->calibrate ? _("Stop calibration") : _("Start calibration"));
 
 	// Other menu entries are locked while calibrating (Quit stays available)
 	gtk_widget_set_sensitive(w->open_item, !w->calibrate);
@@ -780,14 +782,22 @@ const char *watch_position_code(int pos)
 	return pos > POS_NONE && pos < POS_COUNT ? position_codes[pos] : NULL;
 }
 
+/* The position names are in a combo box and in the tab titles. The codes in
+ * parentheses are the same in every language, see the comments below. */
 static const char *position_labels[POS_COUNT] = {
-	"(not set)",
-	"Dial up (DU)",
-	"Dial down (DD)",
-	"Crown up (CU)",
-	"Crown down (CD)",
-	"Crown left (CL)",
-	"Crown right (CR)"
+	N_("(not set)"),
+	/* TRANSLATORS: watch position. Translate the words, keep the code (DU) unchanged */
+	N_("Dial up (DU)"),
+	/* TRANSLATORS: watch position. Translate the words, keep the code (DD) unchanged */
+	N_("Dial down (DD)"),
+	/* TRANSLATORS: watch position. Translate the words, keep the code (CU) unchanged */
+	N_("Crown up (CU)"),
+	/* TRANSLATORS: watch position. Translate the words, keep the code (CD) unchanged */
+	N_("Crown down (CD)"),
+	/* TRANSLATORS: watch position. Translate the words, keep the code (CL) unchanged */
+	N_("Crown left (CL)"),
+	/* TRANSLATORS: watch position. Translate the words, keep the code (CR) unchanged */
+	N_("Crown right (CR)")
 };
 
 /* Tab title: "<name or Snapshot>" plus " (<position>)" when a position is set */
@@ -798,7 +808,8 @@ static void update_tab_label(GtkWidget *panel)
 	if(!label || !op) return;
 
 	const char *name = g_object_get_data(G_OBJECT(panel), "tab-name");
-	if(!name) name = "Snapshot";
+	/* TRANSLATORS: default title of a snapshot tab, short (tab title) */
+	if(!name) name = _("Snapshot");
 	int pos = op->snst->position;
 
 	if(pos > POS_NONE && pos < POS_COUNT) {
@@ -853,7 +864,7 @@ static void handle_manual(GtkMenuItem *m, struct main_window *w)
 		uri = g_strdup(MANUAL_URL);
 	GError *err = NULL;
 	if(!gtk_show_uri_on_window(GTK_WINDOW(w->window), uri, GDK_CURRENT_TIME, &err)) {
-		error("Could not open the manual (%s): %s", uri, err ? err->message : "unknown error");
+		error(_("Could not open the manual (%s): %s"), uri, err ? err->message : _("unknown error"));
 		g_clear_error(&err);
 	}
 	g_free(uri);
@@ -908,7 +919,8 @@ static GtkWidget *make_tab_label(char *name, struct output_panel *panel_to_close
 {
 	GtkWidget *hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
 
-	char *nm = panel_to_close ? name ? name : "Snapshot" : "Real time";
+	/* TRANSLATORS: tab titles, short. "Real time" is the live measurement tab, "Snapshot" a kept measurement */
+	const char *nm = panel_to_close ? name ? name : _("Snapshot") : _("Real time");
 	GtkWidget *label = gtk_label_new(nm);
 	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 5);
 
@@ -999,7 +1011,7 @@ static void chooser_set_filters(GtkFileChooser *chooser)
 	gtk_file_chooser_add_filter(chooser, tgj_filter);
 
 	GtkFileFilter *all_filter = gtk_file_filter_new();
-	gtk_file_filter_set_name(all_filter, "All files");
+	gtk_file_filter_set_name(all_filter, _("All files"));
 	gtk_file_filter_add_pattern(all_filter, "*");
 	gtk_file_chooser_add_filter(chooser, all_filter);
 
@@ -1032,7 +1044,7 @@ error:	g_free(name);
 	if(!f) {
 		GtkWidget *dialog;
 		dialog = gtk_message_dialog_new(GTK_WINDOW(w->window),0,GTK_MESSAGE_ERROR,GTK_BUTTONS_CLOSE,
-					"Error opening file\n");
+					_("Error opening file\n"));
 		gtk_dialog_run(GTK_DIALOG(dialog));
 		gtk_widget_destroy(dialog);
 	}
@@ -1040,15 +1052,15 @@ error:	g_free(name);
 	return f;
 }
 
-static FILE *choose_file_for_save(struct main_window *w, char *title, char *suggestion)
+static FILE *choose_file_for_save(struct main_window *w, const char *title, char *suggestion)
 {
 	FILE *f = NULL;
 	GtkWidget *dialog = gtk_file_chooser_dialog_new (title,
 			GTK_WINDOW(w->window),
 			GTK_FILE_CHOOSER_ACTION_SAVE,
-			"Cancel",
+			_("Cancel"),
 			GTK_RESPONSE_CANCEL,
-			"Save",
+			_("Save"),
 			GTK_RESPONSE_ACCEPT,
 			NULL);
 	GtkFileChooser *chooser = GTK_FILE_CHOOSER (dialog);
@@ -1079,7 +1091,7 @@ static FILE *choose_file_for_save(struct main_window *w, char *title, char *sugg
 				GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
 				GTK_MESSAGE_QUESTION,
 				GTK_BUTTONS_OK_CANCEL,
-				"File %s already exists. Do you want to replace it?",
+				_("File %s already exists. Do you want to replace it?"),
 				filename);
 			do_open = GTK_RESPONSE_OK == gtk_dialog_run(GTK_DIALOG(dialog));
 			gtk_widget_destroy(dialog);
@@ -1121,12 +1133,12 @@ static void save_current(GtkMenuItem *m, struct main_window *w)
 	if(!snapshot->timestamp)
 		snapshot->timestamp = get_timestamp(snapshot->is_light);
 
-	FILE *f = choose_file_for_save(w, "Save current display", name);
+	FILE *f = choose_file_for_save(w, _("Save current display"), name);
 
 	if(f) {
 		if(write_file(f, &snapshot, &name, &trend, 1)) {
 			GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(w->window),0,GTK_MESSAGE_ERROR,GTK_BUTTONS_CLOSE,
-						"Error writing file");
+						_("Error writing file"));
 			gtk_dialog_run(GTK_DIALOG(dialog));
 			gtk_widget_destroy(dialog);
 		}
@@ -1154,7 +1166,7 @@ static void close_all(GtkMenuItem *m, struct main_window *w)
 static void save_all(GtkMenuItem *m, struct main_window *w)
 {
 	UNUSED(m);
-	FILE *f = choose_file_for_save(w, "Save all snapshots", NULL);
+	FILE *f = choose_file_for_save(w, _("Save all snapshots"), NULL);
 	if(!f) return;
 
 	int i, j, tabs = gtk_notebook_get_n_pages(GTK_NOTEBOOK(w->notebook));
@@ -1173,7 +1185,7 @@ static void save_all(GtkMenuItem *m, struct main_window *w)
 
 	if(write_file(f, s, names, trends, j)) {
 		GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(w->window),0,GTK_MESSAGE_ERROR,GTK_BUTTONS_CLOSE,
-					"Error writing file");
+					_("Error writing file"));
 		gtk_dialog_run(GTK_DIALOG(dialog));
 		gtk_widget_destroy(dialog);
 	}
@@ -1199,7 +1211,7 @@ static void load_snapshots(FILE *f, char *name, struct main_window *w)
 		free(trends);
 	} else {
 		GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(w->window),0,GTK_MESSAGE_ERROR,GTK_BUTTONS_CLOSE,
-					"Error reading file: %s", name);
+					_("Error reading file: %s"), name);
 		gtk_dialog_run(GTK_DIALOG(dialog));
 		gtk_widget_destroy(dialog);
 	}
@@ -1224,12 +1236,12 @@ static void load_from_file(char *filename, struct main_window *w)
 static void load(GtkMenuItem *m, struct main_window *w)
 {
 	UNUSED(m);
-	GtkWidget *dialog = gtk_file_chooser_dialog_new ("Open",
+	GtkWidget *dialog = gtk_file_chooser_dialog_new (_("Open"),
 			GTK_WINDOW(w->window),
 			GTK_FILE_CHOOSER_ACTION_OPEN,
-			"Cancel",
+			_("Cancel"),
 			GTK_RESPONSE_CANCEL,
-			"Open",
+			_("Open"),
 			GTK_RESPONSE_ACCEPT,
 			NULL);
 	GtkFileChooser *chooser = GTK_FILE_CHOOSER (dialog);
@@ -1307,18 +1319,18 @@ static void init_main_window(struct main_window *w)
 	// Saved watch selector (populated once bph and lift angle widgets exist)
 	GtkWidget *label = NULL;
 	w->watch_combo_box = gtk_combo_box_text_new();
-	gtk_widget_set_tooltip_text(w->watch_combo_box, "Saved watches (bph and lift angle)");
+	gtk_widget_set_tooltip_text(w->watch_combo_box, _("Saved watches (bph and lift angle)"));
 	gtk_box_pack_start(GTK_BOX(hbox), w->watch_combo_box, FALSE, FALSE, 0);
 	w->watch_save_button = gtk_button_new_from_icon_name("document-save-symbolic", GTK_ICON_SIZE_BUTTON);
-	gtk_widget_set_tooltip_text(w->watch_save_button, "Save the current bph and lift angle as a watch");
+	gtk_widget_set_tooltip_text(w->watch_save_button, _("Save the current bph and lift angle as a watch"));
 	gtk_box_pack_start(GTK_BOX(hbox), w->watch_save_button, FALSE, FALSE, 0);
 	w->watch_delete_button = gtk_button_new_from_icon_name("edit-delete-symbolic", GTK_ICON_SIZE_BUTTON);
-	gtk_widget_set_tooltip_text(w->watch_delete_button, "Delete the selected watch");
+	gtk_widget_set_tooltip_text(w->watch_delete_button, _("Delete the selected watch"));
 	gtk_box_pack_start(GTK_BOX(hbox), w->watch_delete_button, FALSE, FALSE, 0);
 
 	// BPH label
 	label = gtk_label_new("BEAT");
-	gtk_widget_set_tooltip_text(label, "Beats per hour (bph)");
+	gtk_widget_set_tooltip_text(label, _("Beats per hour (bph)"));
 	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
 
 	// BPH combo box
@@ -1326,7 +1338,9 @@ static void init_main_window(struct main_window *w)
 	gtk_entry_set_width_chars(GTK_ENTRY(gtk_bin_get_child(GTK_BIN(w->bph_combo_box))), 6);
 	gtk_box_pack_start(GTK_BOX(hbox), w->bph_combo_box, FALSE, FALSE, 0);
 	// Fill in pre-defined values
-	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(w->bph_combo_box), "guess");
+	/* TRANSLATORS: first entry of the beats-per-hour list: the program detects the beat rate by itself. Short.
+	 * The program reads the entry back as a number and treats any non-numeric text as "guess". */
+	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(w->bph_combo_box), _("guess"));
 	int i,current = 0;
 	for(i = 0; preset_bph[i]; i++) {
 		char s[100];
@@ -1346,7 +1360,7 @@ static void init_main_window(struct main_window *w)
 
 	// Lift angle label
 	label = gtk_label_new("L.A.");
-	gtk_widget_set_tooltip_text(label, "Lift angle (degrees)");
+	gtk_widget_set_tooltip_text(label, _("Lift angle (degrees)"));
 	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
 
 	// Lift angle spin button
@@ -1400,10 +1414,10 @@ static void init_main_window(struct main_window *w)
 	w->snapshot_position_combo = gtk_combo_box_text_new();
 	int pos;
 	for(pos = POS_NONE; pos < POS_COUNT; pos++)
-		gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(w->snapshot_position_combo), position_labels[pos]);
+		gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(w->snapshot_position_combo), _(position_labels[pos]));
 	gtk_combo_box_set_active(GTK_COMBO_BOX(w->snapshot_position_combo), w->live_position);
 	gtk_widget_set_tooltip_text(w->snapshot_position_combo,
-		"Position of the watch.\n"
+		_("Position of the watch.\n"
 		"\n"
 		"Real time: applied to\n"
 		"the next snapshot.\n"
@@ -1412,24 +1426,24 @@ static void init_main_window(struct main_window *w)
 		"\n"
 		"Shown in the tab title\n"
 		"and saved with the\n"
-		"snapshot.");
+		"snapshot."));
 	gtk_box_pack_start(GTK_BOX(hbox), w->snapshot_position_combo, FALSE, FALSE, 0);
 	g_signal_connect(w->snapshot_position_combo, "changed", G_CALLBACK(handle_position_change), w);
 
 	// Snapshot button
-	w->snapshot_button = gtk_button_new_with_label("Take Snapshot");
+	w->snapshot_button = gtk_button_new_with_label(_("Take Snapshot"));
 	gtk_widget_set_tooltip_text(w->snapshot_button,
-		"Keep the current\n"
+		_("Keep the current\n"
 		"measurement in a\n"
 		"new tab.\n"
 		"\n"
-		"Shortcut: Ctrl+Space");
+		"Shortcut: Ctrl+Space"));
 	gtk_box_pack_start(GTK_BOX(hbox), w->snapshot_button, FALSE, FALSE, 0);
 	gtk_widget_set_sensitive(w->snapshot_button, FALSE);
 	g_signal_connect(w->snapshot_button, "clicked", G_CALLBACK(handle_snapshot), w);
 
 	// Snapshot name field
-	GtkWidget *name_label = gtk_label_new("Current snapshot:");
+	GtkWidget *name_label = gtk_label_new(_("Current snapshot:"));
 	w->snapshot_name_entry = gtk_entry_new();
 	w->snapshot_name = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
 	gtk_box_pack_start(GTK_BOX(w->snapshot_name), name_label, FALSE, FALSE, 0);
@@ -1452,18 +1466,18 @@ static void init_main_window(struct main_window *w)
 	gtk_box_pack_end(GTK_BOX(top_strip), command_menu_button, FALSE, FALSE, 0);
 	
 	// ... Open
-	w->open_item = gtk_menu_item_new_with_label("Open");
+	w->open_item = gtk_menu_item_new_with_label(_("Open"));
 	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), w->open_item);
 	g_signal_connect(w->open_item, "activate", G_CALLBACK(load), w);
 
 	// ... Save
-	w->save_item = gtk_menu_item_new_with_label("Save current display");
+	w->save_item = gtk_menu_item_new_with_label(_("Save current display"));
 	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), w->save_item);
 	g_signal_connect(w->save_item, "activate", G_CALLBACK(save_current), w);
 	set_menu_item_enabled(w, w->save_item, FALSE);
 
 	// ... Save all
-	w->save_all_item = gtk_menu_item_new_with_label("Save all snapshots");
+	w->save_all_item = gtk_menu_item_new_with_label(_("Save all snapshots"));
 	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), w->save_all_item);
 	g_signal_connect(w->save_all_item, "activate", G_CALLBACK(save_all), w);
 	set_menu_item_enabled(w, w->save_all_item, FALSE);
@@ -1471,10 +1485,10 @@ static void init_main_window(struct main_window *w)
 	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), gtk_separator_menu_item_new());
 
 	// ... Light checkbox
-	GtkWidget *light_checkbox = gtk_check_menu_item_new_with_label("Light algorithm");
+	GtkWidget *light_checkbox = gtk_check_menu_item_new_with_label(_("Light algorithm"));
 	w->light_item = light_checkbox;
 	gtk_widget_set_tooltip_text(light_checkbox,
-		"Reduces CPU load, \n"
+		_("Reduces CPU load, \n"
 		"for slow computers.\n"
 		"\n"
 		"It processes half of\n"
@@ -1487,21 +1501,21 @@ static void init_main_window(struct main_window *w)
 		"and more sensitive to \n"
 		"background noise.\n"
 		"Toggling this setting will\n"
-		"restart your measurement."
+		"restart your measurement.")
 		);
 	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), light_checkbox);
 	g_signal_connect(light_checkbox, "toggled", G_CALLBACK(handle_light), w);
 	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(light_checkbox), w->is_light);
 
 	// ... Audio settings: audio system, input device and rate
-	GtkWidget *audio_settings_item = gtk_menu_item_new_with_label("Audio settings…");
+	GtkWidget *audio_settings_item = gtk_menu_item_new_with_label(_("Audio settings…"));
 	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), audio_settings_item);
 	g_signal_connect_swapped(audio_settings_item, "activate", G_CALLBACK(audio_settings_open), w);
 
 	// ... Start / Stop calibration (label switches with the state)
-	w->cal_button = gtk_menu_item_new_with_label("Start calibration");
+	w->cal_button = gtk_menu_item_new_with_label(_("Start calibration"));
 	gtk_widget_set_tooltip_text(w->cal_button,
-		"Measures the error of\n"
+		_("Measures the error of\n"
 		"your sound card clock,\n"
 		"using a quartz watch\n"
 		"ticking once per second\n"
@@ -1509,27 +1523,27 @@ static void init_main_window(struct main_window *w)
 		"\n"
 		"Takes about 15 minutes.\n"
 		"The result is stored\n"
-		"in the cal field."
+		"in the cal field.")
 		);
 	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), w->cal_button);
 	g_signal_connect(w->cal_button, "activate", G_CALLBACK(handle_calibrate), w);
 
 	// ... User manual
-	GtkWidget *manual_item = gtk_menu_item_new_with_label("User manual");
-	gtk_widget_set_tooltip_text(manual_item, "Open the user manual (PDF).");
+	GtkWidget *manual_item = gtk_menu_item_new_with_label(_("User manual"));
+	gtk_widget_set_tooltip_text(manual_item, _("Open the user manual (PDF)."));
 	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), manual_item);
 	g_signal_connect(manual_item, "activate", G_CALLBACK(handle_manual), w);
 
 	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), gtk_separator_menu_item_new());
 
 	// ... Close all
-	w->close_all_item = gtk_menu_item_new_with_label("Close all snapshots");
+	w->close_all_item = gtk_menu_item_new_with_label(_("Close all snapshots"));
 	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), w->close_all_item);
 	g_signal_connect(w->close_all_item, "activate", G_CALLBACK(close_all), w);
 	set_menu_item_enabled(w, w->close_all_item, FALSE);
 
 	// ... Quit
-	GtkWidget *quit_item = gtk_menu_item_new_with_label("Quit");
+	GtkWidget *quit_item = gtk_menu_item_new_with_label(_("Quit"));
 	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), quit_item);
 	g_signal_connect(quit_item, "activate", G_CALLBACK(handle_quit), w);
 
@@ -1687,9 +1701,9 @@ static void start_interface(GApplication* app, void *p)
 		/* The saved name is kept, so the input is used again once it is back */
 		const char *name = get_audio_input_device_name();
 		if(have_name && (!name || strcmp(name, w->audio_device_name)))
-			w->audio_message = "The saved input was not found; using the default input.";
+			w->audio_message = _("The saved input was not found; using the default input.");
 		else if(w->nominal_sr != saved_rate)
-			w->audio_message = "The saved rate is not available; using the default rate.";
+			w->audio_message = _("The saved rate is not available; using the default rate.");
 	}
 	w->pending_audio_device = w->audio_device;
 	w->pending_audio_rate = w->nominal_sr;
@@ -1703,7 +1717,7 @@ static void start_interface(GApplication* app, void *p)
 
 	w->computer = start_computer(w->nominal_sr, w->bph, w->la, w->cal, w->is_light);
 	if(!w->computer) {
-		error("Error starting computation thread");
+		error(_("Error starting computation thread"));
 		g_application_quit(app);
 		return;
 	}
@@ -1764,9 +1778,60 @@ static void handle_open(GApplication* app, GFile **files, int cnt, char *hint, v
 	}
 }
 
-int main(int argc, char **argv)
+/* Folder with the translations for the user's languages, or NULL. It is
+ * looked for in LOCALEDIR and in locale/ under the system data folders
+ * (on Windows, the share folder of the installation). */
+static gchar *find_locale_dir(void)
+{
+	const gchar * const *langs = g_get_language_names();
+	const gchar * const *data_dirs = g_get_system_data_dirs();
+	int n = 0;
+	while(data_dirs[n]) n++;
+	gchar **dirs = g_new0(gchar *, n + 3);
+	int k = 0;
+	dirs[k++] = g_strdup(LOCALEDIR);
+#ifdef DEBUG
+	dirs[k++] = g_strdup("po/locale");	// built by make in the source tree
+#endif
+	for(int i = 0; i < n; i++)
+		dirs[k++] = g_build_filename(data_dirs[i], "locale", NULL);
+	gchar *found = NULL;
+	for(int d = 0; d < k && !found; d++) {
+		if(!dirs[d][0]) continue;
+		for(const gchar * const *l = langs; *l && !found; l++) {
+			gchar *mo = g_strconcat(PACKAGE, ".mo", NULL);
+			gchar *path = g_build_filename(dirs[d], *l, "LC_MESSAGES", mo, NULL);
+			if(g_file_test(path, G_FILE_TEST_IS_REGULAR))
+				found = g_strdup(dirs[d]);
+			g_free(path);
+			g_free(mo);
+		}
+	}
+	g_strfreev(dirs);
+	return found;
+}
+
+/* Interface text in the system language. Only the message category follows
+ * the system: numbers keep the C locale, so the decimal separator is always
+ * '.', on screen and in the .tgj files, which are parsed with scanf. That is
+ * also why GTK is told not to set the locale itself. */
+static void setup_translations(void)
 {
 	gtk_disable_setlocale();
+	setlocale(LC_MESSAGES, "");
+	gchar *dir = find_locale_dir();
+	if(dir) {
+		bindtextdomain(PACKAGE, dir);
+		bind_textdomain_codeset(PACKAGE, "UTF-8");
+		textdomain(PACKAGE);
+		debug("Translations from %s\n", dir);
+		g_free(dir);
+	}
+}
+
+int main(int argc, char **argv)
+{
+	setup_translations();
 
 #ifdef DEBUG
 	if(argc > 1 && !strcmp("test",argv[1])) {

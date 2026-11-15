@@ -99,10 +99,10 @@ static void combo_set_active_int(GtkWidget *combo, int id)
 static gchar *audio_summary(struct main_window *w)
 {
 	if(w->restart_audio)
-		return g_strdup("Opening audio input…");
+		return g_strdup(_("Opening audio input…"));
 	const char *device = get_audio_input_device_name();
 	if(!w->audio_ok || !device)
-		return g_strdup("No audio input");
+		return g_strdup(_("No audio input"));
 	const char *api = get_audio_api_name();
 	gchar *rate = rate_label(w->nominal_sr);
 	gchar *s = g_strdup_printf("%s · %s · %s", device, api ? api : "?", rate);
@@ -135,7 +135,8 @@ static void fill_device_combo(struct audio_settings *as)
 	int default_device = AUDIO_DEVICE_DEFAULT;
 	if(!list_audio_input_devices(&devices, &names, &count, &default_device)) {
 		for(int i = 0; i < count; i++) {
-			gchar *text = g_strconcat(names[i], devices[i] == default_device ? " (default)" : "", NULL);
+			/* TRANSLATORS: %s is the name of the audio input device that the system uses by default */
+			gchar *text = devices[i] == default_device ? g_strdup_printf(_("%s (default)"), names[i]) : g_strdup(names[i]);
 			combo_append_int(as->device_combo, devices[i], text);
 			g_free(text);
 		}
@@ -166,9 +167,9 @@ static void update_status(struct audio_settings *as)
 	gchar *summary = audio_summary(w);
 	const char *note = NULL;
 	if(w->calibrate)
-		note = "Audio settings are locked during calibration.";
+		note = _("Audio settings are locked during calibration.");
 	else if(!w->controls_active)
-		note = "Switch to the real-time tab to change audio settings.";
+		note = _("Switch to the real-time tab to change audio settings.");
 	else if(!w->restart_audio)
 		note = w->audio_message;
 
@@ -291,8 +292,8 @@ void audio_settings_open(struct main_window *w)
 	w->audio_settings = as;
 
 	/* Transient for the main window, so it stays on top of it, but not modal */
-	as->dialog = gtk_dialog_new_with_buttons("Audio settings", GTK_WINDOW(w->window),
-		GTK_DIALOG_DESTROY_WITH_PARENT, "_Close", GTK_RESPONSE_CLOSE, NULL);
+	as->dialog = gtk_dialog_new_with_buttons(_("Audio settings"), GTK_WINDOW(w->window),
+		GTK_DIALOG_DESTROY_WITH_PARENT, _("_Close"), GTK_RESPONSE_CLOSE, NULL);
 	gtk_window_set_resizable(GTK_WINDOW(as->dialog), FALSE);
 
 	GtkWidget *grid = gtk_grid_new();
@@ -301,25 +302,25 @@ void audio_settings_open(struct main_window *w)
 	gtk_container_set_border_width(GTK_CONTAINER(grid), 12);
 	gtk_container_add(GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(as->dialog))), grid);
 
-	grid_label(grid, "Audio system", 0);
+	grid_label(grid, _("Audio system"), 0);
 	as->api_combo = gtk_combo_box_text_new();
 	gtk_widget_set_tooltip_text(as->api_combo,
-		"The sound system used to record.\n"
+		_("The sound system used to record.\n"
 		"Choosing another one selects its\n"
-		"default input and the default rate.");
+		"default input and the default rate."));
 	gtk_grid_attach(GTK_GRID(grid), as->api_combo, 1, 0, 2, 1);
 
-	grid_label(grid, "Input device", 1);
+	grid_label(grid, _("Input device"), 1);
 	as->device_combo = gtk_combo_box_text_new();
 	gtk_widget_set_hexpand(as->device_combo, TRUE);
 	gtk_grid_attach(GTK_GRID(grid), as->device_combo, 1, 1, 2, 1);
 
-	grid_label(grid, "Sample rate", 2);
+	grid_label(grid, _("Sample rate"), 2);
 	as->rate_combo = gtk_combo_box_text_new();
-	gtk_widget_set_tooltip_text(as->rate_combo, "Only the rates the input device accepts are listed.");
+	gtk_widget_set_tooltip_text(as->rate_combo, _("Only the rates the input device accepts are listed."));
 	gtk_grid_attach(GTK_GRID(grid), as->rate_combo, 1, 2, 2, 1);
 
-	grid_label(grid, "Input level", 3);
+	grid_label(grid, _("Input level"), 3);
 	as->level_bar = gtk_level_bar_new_for_interval(0, 1);
 	gtk_widget_set_hexpand(as->level_bar, TRUE);
 	gtk_widget_set_valign(as->level_bar, GTK_ALIGN_CENTER);
@@ -357,7 +358,7 @@ void audio_settings_update(struct main_window *w)
 	if(w->audio_button_label) {
 		gchar *summary = audio_summary(w);
 		gtk_label_set_text(GTK_LABEL(w->audio_button_label), summary);
-		gchar *tip = g_strconcat(summary, "\nClick to change the audio settings.", NULL);
+		gchar *tip = g_strconcat(summary, "\n", _("Click to change the audio settings."), NULL);
 		gtk_widget_set_tooltip_text(w->audio_button, tip);
 		g_free(tip);
 		g_free(summary);
