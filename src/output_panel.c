@@ -1018,7 +1018,7 @@ static gboolean paperstrip_draw_event(GtkWidget *widget, cairo_t *c, struct outp
 	// the current cal value), dashed in the reference colour. The trace should
 	// run parallel to them. Age is counted in rows from the bottom edge.
 	cairo_set_line_width(c, 1.2);
-	slope *= -strip_width; // mirrored together with the beat dots, see below
+	slope *= -strip_width * row_samples / sweep;
 	if(slope <= 2 && slope >= -2) {
 		static const double guide_dashes[2] = {6, 4};
 		const double rows = plot_bottom;
