@@ -60,6 +60,7 @@
 #define PAPERSTRIP_ZOOM 10
 #define PAPERSTRIP_ZOOM_CAL 100
 #define PAPERSTRIP_MARGIN .2
+#define PAPERSTRIP_DIVISIONS 9 // vertical grid, shared by the ms and amplitude scales (25 deg each)
 
 #define MIN_BPH 8100
 #define TYP_BPH 12000

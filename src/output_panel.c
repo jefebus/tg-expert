@@ -913,18 +913,24 @@ static gboolean paperstrip_draw_event(GtkWidget *widget, cairo_t *c, struct outp
 	// rate) leans to the right with the newest beats at the bottom
 #define RULER_X(t) (right_margin - (t) * strip_width / window_ms)
 
-	// Ruler in ms: the smallest round step that gives at most 10 divisions
-	static const double ruler_steps[] = {0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 0};
-	double ruler = 100;
-	for(i = 0; ruler_steps[i]; i++) {
-		if(window_ms / ruler_steps[i] <= 10) {
-			ruler = ruler_steps[i];
-			break;
+	// Ruler in ms. Normal mode: PAPERSTRIP_DIVISIONS equal divisions, shared with
+	// the amplitude scale (25 deg each), so one set of grid lines serves both.
+	// Calibration (no amplitude): the smallest round step giving at most 10 divisions.
+	double ruler = window_ms / PAPERSTRIP_DIVISIONS;
+	if(snst->calibrate) {
+		static const double ruler_steps[] = {0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 0};
+		ruler = 100;
+		for(i = 0; ruler_steps[i]; i++) {
+			if(window_ms / ruler_steps[i] <= 10) {
+				ruler = ruler_steps[i];
+				break;
+			}
 		}
 	}
+	const double amp_step = (amp_max - amp_min) / PAPERSTRIP_DIVISIONS;
 
 	char s[32];
-	int k, a;
+	int k;
 	cairo_text_extents_t extents;
 
 	double now = sweep*ceil(time/sweep);
@@ -944,7 +950,7 @@ static gboolean paperstrip_draw_event(GtkWidget *widget, cairo_t *c, struct outp
 	cairo_clip(c);
 	cairo_set_line_width(c, 1);
 
-	// Vertical grid: ruler lines (white, dotted) and amplitude lines (green, dotted)
+	// Vertical grid (white, dotted): the ruler lines, which are also the amplitude lines
 	for(k = 1; k * ruler < window_ms - ruler / 2; k++) {
 		double x = round(RULER_X(k * ruler)) + .5;
 		cairo_move_to(c, x, plot_top);
@@ -952,15 +958,6 @@ static gboolean paperstrip_draw_event(GtkWidget *widget, cairo_t *c, struct outp
 	}
 	set_axis_style(c, COL_AXIS, 0);
 	cairo_stroke(c);
-	if(!snst->calibrate) {
-		for(a = 150; a <= 350; a += 50) {
-			double x = round(AMP_X(a)) + .5;
-			cairo_move_to(c, x, plot_top);
-			cairo_line_to(c, x, plot_bottom);
-		}
-		set_axis_style(c, COL_AMP, 0);
-		cairo_stroke(c);
-	}
 
 	// Window edges: a beat leaving one edge comes back at the other
 	cairo_move_to(c, left_margin + .5, plot_top);
@@ -1117,12 +1114,30 @@ static gboolean paperstrip_draw_event(GtkWidget *widget, cairo_t *c, struct outp
 	cairo_set_font_size(c, font);
 	const double y_amp = font + 2;
 	const double y_ms = scale_rows == 2 ? 2 * font + 6 : font + 2;
+	// Equal divisions give ms values that are not round: fewer decimals for wider steps
+	const int ms_digits = ruler >= 10 ? 0 : ruler >= 1 ? 1 : 2;
+#define MS_LABEL(t) (snst->calibrate ? snprintf(s, sizeof(s), "%g", (t)) \
+                                     : snprintf(s, sizeof(s), "%.*f", ms_digits, (t)))
+	// Label every scale_stride-th line, so that the labels do not overlap
+	double widest = 0;
+	MS_LABEL(window_ms);
+	cairo_text_extents(c, s, &extents);
+	widest = extents.x_advance;
+	if(!snst->calibrate) {
+		cairo_text_extents(c, "360\xC2\xB0", &extents);
+		widest = fmax(widest, extents.x_advance);
+	}
+	const double spacing = strip_width * ruler / window_ms;
+	int scale_stride = spacing > 0 ? (int)ceil((widest + font / 2.0) / spacing) : 1;
+	if(scale_stride < 1) scale_stride = 1;
+
+	// Amplitude labels on the grid lines: line k from the right is amp_max - k * amp_step
 	if(!snst->calibrate) {
 		set_color(c, COL_AMP, 1);
-		for(a = 150; a <= 350; a += 50) {
-			snprintf(s, sizeof(s), "%d\xC2\xB0", a);
+		for(k = 0; k <= PAPERSTRIP_DIVISIONS; k += scale_stride) {
+			snprintf(s, sizeof(s), "%.0f\xC2\xB0", amp_max - k * amp_step);
 			cairo_text_extents(c, s, &extents);
-			cairo_move_to(c, AMP_X(a) - extents.x_advance / 2, y_amp);
+			cairo_move_to(c, RULER_X(k * ruler) - extents.x_advance / 2, y_amp);
 			cairo_show_text(c, s);
 		}
 	}
@@ -1131,14 +1146,15 @@ static gboolean paperstrip_draw_event(GtkWidget *widget, cairo_t *c, struct outp
 	double unit_x = font / 4;
 	double unit_end = unit_x + extents.x_advance;
 	cairo_set_source(c, white);
-	for(k = 0; k * ruler <= window_ms + 1e-9; k++) {
-		snprintf(s, sizeof(s), "%g", k * ruler);
+	for(k = 0; k * ruler <= window_ms + 1e-9; k += scale_stride) {
+		MS_LABEL(k * ruler);
 		cairo_text_extents(c, s, &extents);
 		double x = RULER_X(k * ruler) - extents.x_advance / 2;
 		if(x < unit_end + font / 2 || x + extents.x_advance > width) continue; // keep clear of the unit
 		cairo_move_to(c, x, y_ms);
 		cairo_show_text(c, s);
 	}
+#undef MS_LABEL
 	cairo_move_to(c, unit_x, y_ms);
 	cairo_show_text(c, "ms");
 
