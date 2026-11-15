@@ -4,7 +4,7 @@ set -euo pipefail
 
 DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")"; pwd)
 ROOT=$(cd "$DIR/.."; pwd)
-LIST="$ROOT/packaging/tg-timer_resources"
+LIST="$ROOT/packaging/tg-expert_resources"
 SOURCE=$(cygpath -u 'C:\msys64\mingw64')
 TARGET="$ROOT/msi-resources"
 

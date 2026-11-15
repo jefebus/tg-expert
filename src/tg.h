@@ -1,6 +1,7 @@
 /*
     tg
     Copyright (C) 2015 Marcello Mamino
+    Copyright (C) 2026 jefebus
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License version 2 as
@@ -32,7 +33,17 @@
 #define _WIN32
 #endif
 
-#define CONFIG_FILE_NAME "tg-timer.ini"
+#define CONFIG_FILE_NAME "tg-expert.ini"
+/* The icon files keep the name of the original program (icons/.../tg-timer.png) */
+#define ICON_NAME "tg-timer"
+/* The user manual (PDF), in share/doc/tg-expert on every platform (DOCDIR is
+ * set by the build to $(docdir)). If it is not installed, the releases page
+ * is opened instead. */
+#ifndef DOCDIR
+#define DOCDIR ""
+#endif
+#define MANUAL_FILE_NAME "tg-expert-manual.pdf"
+#define MANUAL_URL "https://github.com/jefebus/tg-expert/releases/latest"
 
 #define FILTER_CUTOFF 3000
 

@@ -1,6 +1,7 @@
 /*
     tg
     Copyright (C) 2015 Marcello Mamino
+    Copyright (C) 2026 jefebus
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License version 2 as
@@ -820,6 +821,45 @@ static void handle_name_change(GtkEntry *e, struct main_window *w)
 	update_tab_label(panel);
 }
 
+/* Path of the installed manual, or NULL if it is not there. It is looked for
+ * in DOCDIR, the build's $(docdir), and in doc/PACKAGE under the system data
+ * folders: /usr/share, /usr/local/share... on Linux, and on Windows the share
+ * folder of the installation, where the installer puts it. */
+static gchar *find_manual(void)
+{
+	gchar *path = g_build_filename(DOCDIR, MANUAL_FILE_NAME, NULL);
+	if(g_file_test(path, G_FILE_TEST_IS_REGULAR))
+		return path;
+	g_free(path);
+	const gchar * const *dirs;
+	for(dirs = g_get_system_data_dirs(); *dirs; dirs++) {
+		path = g_build_filename(*dirs, "doc", PACKAGE, MANUAL_FILE_NAME, NULL);
+		if(g_file_test(path, G_FILE_TEST_IS_REGULAR))
+			return path;
+		g_free(path);
+	}
+	return NULL;
+}
+
+/* Open the manual in the PDF viewer, or the releases page if it is not installed.
+ * On Windows, GLib starts the viewer through gspawn-win64-helper.exe, which
+ * the installer ships next to the executable (packaging/tg-expert_resources). */
+static void handle_manual(GtkMenuItem *m, struct main_window *w)
+{
+	UNUSED(m);
+	gchar *path = find_manual();
+	gchar *uri = path ? g_filename_to_uri(path, NULL, NULL) : NULL;
+	if(!uri)
+		uri = g_strdup(MANUAL_URL);
+	GError *err = NULL;
+	if(!gtk_show_uri_on_window(GTK_WINDOW(w->window), uri, GDK_CURRENT_TIME, &err)) {
+		error("Could not open the manual (%s): %s", uri, err ? err->message : "unknown error");
+		g_clear_error(&err);
+	}
+	g_free(uri);
+	g_free(path);
+}
+
 static void handle_position_change(GtkComboBox *b, struct main_window *w)
 {
 	if(w->position_updating) return;
@@ -1245,7 +1285,7 @@ static void init_main_window(struct main_window *w)
 	g_signal_connect(w->window, "key-press-event", G_CALLBACK(handle_key_press), w);
 
 	gtk_window_set_title(GTK_WINDOW(w->window), PROGRAM_NAME " " VERSION);
-	gtk_window_set_icon_name (GTK_WINDOW(w->window), PACKAGE);
+	gtk_window_set_icon_name (GTK_WINDOW(w->window), ICON_NAME);
 
 	GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
 	gtk_container_add(GTK_CONTAINER(w->window), vbox);
@@ -1473,6 +1513,12 @@ static void init_main_window(struct main_window *w)
 		);
 	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), w->cal_button);
 	g_signal_connect(w->cal_button, "activate", G_CALLBACK(handle_calibrate), w);
+
+	// ... User manual
+	GtkWidget *manual_item = gtk_menu_item_new_with_label("User manual");
+	gtk_widget_set_tooltip_text(manual_item, "Open the user manual (PDF).");
+	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), manual_item);
+	g_signal_connect(manual_item, "activate", G_CALLBACK(handle_manual), w);
 
 	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), gtk_separator_menu_item_new());
 

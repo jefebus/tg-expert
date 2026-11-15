@@ -25,4 +25,4 @@ function newuuid(  cmd, u) {
 	}
 	print line
 }
-' tg-timer.wxs.template > tg-timer.wxs
+' tg-expert.wxs.template > tg-expert.wxs

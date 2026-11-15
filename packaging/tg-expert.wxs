@@ -1,0 +1,89 @@
+<?xml version='1.0' encoding='windows-1252'?>
+<Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
+  <Product Name='tg-expert' Id='3a7f98cc-bb50-4b14-9354-58468ecff747' UpgradeCode='ed9a22fc-68e1-4038-b075-c41127282fe9'
+    Language='1033' Codepage='1252' Version='0.9.0' Manufacturer='tg-expert'>
+
+    <Package Id='*' Keywords='Installer'
+      Description='tg-expert 0.9.0 Installer'
+      Manufacturer='tg-expert'
+      InstallerVersion='100' Languages='1033' Compressed='yes' SummaryCodepage='1252' />
+
+    <MajorUpgrade AllowSameVersionUpgrades='yes' Schedule='afterInstallInitialize'
+                  DowngradeErrorMessage='A newer version of [ProductName] is already installed.' />
+
+    <Media Id='1' Cabinet='Sample.cab' EmbedCab='yes' />
+
+    <Directory Id='TARGETDIR' Name='SourceDir'>
+      <Directory Id='ProgramFilesFolder' Name='PFiles'>
+        <Directory Id='INSTALLDIR' Name='tg-expert'>
+
+          <Component Id='MainExecutable' Guid='b4960a23-2014-43c4-9c2c-d96e83951f50'>
+            <File Id='TgEXE' Name='tg-expert.exe' DiskId='1' Source='tg-expert.exe' KeyPath='yes'>
+              <Shortcut Id='startmenuTg' Directory='ProgramMenuDir' Name='tg-expert 0.9.0' WorkingDirectory='INSTALLDIR' Icon='TgExpert.exe' IconIndex='0' Advertise='yes' />
+              <Shortcut Id='desktopTg' Directory='DesktopFolder' Name='tg-expert 0.9.0' WorkingDirectory='INSTALLDIR' Icon='TgExpert.exe' IconIndex='0' Advertise='yes' />
+            </File>
+            <File Id='TgDocumentICO' Name='tg-document.ico' Source='tg-document.ico' />
+            <ProgId Id='TgExpert.TgjFile' Description='tg-expert data file' Icon='TgDocumentICO'>
+              <Extension Id='tgj' ContentType='application/x-tg-timer-data'>
+                <Verb Id='open' Command='Open' TargetFile='TgEXE' Argument='"%1"' />
+              </Extension>
+            </ProgId>
+          </Component>
+
+          <Component Id='License' Guid='bea6d7d0-87c8-43c6-9ce0-37f90fc04d1b'>
+            <File Id='License' Name='LICENSE' DiskId='1' Source='LICENSE' KeyPath='yes' />
+          </Component>
+
+          <Component Id='Readme' Guid='ba9d0563-4a07-4bfa-8568-0effb3018260'>
+            <File Id='Readme' Name='README.md' DiskId='1' Source='README.md' KeyPath='yes' />
+          </Component>
+
+          <!-- The manual goes in share\doc\tg-expert, where the program looks
+               for it (GLib's system data folders), as with make install -->
+          <Directory Id='ManualShareDir' Name='share'>
+            <Directory Id='ManualDocDir' Name='doc'>
+              <Directory Id='MANUALDIR' Name='tg-expert'>
+                <Component Id='Manual' Guid='5134e80c-3c15-4955-b510-4aa1f035cdf5'>
+                  <File Id='Manual' Name='tg-expert-manual.pdf' DiskId='1' Source='tg-expert-manual.pdf' KeyPath='yes' />
+                </Component>
+              </Directory>
+            </Directory>
+          </Directory>
+
+        </Directory>
+      </Directory>
+
+      <Directory Id='ProgramMenuFolder' Name='Programs'>
+        <Directory Id='ProgramMenuDir' Name='tg-expert 0.9.0'>
+          <Component Id='ProgramMenuDir' Guid='79531313-2e46-4163-b103-3f10c4c2f4fc'>
+            <Shortcut Id='startmenuManual' Name='tg-expert manual' Description='tg-expert user manual (PDF)'
+                      Target='[MANUALDIR]tg-expert-manual.pdf' WorkingDirectory='MANUALDIR' />
+            <RemoveFolder Id='ProgramMenuDir' On='uninstall' />
+            <RegistryValue Root='HKCU' Key='Software\[Manufacturer]\[ProductName]' Type='string' Value='' KeyPath='yes' />
+          </Component>
+        </Directory>
+      </Directory>
+
+      <Directory Id='DesktopFolder' Name='Desktop' />
+    </Directory>
+
+    <Feature Id='Complete' Level='1' ConfigurableDirectory='INSTALLDIR'>
+      <ComponentRef Id='MainExecutable' />
+      <ComponentRef Id='License' />
+      <ComponentRef Id='Readme' />
+      <ComponentRef Id='Manual' />
+      <ComponentGroupRef Id='Resources' />
+      <ComponentRef Id='ProgramMenuDir' />
+    </Feature>
+
+    <Property Id='WIXUI_INSTALLDIR' Value='INSTALLDIR' />
+
+    <WixVariable Id='WixUILicenseRtf' Value='LICENSE.rtf' />
+
+    <UIRef Id='WixUI_InstallDir' />
+    <UIRef Id='WixUI_ErrorProgressText' />
+
+    <Icon Id='TgExpert.exe' SourceFile='tg-expert.exe' />
+
+  </Product>
+</Wix>

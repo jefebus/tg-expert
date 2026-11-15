@@ -1,6 +1,7 @@
 /*
     tg
     Copyright (C) 2015 Marcello Mamino
+    Copyright (C) 2026 jefebus
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License version 2 as
@@ -170,7 +171,13 @@ void trend_update(struct trend *t, const struct snapshot *s, int position)
 	if(position < POS_NONE || position >= POS_COUNT)
 		position = POS_NONE;
 
-	/* Readings taken with other settings are not comparable */
+	if(!s->pb || s->is_old || s->guessed_bph <= 0 || !isfinite(s->rate) || !isfinite(s->be))
+		return;	// no good signal: a gap
+
+	/* Readings taken with other settings are not comparable. Checked only
+	 * with a good signal: without one, guessed_bph falls back to DEFAULT_BPH
+	 * (e.g. while the watch is turned to another position), which is not a
+	 * change of setting. */
 	if(t->count && (s->guessed_bph != t->bph || s->la != t->la || s->cal != t->cal ||
 			s->nominal_sr != t->nominal_sr || s->is_light != t->is_light))
 		trend_reset(t);
@@ -178,8 +185,6 @@ void trend_update(struct trend *t, const struct snapshot *s, int position)
 	gint64 now = g_get_monotonic_time();
 	if(t->count && now - t->last_us < (gint64)TREND_INTERVAL_S * 1000000)
 		return;
-	if(!s->pb || s->is_old || s->guessed_bph <= 0 || !isfinite(s->rate) || !isfinite(s->be))
-		return;	// no good signal: a gap
 	if(t->count >= TREND_MAX_SAMPLES) {
 		t->full = 1;
 		return;

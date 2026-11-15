@@ -1,7 +1,7 @@
 .*
 !.gitignore
-!.travis.yml
 !.valgrind.supp
+tmp/**
 
 # Object files
 *.o
@@ -9,7 +9,7 @@
 *.obj
 *.elf
 build
-tg-timer.res
+tg-expert.res
 
 # Executables
 *.exe
@@ -18,10 +18,10 @@ tg-timer.res
 *.i*86
 *.x86_64
 *.hex
-tg-timer
-tg-timer-dbg
-tg-timer-prf
-tg-timer-vlg
+tg-expert
+tg-expert-dbg
+tg-expert-prf
+tg-expert-vlg
 
 # autotools
 Makefile
@@ -49,3 +49,6 @@ Makefile.in
 # build directories
 /deb
 /msi
+/msi-resources
+/tg-expert-manual-*.pdf
+/tg-expert-manual.pdf

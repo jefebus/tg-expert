@@ -1,8 +1,8 @@
 [Desktop Entry]
 Type=Application
-Name=Tg
+Name=tg-expert
 Comment=Software-based timegrapher
-Exec=tg-timer %F
+Exec=tg-expert %F
 Icon=tg-timer
 Terminal=false
 Categories=Utility

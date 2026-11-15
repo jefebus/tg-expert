@@ -3,7 +3,7 @@
 override_dh_auto_test:
 
 override_dh_auto_install:
-	$(MAKE) DESTDIR=$$(pwd)/debian/tg-timer prefix=/usr install
+	$(MAKE) DESTDIR=$$(pwd)/debian/tg-expert prefix=/usr install
 
 %:
 	dh $@
