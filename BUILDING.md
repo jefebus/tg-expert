@@ -1,0 +1,119 @@
+# Building tg-expert
+
+## Dependencies
+
+Runtime and build: GTK+ 3, GLib 2.0, PortAudio, FFTW3 (single precision,
+`fftw3f`), pthread, libm.
+
+Tools: a C99 compiler, autoconf, automake, libtool, make, pkg-config, git.
+
+User manual: [Typst](https://typst.app). It's needed only to build the PDF
+manual, which is also required for the Windows installer. Install it with
+`winget install --id Typst.Typst` on Windows, `brew install typst` on macOS,
+and on Linux from the distribution's packages where available, or as a binary
+from the [Typst releases](https://github.com/typst/typst/releases).
+
+Windows installer: the [WiX Toolset v3](https://wixtoolset.org) (`heat`,
+`candle`, `light`) and `uuidgen`.
+
+## Install the packages
+
+### Windows (MSYS2 MINGW64)
+
+Install [MSYS2](https://www.msys2.org), open the "MSYS2 MINGW64" shell and run:
+
+```sh
+pacman -S --needed mingw-w64-x86_64-gcc make pkg-config mingw-w64-x86_64-gtk3 \
+  mingw-w64-x86_64-portaudio mingw-w64-x86_64-fftw git autoconf automake libtool
+```
+
+### Debian and Ubuntu
+
+```sh
+sudo apt-get install libgtk-3-dev libjack-jackd2-dev portaudio19-dev \
+  libfftw3-dev git autoconf automake libtool
+```
+
+`libjack-jackd2-dev` works around an old Debian packaging bug.
+
+### Fedora
+
+```sh
+sudo dnf install fftw-devel portaudio-devel gtk3-devel git autoconf automake libtool
+```
+
+### macOS (Homebrew)
+
+```sh
+brew install gtk+3 portaudio fftw pkg-config autoconf automake libtool
+```
+
+The macOS package list is unverified. The program needs microphone
+permission for the terminal or app that starts it.
+
+## Build
+
+```sh
+git clone https://github.com/jefebus/tg-expert.git
+cd tg-expert
+./autogen.sh
+./configure
+make
+```
+
+This produces `tg-expert` (`tg-expert.exe` on Windows). Other targets:
+
+- `make tg-expert-dbg`: debug build.
+- `make tg-expert-prf`: profiling build.
+- `make tg-expert-vlg`, `make valgrind`: build and run under Valgrind.
+- `make test`: run the built-in tests with the debug build.
+- `make install`: install the program, man page, desktop and MIME files.
+- `make dist`: create the source tarball.
+
+## User manual
+
+The manual is written in Typst, in `docs/manual/`. If `typst` is in the PATH
+when `configure` runs:
+
+- `make` also builds the manual, `tg-expert-manual.pdf`;
+- `make manual` builds only the manual;
+- `make install` installs it in the documentation folder, where the
+  "User manual" menu item finds it.
+
+Without Typst, `make manual` stops with a message. Run `./configure` again
+after installing Typst.
+
+To build the PDF by hand, for example as a release asset:
+
+```sh
+typst compile docs/manual/main.typ tg-expert-manual-0.9.0.pdf
+```
+
+On Windows, winget installs Typst outside the MSYS2 PATH. Add its folder to
+the PATH in the MINGW64 shell, or build the PDF from PowerShell.
+
+## Windows installer
+
+Build the installer in the MSYS2 MINGW64 shell, from the source folder:
+
+1. Build the manual as `tg-expert-manual-0.9.0.pdf` in the source folder (see
+   above). If it's missing, `make_msi.sh` builds it when `typst` is in the
+   PATH, and stops otherwise.
+2. Collect the runtime files to bundle (GTK, PortAudio and FFTW DLLs, and
+   their data files):
+
+   ```sh
+   packaging/make_msi_resources.sh
+   ```
+
+   This copies the files listed in `packaging/tg-expert_resources` from
+   `C:\msys64\mingw64` into `msi-resources/`. It expects MSYS2 in
+   `C:\msys64`.
+3. Build the MSI:
+
+   ```sh
+   packaging/make_msi.sh msi-resources
+   ```
+
+   This runs `configure` and `make`, then WiX. The result is
+   `msi/tg-expert_0.9.0.msi`.

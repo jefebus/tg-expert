@@ -1,7 +1,7 @@
 define([tg_version], m4_normalize(m4_include([version])))
 AC_CONFIG_MACRO_DIRS([m4])
 
-AC_INIT([Tg], [tg_version], [vacaboja@gmail.com], [tg-timer], [https://github.com/vacaboja/tg])
+AC_INIT([tg-expert], [tg_version], [], [tg-expert], [https://github.com/jefebus/tg-expert])
 AM_INIT_AUTOMAKE([-Wall foreign subdir-objects])
 
 AC_PROG_CC
@@ -12,6 +12,8 @@ PKG_CHECK_MODULES([PORTAUDIO], [portaudio-2.0])
 PKG_CHECK_MODULES([FFTW], [fftw3f])
 
 AC_CHECK_TOOL([WINDRES], [windres])
+AC_PATH_PROG([TYPST], [typst])
+AM_CONDITIONAL([HAVE_TYPST], [test x$TYPST != x])
 AM_CONDITIONAL([HAVE_WINDRES], [test x$WINDRES != x])
 
 AM_CONDITIONAL([BE_WINDOWS], [test x$OS = xWindows_NT])

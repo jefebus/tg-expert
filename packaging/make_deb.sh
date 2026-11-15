@@ -13,11 +13,11 @@ make dist
 
 rm -rf deb
 mkdir deb
-cp tg-timer-"$VERSION".tar.gz deb/tg-timer_"$VERSION".orig.tar.gz
+cp tg-expert-"$VERSION".tar.gz deb/tg-expert_"$VERSION".orig.tar.gz
 
 cd deb
 
-tar xzf tg-timer_"$VERSION".orig.tar.gz
-cp -r "$ABSDIR"/debian tg-timer-"$VERSION"
-cd tg-timer-"$VERSION"
+tar xzf tg-expert_"$VERSION".orig.tar.gz
+cp -r "$ABSDIR"/debian tg-expert-"$VERSION"
+cd tg-expert-"$VERSION"
 debuild -us -uc

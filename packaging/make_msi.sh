@@ -38,20 +38,37 @@ VERSION=`cat version`
 ./configure
 make
 
+# The user manual: tg-expert-manual-VERSION.pdf from the source root, or
+# built with Typst if it is not there
+MANUAL="$ABSDIR/../tg-expert-manual-${VERSION}.pdf"
+if test ! -f "$MANUAL"
+then
+	if command -v typst >/dev/null 2>&1
+	then
+		typst compile "$ABSDIR/../docs/manual/main.typ" "$MANUAL"
+	else
+		echo "Error: $MANUAL not found, and typst is not in PATH to build it."
+		echo "Build it with: typst compile docs/manual/main.typ tg-expert-manual-${VERSION}.pdf"
+		exit 1
+	fi
+fi
+
 rm -rf "$TARGET"
 mkdir -p "$TARGET"
 
-cp "$ABSDIR/../tg-timer.exe" "$TARGET/tg.exe"
+cp "$ABSDIR/../tg-expert.exe" "$TARGET/tg-expert.exe"
 cd "$TARGET"
-cp "$ABSDIR/tg-timer.wxs" "$TARGET"
+cp "$ABSDIR/tg-expert.wxs" "$TARGET"
 cp "$ABSDIR/LICENSE.rtf" "$TARGET"
 cp "$ABSDIR/../README.md" "$TARGET"
+cp "$MANUAL" "$TARGET/tg-expert-manual.pdf"
 cp "$ABSDIR/../LICENSE" "$TARGET"
 cp "$ABSDIR/../icons/tg-document.ico" "$TARGET"
 cp -r "$RESOURCES"/* "$TARGET"
 heat dir "$RESOURCES" -srd -gg -sreg -dr INSTALLDIR -cg Resources -out "$TARGET/Resources.wxs"
 
-candle tg-timer.wxs Resources.wxs
-light -out tg-timer_${VERSION}.msi -ext WixUIExtension tg-timer.wixobj Resources.wixobj
+# WixUtilExtension provides WixShellExec, which launches the program from the last dialog
+candle -ext WixUtilExtension tg-expert.wxs Resources.wxs
+light -out tg-expert_${VERSION}.msi -ext WixUIExtension -ext WixUtilExtension tg-expert.wixobj Resources.wixobj
 
-echo "MSI generated at: $TARGET/tg-timer_${VERSION}.msi"
+echo "MSI generated at: $TARGET/tg-expert_${VERSION}.msi"
