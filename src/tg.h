@@ -257,6 +257,48 @@ void lock_computer(struct computer *c);
 void unlock_computer(struct computer *c);
 void compute_results(struct snapshot *s);
 
+/* trend.c: long-term statistics of the live measurement */
+#define TREND_INTERVAL_S 2	// one reading every 2 s
+#define TREND_MAX_HOURS 100
+#define TREND_MAX_SAMPLES (TREND_MAX_HOURS * 3600 / TREND_INTERVAL_S)
+
+struct trend_sample {
+	float t;	// s since the start of the recording
+	float rate;	// s/d
+	float amp;	// deg, 0 = not available
+	float be;	// ms
+	signed char position;	// enum watch_position
+};
+
+struct trend_stats {
+	int n;
+	double sum, sumsq, min, max;
+};
+
+struct trend {
+	struct trend_sample *samples;
+	int count, capacity;
+	int full;	// TREND_MAX_SAMPLES reached: recording stopped
+	int frozen;	// copy kept by a snapshot tab
+	gint64 start_us, last_us, end_us;	// monotonic time; end_us only if frozen
+	// settings the readings were taken with
+	int bph, cal, nominal_sr, is_light;
+	double la;
+	struct trend_stats rate, amp, be;
+	struct trend_stats pos_rate[POS_COUNT], pos_amp[POS_COUNT], pos_be[POS_COUNT];
+};
+
+struct trend *trend_new(void);
+void trend_free(struct trend *t);
+struct trend *trend_clone(const struct trend *t);
+void trend_reset(struct trend *t);
+void trend_update(struct trend *t, const struct snapshot *s, int position);
+int trend_set_samples(struct trend *t, const float *tm, const float *rate, const float *amp,
+	const float *be, const int *position, int count, double elapsed);
+double trend_elapsed(const struct trend *t);
+double trend_stats_mean(const struct trend_stats *s);
+double trend_stats_sd(const struct trend_stats *s);
+
 /* output_panel.c */
 struct output_panel {
 	GtkWidget *panel;
@@ -280,6 +322,11 @@ struct output_panel {
 	double guide_rate;           // filtered rate (s/d) for the paper strip rate guide
 	gint64 guide_time;           // monotonic time of the last filter update, 0 = restart
 	int trace_centered;          // the live trace was centred since it appeared
+	GtkWidget *right_switcher;   // chooses "panels" (waveforms) or "trend" in right_stack
+	GtkWidget *trend_drawing_area;
+	struct trend *trend;         // owned; NULL for snapshots loaded from a file
+	int trend_rate_range;        // s/d shown either side of 0, 0 = automatic
+	int trend_span_s;            // time shown, 0 = everything since the start
 	float audio_meter_level;
 	gint64 audio_meter_time;
 	int audio_meter_active;
@@ -374,6 +421,7 @@ extern int testing;
 void print_debug(char *format,...);
 void error(char *format,...);
 void request_audio_restart(struct main_window *w, int api, int device, int rate);
+const char *watch_position_code(int pos);
 
 /* audio_settings.c */
 void audio_settings_open(struct main_window *w);
@@ -413,5 +461,6 @@ void set_watch(struct main_window *w, const char *name, int bph, double la);
 void delete_watch(struct main_window *w, const char *name);
 
 /* serializer.c */
-int write_file(FILE *f, struct snapshot **s, char **names, uint64_t cnt);
-int read_file(FILE *f, struct snapshot ***s, char ***names, uint64_t *cnt);
+/* trends[i] is the long-term trend of snapshot i, NULL if it has none */
+int write_file(FILE *f, struct snapshot **s, char **names, struct trend **trends, uint64_t cnt);
+int read_file(FILE *f, struct snapshot ***s, char ***names, struct trend ***trends, uint64_t *cnt);

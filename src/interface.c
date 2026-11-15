@@ -531,6 +531,8 @@ static guint computer_terminated(struct main_window *w)
 			w->pending_audio_device = w->audio_device;
 			w->pending_audio_rate = w->nominal_sr;
 			w->restart_audio = 0;
+			/* Readings from another input are not comparable */
+			trend_reset(w->active_panel->trend);
 			/* The settings dialog shows the result itself */
 			if(w->audio_message && !audio_settings_is_open(w))
 				error("%s", w->audio_message);
@@ -771,6 +773,12 @@ static const char *position_codes[POS_COUNT] = {
 	NULL, "DU", "DD", "CU", "CD", "CL", "CR"
 };
 
+/* Short code of a position (DU, DD, ...), NULL if not set */
+const char *watch_position_code(int pos)
+{
+	return pos > POS_NONE && pos < POS_COUNT ? position_codes[pos] : NULL;
+}
+
 static const char *position_labels[POS_COUNT] = {
 	"(not set)",
 	"Dial up (DU)",
@@ -895,7 +903,7 @@ static void handle_paperstrip_settings_changed(void *data, double tick_seconds,
 	save_on_change(w);
 }
 
-static void add_new_tab(struct snapshot *s, char *name, struct main_window *w)
+static struct output_panel *add_new_tab(struct snapshot *s, char *name, struct main_window *w)
 {
 	struct output_panel *op = init_output_panel(NULL, s, 5);
 	op_set_paperstrip_settings(op, w->active_panel->paperstrip_tick_seconds,
@@ -910,6 +918,7 @@ static void add_new_tab(struct snapshot *s, char *name, struct main_window *w)
 	gtk_notebook_set_tab_reorderable(GTK_NOTEBOOK(w->notebook), op->panel, TRUE);
 	set_menu_item_enabled(w, w->save_all_item, TRUE);
 	set_menu_item_enabled(w, w->close_all_item, TRUE);
+	return op;
 }
 
 static void handle_snapshot(GtkButton *b, struct main_window *w)
@@ -921,7 +930,9 @@ static void handle_snapshot(GtkButton *b, struct main_window *w)
 	s->audio_status = w->active_panel->audio_status;
 	s->position = w->live_position; // can still be changed on the snapshot tab
 	// Name the snapshot after the selected watch, if any ("Snapshot" otherwise)
-	add_new_tab(s, (char *)selected_watch(w), w);
+	struct output_panel *op = add_new_tab(s, (char *)selected_watch(w), w);
+	// The snapshot keeps the long-term statistics as they are now
+	op->trend = trend_clone(w->active_panel->trend);
 }
 
 /* Keyboard shortcut for the most frequent action: Ctrl+Space takes a snapshot.
@@ -1059,6 +1070,8 @@ static void save_current(GtkMenuItem *m, struct main_window *w)
 	GtkWidget *tab = gtk_notebook_get_nth_page(GTK_NOTEBOOK(w->notebook), p);
 	struct output_panel *op = g_object_get_data(G_OBJECT(tab), "op-pointer");
 	struct snapshot *snapshot = op ? op->snst : w->active_snapshot;
+	// The real-time tab saves the trend recorded so far
+	struct trend *trend = op ? op->trend : w->active_panel->trend;
 	char *name = g_object_get_data(G_OBJECT(tab), "tab-name");
 
 	if(snapshot->calibrate || !snapshot->pb) return;
@@ -1071,7 +1084,7 @@ static void save_current(GtkMenuItem *m, struct main_window *w)
 	FILE *f = choose_file_for_save(w, "Save current display", name);
 
 	if(f) {
-		if(write_file(f, &snapshot, &name, 1)) {
+		if(write_file(f, &snapshot, &name, &trend, 1)) {
 			GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(w->window),0,GTK_MESSAGE_ERROR,GTK_BUTTONS_CLOSE,
 						"Error writing file");
 			gtk_dialog_run(GTK_DIALOG(dialog));
@@ -1107,16 +1120,18 @@ static void save_all(GtkMenuItem *m, struct main_window *w)
 	int i, j, tabs = gtk_notebook_get_n_pages(GTK_NOTEBOOK(w->notebook));
 	struct snapshot *s[tabs];
 	char *names[tabs];
+	struct trend *trends[tabs];
 
 	for(i = j = 0; i < tabs; i++) {
 		GtkWidget *tab = gtk_notebook_get_nth_page(GTK_NOTEBOOK(w->notebook), i);
 		struct output_panel *op = g_object_get_data(G_OBJECT(tab), "op-pointer");
 		if(!op) continue; // This one is the real-time tab
 		s[j] = op->snst;
+		trends[j] = op->trend;
 		names[j++] = g_object_get_data(G_OBJECT(tab), "tab-name");
 	}
 
-	if(write_file(f, s, names, j)) {
+	if(write_file(f, s, names, trends, j)) {
 		GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(w->window),0,GTK_MESSAGE_ERROR,GTK_BUTTONS_CLOSE,
 					"Error writing file");
 		gtk_dialog_run(GTK_DIALOG(dialog));
@@ -1130,15 +1145,18 @@ static void load_snapshots(FILE *f, char *name, struct main_window *w)
 {
 	struct snapshot **s;
 	char **names;
+	struct trend **trends;
 	uint64_t cnt;
-	if(!read_file(f, &s, &names, &cnt)) {
+	if(!read_file(f, &s, &names, &trends, &cnt)) {
 		uint64_t i;
 		for(i = 0; i < cnt; i++) {
-			add_new_tab(s[i], names[i] ? names[i] : name, w);
+			struct output_panel *op = add_new_tab(s[i], names[i] ? names[i] : name, w);
+			op->trend = trends[i]; // NULL for files saved without one
 			free(names[i]);
 		}
 		free(s);
 		free(names);
+		free(trends);
 	} else {
 		GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(w->window),0,GTK_MESSAGE_ERROR,GTK_BUTTONS_CLOSE,
 					"Error reading file: %s", name);
@@ -1524,6 +1542,7 @@ guint refresh(struct main_window *w)
 	}
 	unlock_computer(w->computer);
 	refresh_results(w);
+	trend_update(w->active_panel->trend, w->active_snapshot, w->live_position);
 	op_set_snapshot(w->active_panel, w->active_snapshot);
 
 	int p = gtk_notebook_get_current_page(GTK_NOTEBOOK(w->notebook));

@@ -271,6 +271,20 @@ static int scan_float_array(FILE *f, float **a, uint64_t max_l, uint64_t *len)
 	return 0;
 }
 
+static int scan_int_array(FILE *f, int **a, uint64_t max_l, uint64_t *len)
+{
+	uint64_t l,i;
+	int n = 0;
+	if(1 != fscanf(f, " A%"SCNu64";%n", &l, &n) || !n) return 1;
+	if(max_l && l > max_l) return 1;
+	if(!*a) *a = malloc((l ? l : 1)*sizeof(**a));
+	if(!*a) return 1;
+	for(i = 0; i < l; i++)
+		if(scan_int(f, *a+i)) return 1;
+	if(len) *len = l;
+	return 0;
+}
+
 static int make_label(FILE *f, char *l)
 {
 	return 0 > fprintf(f, "L%s;\n", l);
@@ -341,7 +355,102 @@ static int serialize_union_begin(FILE *f, char *s)
 	if(serialize_ ## T (f, s -> A)) return 1;	\
 	}
 
-static int serialize_snapshot(FILE *f, struct snapshot *s, char *name)
+/* Long-term trend: the settings, the elapsed time and one array per value.
+ * The statistics are not stored, they are computed again on loading. */
+static int serialize_trend(FILE *f, const struct trend *s)
+{
+	int i;
+	if(serialize_struct_begin(f)) return 1;
+	SERIALIZE(int,bph);
+	SERIALIZE(double,la);
+	SERIALIZE(int,cal);
+	SERIALIZE(int,nominal_sr);
+	SERIALIZE(int,is_light);
+	SERIALIZE(int,full);
+	if(make_label(f, "elapsed")) return 1;
+	if(serialize_double(f, trend_elapsed(s))) return 1;
+#define TREND_ARRAY(LABEL, FIELD, TYPE)					\
+	if(make_label(f, LABEL)) return 1;				\
+	if(0 > fprintf(f, "A%d;\n", s->count)) return 1;		\
+	for(i = 0; i < s->count; i++)					\
+		if(serialize_ ## TYPE (f, s->samples[i].FIELD)) return 1;
+	TREND_ARRAY("t", t, float);
+	TREND_ARRAY("rate", rate, float);
+	TREND_ARRAY("amp", amp, float);
+	TREND_ARRAY("be", be, float);
+	TREND_ARRAY("position", position, int);
+#undef TREND_ARRAY
+	return serialize_struct_end(f);
+}
+
+/* Returns 1 on a format error. *trend is NULL if the data is not usable. */
+static int scan_trend(FILE *f, struct trend **trend)
+{
+	char l[LABEL_SIZE+1];
+	int n = 0;
+	*trend = NULL;
+	if(0 != fscanf(f, " T;%n", &n) || !n) return 1;
+	struct trend *t = trend_new();
+	if(!t) return 1;
+	float *tm = NULL, *rate = NULL, *amp = NULL, *be = NULL;
+	int *position = NULL;
+	uint64_t n_t = 0, n_rate = 0, n_amp = 0, n_be = 0, n_position = 0;
+	double elapsed = 0;
+	int ok = 1;
+	for(;;) {
+		if(scan_label(f,l)) goto error;
+		if(!strcmp("__end__", l)) break;
+#define TREND_SCAN(LABEL, ARRAY, COUNT, TYPE)					\
+		if(!strcmp(LABEL, l)) {						\
+			if(ARRAY || scan_ ## TYPE ## _array(f, &ARRAY,		\
+					TREND_MAX_SAMPLES, &COUNT)) goto error;	\
+			continue;						\
+		}
+		TREND_SCAN("t", tm, n_t, float);
+		TREND_SCAN("rate", rate, n_rate, float);
+		TREND_SCAN("amp", amp, n_amp, float);
+		TREND_SCAN("be", be, n_be, float);
+		TREND_SCAN("position", position, n_position, int);
+#undef TREND_SCAN
+#define TREND_FIELD(A, TYPE)							\
+		if(!strcmp(#A, l)) {						\
+			if(scan_ ## TYPE (f, &t->A)) goto error;		\
+			continue;						\
+		}
+		TREND_FIELD(bph, int);
+		TREND_FIELD(la, double);
+		TREND_FIELD(cal, int);
+		TREND_FIELD(nominal_sr, int);
+		TREND_FIELD(is_light, int);
+		TREND_FIELD(full, int);
+#undef TREND_FIELD
+		if(!strcmp("elapsed", l)) {
+			if(scan_double(f, &elapsed)) goto error;
+			continue;
+		}
+		if(eat_object(f)) goto error;
+	}
+	// All arrays must be there and have the same length
+	if(!tm || !rate || !amp || !be || !position ||
+			n_rate != n_t || n_amp != n_t || n_be != n_t || n_position != n_t)
+		ok = 0;
+	if(ok && trend_set_samples(t, tm, rate, amp, be, position, (int)n_t, elapsed))
+		ok = 0;
+	if(!ok) {
+		debug("serializer: unusable trend, ignored\n");
+		trend_free(t);
+		t = NULL;
+	}
+	free(tm); free(rate); free(amp); free(be); free(position);
+	*trend = t;
+	return 0;
+error:
+	free(tm); free(rate); free(amp); free(be); free(position);
+	trend_free(t);
+	return 1;
+}
+
+static int serialize_snapshot(FILE *f, struct snapshot *s, char *name, const struct trend *trend)
 {
 	if(serialize_union_begin(f, "realtime-snapshot")) return 1;
 	if(serialize_struct_begin(f)) return 1;
@@ -386,6 +495,10 @@ static int serialize_snapshot(FILE *f, struct snapshot *s, char *name)
 	if(serialize_float_array(f, s->amps, s->amps_count)) return 1;
 	if(make_label(f, "amps_time")) return 1;
 	if(serialize_uint64_t_array(f, s->amps_time, s->amps_count)) return 1;
+	if(trend) { // older versions skip unknown labels
+		if(make_label(f, "trend")) return 1;
+		if(serialize_trend(f, trend)) return 1;
+	}
 	return serialize_struct_end(f);
 }
 
@@ -396,12 +509,13 @@ static int serialize_snapshot(FILE *f, struct snapshot *s, char *name)
 		continue;					\
 	}}
 
-static int scan_snapshot(FILE *f, struct snapshot **s, char **name)
+static int scan_snapshot(FILE *f, struct snapshot **s, char **name, struct trend **trend)
 {
 	char l[LABEL_SIZE+1];
 	int n = 0;
 	*s = NULL;
 	*name = NULL;
+	*trend = NULL;
 	if(0 != fscanf(f, " U;%n", &n) || !n) return 1;
 	if(scan_label(f,l)) return 1;
 	if(strcmp("realtime-snapshot", l))
@@ -461,6 +575,11 @@ static int scan_snapshot(FILE *f, struct snapshot **s, char **name)
 			uint64_t x;
 			if(	(*s)->amps_time ||
 				scan_uint64_t_array(f, &((*s)->amps_time), INT_MAX, &x)) goto error;
+			continue;
+		}
+		if(!strcmp("trend", l)) {
+			debug("serializer: scanning trend\n");
+			if(*trend || scan_trend(f, trend)) goto error;
 			continue;
 		}
 		SCAN(int,pb->sample_rate);
@@ -548,6 +667,8 @@ static int scan_snapshot(FILE *f, struct snapshot **s, char **name)
 	return 0;
 
 error:
+	trend_free(*trend);
+	*trend = NULL;
 	free(*name);
 	free((*s)->pb->waveform);
 	free((*s)->pb);
@@ -561,40 +682,48 @@ error:
 	return 1;
 }
 
-static int scan_snapshot_list(FILE *f, struct snapshot ***s, char ***names, uint64_t *cnt)
+static int scan_snapshot_list(FILE *f, struct snapshot ***s, char ***names, struct trend ***trends,
+	uint64_t *cnt)
 {
 	debug("serializer: scanning snapshot list\n");
 	uint64_t i;
 	int n = 0;
 	*s = NULL;
 	*names = NULL;
+	*trends = NULL;
 	*cnt = 0;
 	if(1 != fscanf(f, " A%"SCNu64";%n", &i, &n) || !n) goto error;
 	*s = malloc(i*sizeof(struct snapshot *));
 	*names = malloc(i*sizeof(char *));
+	*trends = malloc(i*sizeof(struct trend *));
+	if(i && (!*s || !*names || !*trends)) goto error;
 	uint64_t j;
 	for(j = 0; j < i; j++) {
-		if(scan_snapshot(f, *s+*cnt, *names+*cnt)) goto error;
+		if(scan_snapshot(f, *s+*cnt, *names+*cnt, *trends+*cnt)) goto error;
 		*cnt += !!(*s)[*cnt];
 	}
 	*s = realloc(*s, *cnt*sizeof(struct snapshot *));
 	*names = realloc(*names, *cnt*sizeof(char *));
+	*trends = realloc(*trends, *cnt*sizeof(struct trend *));
 	return 0;
 error:
 	debug("serializer: error in snapshot list\n");
 	for(; (*cnt)--;) {
 		snapshot_destroy((*s)[*cnt]);
 		free((*names)[*cnt]);
+		trend_free((*trends)[*cnt]);
 	}
 	free(*s);
 	free(*names);
+	free(*trends);
 	*s = NULL;
 	*names = NULL;
+	*trends = NULL;
 	*cnt = 0;
 	return 1;
 }
 
-int write_file(FILE *f, struct snapshot **s, char **names, uint64_t cnt)
+int write_file(FILE *f, struct snapshot **s, char **names, struct trend **trends, uint64_t cnt)
 {
 	uint64_t i;
 	if(make_label(f, "tg-timer-version")) return 1;
@@ -604,12 +733,12 @@ int write_file(FILE *f, struct snapshot **s, char **names, uint64_t cnt)
 	if(make_label(f, "snapshot-list")) return 1;
 	if(0 > fprintf(f, "A%"PRIu64";\n", cnt)) return 1;
 	for(i = 0; i < cnt; i++)
-		if(serialize_snapshot(f, s[i], names[i])) return 1;
+		if(serialize_snapshot(f, s[i], names[i], trends ? trends[i] : NULL)) return 1;
 	if(serialize_struct_end(f)) return 1;
 	return 0;
 }
 
-int read_file(FILE *f, struct snapshot ***s, char ***names, uint64_t *cnt)
+int read_file(FILE *f, struct snapshot ***s, char ***names, struct trend ***trends, uint64_t *cnt)
 {
 	debug("serializer: reading file\n");
 	char lbl[LABEL_SIZE+1];
@@ -618,6 +747,7 @@ int read_file(FILE *f, struct snapshot ***s, char ***names, uint64_t *cnt)
 	*cnt = 0;
 	*s = NULL;
 	*names = NULL;
+	*trends = NULL;
 	if(scan_label(f, l) || strcmp("tg-timer-version",l)) return 1;
 	if(scan_string(f, &l, LABEL_SIZE, NULL)) return 1;
 	debug("serializer: read version %s\n",l);
@@ -629,7 +759,7 @@ int read_file(FILE *f, struct snapshot ***s, char ***names, uint64_t *cnt)
 		if(scan_label(f,l)) goto error;
 		if(!strcmp("__end__",l)) break;
 		if(!strcmp("snapshot-list",l)) {
-			if(*s || scan_snapshot_list(f, s, names, cnt)) goto error;
+			if(*s || scan_snapshot_list(f, s, names, trends, cnt)) goto error;
 			found_snapshot_list = 1;
 			continue;
 		}
@@ -649,12 +779,15 @@ error:
 		for(i = 0; i < *cnt; i++) {
 			snapshot_destroy((*s)[i]);
 			free((*names)[i]);
+			trend_free((*trends)[i]);
 		}
 		free(*s);
 		free(*names);
+		free(*trends);
 	}
 	*s = NULL;
 	*names = NULL;
+	*trends = NULL;
 	*cnt = 0;
 	return 1;
 }
