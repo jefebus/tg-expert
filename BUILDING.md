@@ -78,22 +78,35 @@ This produces `tg-expert` (`tg-expert.exe` on Windows). Other targets:
 
 ## User manual
 
-The manual is written in Typst, in `docs/manual/`. If `typst` is in the PATH
-when `configure` runs:
+The manual is written in Typst, in `docs/manual/`, in three languages:
+`main.typ` with `chapters/` (English), `main-es.typ` with `es/` (Spanish) and
+`main-de.typ` with `de/` (German). `lib.typ` and `images/` are shared. If
+`typst` is in the PATH when `configure` runs:
 
-- `make` also builds the manual, `tg-expert-manual.pdf`;
-- `make manual` builds only the manual;
-- `make install` installs it in the documentation folder, where the
-  "User manual" menu item finds it.
+- `make` also builds the manuals: `tg-expert-manual.pdf`,
+  `tg-expert-manual-es.pdf` and `tg-expert-manual-de.pdf`;
+- `make manual` builds only the manuals;
+- `make install` installs them in the documentation folder. The
+  "User manual" menu item opens the one in the language of the interface,
+  or the English one.
 
 Without Typst, `make manual` stops with a message. Run `./configure` again
 after installing Typst.
 
-To build the PDF by hand, for example as a release asset:
+To build the PDFs by hand, for example as release assets:
 
 ```sh
-typst compile docs/manual/main.typ tg-expert-manual-0.9.0.pdf
+typst compile --input version=0.10.0 docs/manual/main.typ    tg-expert-manual-0.10.0.pdf
+typst compile --input version=0.10.0 docs/manual/main-es.typ tg-expert-manual-0.10.0-es.pdf
+typst compile --input version=0.10.0 docs/manual/main-de.typ tg-expert-manual-0.10.0-de.pdf
 ```
+
+`--input version=` sets the version shown on the cover; without it, the
+cover says "(development version)".
+
+When a chapter changes in English, update the same file in `es/` and `de/`.
+The terms are in `po/GLOSSARY.md`, and the names of buttons and menus must
+match the translations in `po/es.po` and `po/de.po`.
 
 On Windows, winget installs Typst outside the MSYS2 PATH. Add its folder to
 the PATH in the MINGW64 shell, or build the PDF from PowerShell.
@@ -102,9 +115,10 @@ the PATH in the MINGW64 shell, or build the PDF from PowerShell.
 
 Build the installer in the MSYS2 MINGW64 shell, from the source folder:
 
-1. Build the manual as `tg-expert-manual-0.9.0.pdf` in the source folder (see
-   above). If it's missing, `make_msi.sh` builds it when `typst` is in the
-   PATH, and stops otherwise.
+1. Put `typst` in the PATH, so `make_msi.sh` builds the three manuals. Without
+   it, the script uses `tg-expert-manual-0.10.0.pdf`, `-0.10.0-es.pdf` and
+   `-0.10.0-de.pdf` from the source folder (see above), and stops if one is
+   missing. `msgfmt` is needed too: the installer includes the translations.
 2. Collect the runtime files to bundle (GTK, PortAudio and FFTW DLLs, and
    their data files):
 

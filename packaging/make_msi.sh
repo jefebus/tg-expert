@@ -38,34 +38,56 @@ VERSION=`cat version`
 ./configure
 make
 
-# The user manual: tg-expert-manual-VERSION.pdf from the source root, or
-# built with Typst if it is not there
-MANUAL="$ABSDIR/../tg-expert-manual-${VERSION}.pdf"
-if test ! -f "$MANUAL"
-then
-	if command -v typst >/dev/null 2>&1
-	then
-		typst compile "$ABSDIR/../docs/manual/main.typ" "$MANUAL"
-	else
-		echo "Error: $MANUAL not found, and typst is not in PATH to build it."
-		echo "Build it with: typst compile docs/manual/main.typ tg-expert-manual-${VERSION}.pdf"
-		exit 1
-	fi
-fi
-
 rm -rf "$TARGET"
 mkdir -p "$TARGET"
+
+# The user manuals, in English, Spanish and German: built with Typst when it
+# is in PATH, else taken from tg-expert-manual-VERSION[-lang].pdf in the
+# source root. Installed as share/doc/tg-expert/tg-expert-manual[-lang].pdf.
+for lang in en es de
+do
+	if test $lang = en; then src=main.typ; suffix=""; else src=main-$lang.typ; suffix="-$lang"; fi
+	prebuilt="$ABSDIR/../tg-expert-manual-${VERSION}${suffix}.pdf"
+	out="$TARGET/tg-expert-manual${suffix}.pdf"
+	if command -v typst >/dev/null 2>&1
+	then
+		typst compile --input version="$VERSION" "$ABSDIR/../docs/manual/$src" "$out"
+	elif test -f "$prebuilt"
+	then
+		cp "$prebuilt" "$out"
+	else
+		echo "Error: typst is not in PATH and $prebuilt does not exist."
+		echo "Build it with: typst compile docs/manual/$src tg-expert-manual-${VERSION}${suffix}.pdf"
+		exit 1
+	fi
+done
+
+# Runtime files plus the translations of the interface (built by make in po/),
+# harvested together into Resources.wxs
+STAGE="$TARGET/resources-stage"
+mkdir -p "$STAGE"
+cp -r "$RESOURCES"/. "$STAGE"
+for lang in es de
+do
+	if test ! -f "$ABSDIR/../po/$lang.gmo"
+	then
+		echo "Error: po/$lang.gmo not found. Install gettext (msgfmt) and run configure and make again."
+		exit 1
+	fi
+	mkdir -p "$STAGE/share/locale/$lang/LC_MESSAGES"
+	cp "$ABSDIR/../po/$lang.gmo" "$STAGE/share/locale/$lang/LC_MESSAGES/tg-expert.mo"
+done
 
 cp "$ABSDIR/../tg-expert.exe" "$TARGET/tg-expert.exe"
 cd "$TARGET"
 cp "$ABSDIR/tg-expert.wxs" "$TARGET"
 cp "$ABSDIR/LICENSE.rtf" "$TARGET"
 cp "$ABSDIR/../README.md" "$TARGET"
-cp "$MANUAL" "$TARGET/tg-expert-manual.pdf"
 cp "$ABSDIR/../LICENSE" "$TARGET"
 cp "$ABSDIR/../icons/tg-document.ico" "$TARGET"
-cp -r "$RESOURCES"/* "$TARGET"
-heat dir "$RESOURCES" -srd -gg -sreg -dr INSTALLDIR -cg Resources -out "$TARGET/Resources.wxs"
+cp -r "$STAGE"/. "$TARGET"
+heat dir "$STAGE" -srd -gg -sreg -dr INSTALLDIR -cg Resources -out "$TARGET/Resources.wxs"
+rm -rf "$STAGE"
 
 # WixUtilExtension provides WixShellExec, which launches the program from the last dialog
 candle -ext WixUtilExtension tg-expert.wxs Resources.wxs

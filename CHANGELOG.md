@@ -8,6 +8,9 @@
   system. Numbers always use a point as the decimal separator, and the
   results table headers, position codes and calibration status stay in
   English in every language.
+- The user manual in Spanish and German. "User manual" opens it in the
+  language of the interface. The Windows installer includes the three
+  manuals, each with its Start menu shortcut, and the translations.
 
 ### Changed
 

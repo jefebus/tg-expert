@@ -836,20 +836,39 @@ static void handle_name_change(GtkEntry *e, struct main_window *w)
  * in DOCDIR, the build's $(docdir), and in doc/PACKAGE under the system data
  * folders: /usr/share, /usr/local/share... on Linux, and on Windows the share
  * folder of the installation, where the installer puts it. */
-static gchar *find_manual(void)
+static gchar *find_doc_file(const char *name)
 {
-	gchar *path = g_build_filename(DOCDIR, MANUAL_FILE_NAME, NULL);
+	gchar *path = g_build_filename(DOCDIR, name, NULL);
 	if(g_file_test(path, G_FILE_TEST_IS_REGULAR))
 		return path;
 	g_free(path);
 	const gchar * const *dirs;
 	for(dirs = g_get_system_data_dirs(); *dirs; dirs++) {
-		path = g_build_filename(*dirs, "doc", PACKAGE, MANUAL_FILE_NAME, NULL);
+		path = g_build_filename(*dirs, "doc", PACKAGE, name, NULL);
 		if(g_file_test(path, G_FILE_TEST_IS_REGULAR))
 			return path;
 		g_free(path);
 	}
 	return NULL;
+}
+
+/* The manual in the user's language (MANUAL_FILE_NAME with -<lang> before
+ * the extension, e.g. tg-expert-manual-es.pdf), else the English one */
+static gchar *find_manual(void)
+{
+	const gchar * const *langs;
+	for(langs = g_get_language_names(); *langs; langs++) {
+		if(!strcmp(*langs, "C") || strchr(*langs, '.') || strchr(*langs, '@'))
+			continue;	// "C" is English; es_ES.UTF-8 also comes as es_ES and es
+		gchar *base = g_strndup(MANUAL_FILE_NAME, strlen(MANUAL_FILE_NAME) - strlen(".pdf"));
+		gchar *name = g_strdup_printf("%s-%s.pdf", base, *langs);
+		gchar *path = find_doc_file(name);
+		g_free(name);
+		g_free(base);
+		if(path)
+			return path;
+	}
+	return find_doc_file(MANUAL_FILE_NAME);
 }
 
 /* Open the manual in the PDF viewer, or the releases page if it is not installed.
