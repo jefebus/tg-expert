@@ -529,6 +529,8 @@ static guint computer_terminated(struct main_window *w)
 			int actual_rate = requested_rate;
 			double real_rate = 0;
 			int failed = 0;
+			/* Collect errors from the attempts and report once at the end */
+			set_audio_errors_quiet(1);
 			terminate_portaudio();
 			set_audio_input_device(requested_device);
 			set_audio_sample_rate(requested_rate);
@@ -547,14 +549,16 @@ static guint computer_terminated(struct main_window *w)
 				actual_rate = PA_SAMPLE_RATE;
 				failed = start_portaudio(&actual_rate, &real_rate);
 			}
+			set_audio_errors_quiet(0);
 			if(failed) {
-				terminate_portaudio();
+				/* PortAudio stays initialized so the device list keeps working */
 				w->audio_device = AUDIO_DEVICE_DEFAULT;
 				w->nominal_sr = PA_SAMPLE_RATE;
 				set_audio_input_device(w->audio_device);
 				set_audio_sample_rate(w->nominal_sr);
 				audio_show(w, "No audio input", 0);
-				error("Could not open the requested audio input; select another device to retry.");
+				error("Could not open the audio input. It may be in use or disabled. "
+				      "Choose another device, or check Windows microphone settings.");
 			} else {
 				w->audio_device = get_audio_input_device();
 				w->nominal_sr = get_audio_sample_rate();
@@ -1680,18 +1684,36 @@ static void start_interface(GApplication* app, void *p)
 	set_audio_input_device(w->audio_device);
 	set_audio_sample_rate(w->nominal_sr);
 
+	int audio_failed = 0;
+	real_sr = w->nominal_sr;
+	set_audio_errors_quiet(1);
 	if(start_portaudio(&w->nominal_sr, &real_sr)) {
-		terminate_portaudio();
-		w->nominal_sr = PA_SAMPLE_RATE;
-		set_audio_sample_rate(w->nominal_sr);
-		if(start_portaudio(&w->nominal_sr, &real_sr)) {
-			g_application_quit(app);
-			return;
+		/* Retry with the default rate only if a different rate was saved.
+		 * PortAudio is left initialized on failure so that the device
+		 * list can still be shown and another input chosen. */
+		if(w->nominal_sr != PA_SAMPLE_RATE) {
+			terminate_portaudio();
+			w->nominal_sr = PA_SAMPLE_RATE;
+			set_audio_sample_rate(w->nominal_sr);
+			real_sr = w->nominal_sr;
+			if(start_portaudio(&w->nominal_sr, &real_sr))
+				audio_failed = 1;
+			else
+				error("Saved sample rate unavailable; using the default rate.");
+		} else {
+			audio_failed = 1;
 		}
-		error("Saved sample rate unavailable; using the default rate.");
+		if(audio_failed) {
+			w->nominal_sr = PA_SAMPLE_RATE;
+			real_sr = w->nominal_sr;
+			set_audio_sample_rate(w->nominal_sr);
+		}
 	}
-	w->audio_device = get_audio_input_device();
-	w->nominal_sr = get_audio_sample_rate();
+	set_audio_errors_quiet(0);
+	if(!audio_failed) {
+		w->audio_device = get_audio_input_device();
+		w->nominal_sr = get_audio_sample_rate();
+	}
 
 	if(w->la < MIN_LA || w->la > MAX_LA) w->la = DEFAULT_LA;
 	if(w->bph < MIN_BPH || w->bph > MAX_BPH) w->bph = 0;
@@ -1719,6 +1741,14 @@ static void start_interface(GApplication* app, void *p)
 	op_set_paperstrip_settings_callback(w->active_panel, handle_paperstrip_settings_changed, w);
 
 	init_main_window(w);
+	if(audio_failed) {
+		/* No stream is open: let the user pick any device from the list */
+		w->audio_device = AUDIO_DEVICE_DEFAULT;
+		w->pending_audio_device = AUDIO_DEVICE_DEFAULT;
+		audio_show(w, "No audio input", 0);
+		error("No default audio input found. Choose an input device with the audio button, "
+		      "or check Windows microphone settings.");
+	}
 
 	w->kick_timeout = g_timeout_add_full(G_PRIORITY_LOW,100,(GSourceFunc)kick_computer,w,NULL);
 	w->save_timeout = g_timeout_add_full(G_PRIORITY_LOW,10000,(GSourceFunc)save_on_change_timer,w,NULL);

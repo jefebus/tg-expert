@@ -132,6 +132,7 @@ struct processing_data {
 
 int start_portaudio(int *nominal_sample_rate, double *real_sample_rate);
 int terminate_portaudio();
+void set_audio_errors_quiet(int quiet);
 int list_audio_input_devices(int **devices, char ***names, int *count, int *default_device);
 void free_audio_input_devices(int *devices, char **names, int count);
 void set_audio_input_device(int device);
