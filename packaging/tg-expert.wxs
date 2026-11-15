@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='windows-1252'?>
 <Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
-  <Product Name='tg-expert' Id='3a7f98cc-bb50-4b14-9354-58468ecff747' UpgradeCode='ed9a22fc-68e1-4038-b075-c41127282fe9'
+  <Product Name='tg-expert' Id='95df3b52-91c0-4aa6-87f0-d706834484c0' UpgradeCode='ed9a22fc-68e1-4038-b075-c41127282fe9'
     Language='1033' Codepage='1252' Version='0.9.0' Manufacturer='tg-expert'>
 
     <Package Id='*' Keywords='Installer'
@@ -17,7 +17,7 @@
       <Directory Id='ProgramFilesFolder' Name='PFiles'>
         <Directory Id='INSTALLDIR' Name='tg-expert'>
 
-          <Component Id='MainExecutable' Guid='b4960a23-2014-43c4-9c2c-d96e83951f50'>
+          <Component Id='MainExecutable' Guid='179abec3-26ae-4154-a252-6783db6f8102'>
             <File Id='TgEXE' Name='tg-expert.exe' DiskId='1' Source='tg-expert.exe' KeyPath='yes'>
               <Shortcut Id='startmenuTg' Directory='ProgramMenuDir' Name='tg-expert 0.9.0' WorkingDirectory='INSTALLDIR' Icon='TgExpert.exe' IconIndex='0' Advertise='yes' />
               <Shortcut Id='desktopTg' Directory='DesktopFolder' Name='tg-expert 0.9.0' WorkingDirectory='INSTALLDIR' Icon='TgExpert.exe' IconIndex='0' Advertise='yes' />
@@ -30,11 +30,11 @@
             </ProgId>
           </Component>
 
-          <Component Id='License' Guid='bea6d7d0-87c8-43c6-9ce0-37f90fc04d1b'>
+          <Component Id='License' Guid='68335d1d-7d7c-49f3-bee3-aa5884c5bfb7'>
             <File Id='License' Name='LICENSE' DiskId='1' Source='LICENSE' KeyPath='yes' />
           </Component>
 
-          <Component Id='Readme' Guid='ba9d0563-4a07-4bfa-8568-0effb3018260'>
+          <Component Id='Readme' Guid='018c9d96-0138-4ef3-b089-bbe1576dca1f'>
             <File Id='Readme' Name='README.md' DiskId='1' Source='README.md' KeyPath='yes' />
           </Component>
 
@@ -43,7 +43,7 @@
           <Directory Id='ManualShareDir' Name='share'>
             <Directory Id='ManualDocDir' Name='doc'>
               <Directory Id='MANUALDIR' Name='tg-expert'>
-                <Component Id='Manual' Guid='5134e80c-3c15-4955-b510-4aa1f035cdf5'>
+                <Component Id='Manual' Guid='e72d1b89-79fd-4c2d-b733-ebefaad51b5a'>
                   <File Id='Manual' Name='tg-expert-manual.pdf' DiskId='1' Source='tg-expert-manual.pdf' KeyPath='yes' />
                 </Component>
               </Directory>
@@ -55,7 +55,7 @@
 
       <Directory Id='ProgramMenuFolder' Name='Programs'>
         <Directory Id='ProgramMenuDir' Name='tg-expert 0.9.0'>
-          <Component Id='ProgramMenuDir' Guid='79531313-2e46-4163-b103-3f10c4c2f4fc'>
+          <Component Id='ProgramMenuDir' Guid='fc8c455a-5dff-4961-820c-29f6b8c63024'>
             <Shortcut Id='startmenuManual' Name='tg-expert manual' Description='tg-expert user manual (PDF)'
                       Target='[MANUALDIR]tg-expert-manual.pdf' WorkingDirectory='MANUALDIR' />
             <RemoveFolder Id='ProgramMenuDir' On='uninstall' />
@@ -80,7 +80,16 @@
 
     <WixVariable Id='WixUILicenseRtf' Value='LICENSE.rtf' />
 
-    <UIRef Id='WixUI_InstallDir' />
+    <!-- Last dialog: a "Launch tg-expert" checkbox, ticked by default -->
+    <Property Id='WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT' Value='Launch tg-expert' />
+    <Property Id='WIXUI_EXITDIALOGOPTIONALCHECKBOX' Value='1' />
+    <Property Id='WixShellExecTarget' Value='[#TgEXE]' />
+    <CustomAction Id='LaunchApplication' BinaryKey='WixCA' DllEntry='WixShellExec' Impersonate='yes' />
+
+    <UI>
+      <UIRef Id='WixUI_InstallDir' />
+      <Publish Dialog='ExitDialog' Control='Finish' Event='DoAction' Value='LaunchApplication'>WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed</Publish>
+    </UI>
     <UIRef Id='WixUI_ErrorProgressText' />
 
     <Icon Id='TgExpert.exe' SourceFile='tg-expert.exe' />
