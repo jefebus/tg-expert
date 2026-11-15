@@ -57,10 +57,10 @@
 
 #define EVENTS_COUNT 10000
 #define EVENTS_MAX 100
-#define PAPERSTRIP_ZOOM 10
-#define PAPERSTRIP_ZOOM_CAL 100
+#define PAPERSTRIP_WINDOW_MS 30.0	// paperstrip width at 1x zoom (nearest whole division of the beat)
+#define PAPERSTRIP_WINDOW_MS_CAL 10.0	// the same in calibration (of a second)
 #define PAPERSTRIP_MARGIN .2
-#define PAPERSTRIP_DIVISIONS 9 // vertical grid, shared by the ms and amplitude scales (25 deg each)
+#define PAPERSTRIP_DIVISIONS 10 // vertical grid, shared by the ms and amplitude scales (25 deg each)
 
 #define MIN_BPH 8100
 #define TYP_BPH 12000

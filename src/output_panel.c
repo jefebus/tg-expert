@@ -838,6 +838,37 @@ static double legend_item(cairo_t *c, double x, double y, int style, struct colo
 	return x + e.x_advance + 14;
 }
 
+/* Paperstrip zoom levels (trace_zoom). At 1x the window is PAPERSTRIP_WINDOW_MS
+ * wide (PAPERSTRIP_WINDOW_MS_CAL in calibration), at 2x half of it, and so on. */
+static const double paperstrip_zoom_levels[] = {0.25, 0.5, 1, 2, 4, 8, 0};
+
+/* The level nearest to a saved trace_zoom (older versions stored other factors) */
+static int paperstrip_zoom_index(double trace_zoom)
+{
+	double z = trace_zoom > 0 ? trace_zoom : 1.0;
+	int best = 0;
+	for(int i = 1; paperstrip_zoom_levels[i]; i++)
+		if(fabs(log(paperstrip_zoom_levels[i] / z)) < fabs(log(paperstrip_zoom_levels[best] / z)))
+			best = i;
+	return best;
+}
+
+/* Windows per beat (per second in calibration). A beat is drawn at its time
+ * modulo the window, so this must be a whole number: then consecutive beats,
+ * one beat apart, fall on the same column. With a fraction every beat moves by
+ * that fraction of a window, the dots jump and tic and toc swap places. So the
+ * window is the whole division of the beat nearest to the wanted width, e.g. at
+ * 28800 bph (125 ms) 1x is 125/4 = 31.25 ms instead of 30 ms. */
+static double paperstrip_zoom_factor(const struct snapshot *snst)
+{
+	double zoom = paperstrip_zoom_levels[paperstrip_zoom_index(snst->trace_zoom)];
+	int bph = snst->guessed_bph > 0 ? snst->guessed_bph : (snst->bph ? snst->bph : DEFAULT_BPH);
+	double period_ms = snst->calibrate ? 1000. : 3600000. / bph;
+	double wanted_ms = (snst->calibrate ? PAPERSTRIP_WINDOW_MS_CAL : PAPERSTRIP_WINDOW_MS) / zoom;
+	double n = round(period_ms / wanted_ms);
+	return n < 1 ? 1 : n;
+}
+
 static gboolean paperstrip_draw_event(GtkWidget *widget, cairo_t *c, struct output_panel *op)
 {
 	int i;
@@ -852,15 +883,14 @@ static gboolean paperstrip_draw_event(GtkWidget *widget, cairo_t *c, struct outp
 	double zoom_factor;
 	double safe_sample_rate = snst->sample_rate > 0 ? snst->sample_rate : snst->nominal_sr;
 	int safe_bph = snst->guessed_bph > 0 ? snst->guessed_bph : (snst->bph ? snst->bph : DEFAULT_BPH);
-	const double trace_zoom = snst->trace_zoom > 0 ? snst->trace_zoom : 1.0;
 	double slope = 1000; // detected rate: 1000 -> do not display
 	if(snst->calibrate) {
 		sweep = snst->nominal_sr;
-		zoom_factor = PAPERSTRIP_ZOOM_CAL * trace_zoom;
+		zoom_factor = paperstrip_zoom_factor(snst);
 		slope = (double) snst->cal * zoom_factor / (10 * 3600 * 24);
 	} else {
 		sweep = safe_sample_rate * 3600. / safe_bph;
-		zoom_factor = PAPERSTRIP_ZOOM * trace_zoom;
+		zoom_factor = paperstrip_zoom_factor(snst);
 		if(valid_events_wp && snst->events[snst->events_wp])
 			slope = - guide_rate(op) * zoom_factor / (3600. * 24.);
 		else
@@ -906,8 +936,9 @@ static gboolean paperstrip_draw_event(GtkWidget *widget, cairo_t *c, struct outp
 
 	// Width of the strip in ms (a beat in normal mode, a second in calibration, divided by the zoom)
 	const double window_ms = snst->calibrate ? 1000. / zoom_factor : 3600000. / (safe_bph * zoom_factor);
-	// Amplitude scale: linear, 135 deg at the left edge, 360 deg at the right edge
-	const double amp_min = 135.0, amp_max = 360.0;
+	// Amplitude scale: linear, 110 deg at the left edge, 360 deg at the right edge,
+	// so that each of the PAPERSTRIP_DIVISIONS divisions is 25 deg
+	const double amp_min = 110.0, amp_max = 360.0;
 #define AMP_X(a)   (left_margin + ((a) - amp_min) / (amp_max - amp_min) * (strip_width - 1))
 	// The beat position runs from right to left, so that a fast watch (positive
 	// rate) leans to the right with the newest beats at the bottom
@@ -1098,10 +1129,10 @@ static gboolean paperstrip_draw_event(GtkWidget *widget, cairo_t *c, struct outp
 		double y = plot_bottom - 1 - row;
 		cairo_rectangle(c, width - 1 - column, y, 1, 1);
 		cairo_fill(c);
-		if(column < width - strip_width && row > 0) {
-			// Repeat in the left margin, one row newer, so that the trace
-			// looks continuous across the window edge
-			cairo_rectangle(c, width - 1 - column - strip_width, y + 1, 1, 1);
+		if(column < width - strip_width) {
+			// Repeat one window to the left, so that the trace looks continuous
+			// across the window edge. It is the same beat, so the same row.
+			cairo_rectangle(c, width - 1 - column - strip_width, y, 1, 1);
 			cairo_fill(c);
 		}
 		if(--i < 0) i = snst->events_count - 1;
@@ -1240,12 +1271,12 @@ static void handle_center_trace(GtkButton *b, struct output_panel *op)
 		double chart_width;
 		if(snst->calibrate) {
 			sweep = (double) snst->nominal_sr;
-			zoom_factor = PAPERSTRIP_ZOOM_CAL * (snst->trace_zoom > 0 ? snst->trace_zoom : 1.0);
+			zoom_factor = paperstrip_zoom_factor(snst);
 		} else {
 			if(snst->sample_rate <= 0 || snst->guessed_bph <= 0)
 				return;
 			sweep = snst->sample_rate * 3600. / snst->guessed_bph;
-			zoom_factor = PAPERSTRIP_ZOOM * (snst->trace_zoom > 0 ? snst->trace_zoom : 1.0);
+			zoom_factor = paperstrip_zoom_factor(snst);
 		}
 		if(!isfinite(sweep) || sweep <= 0 || !isfinite(zoom_factor) || zoom_factor <= 0)
 			return;
@@ -1273,12 +1304,12 @@ static void shift_trace(struct output_panel *op, double direction)
 	double zoom_factor;
 	if(snst->calibrate) {
 		chart_width = (double) snst->nominal_sr;
-		zoom_factor = PAPERSTRIP_ZOOM_CAL * (snst->trace_zoom > 0 ? snst->trace_zoom : 1.0);
+		zoom_factor = paperstrip_zoom_factor(snst);
 	} else {
 		if(snst->sample_rate <= 0 || snst->guessed_bph <= 0)
 			return;
 		chart_width = snst->sample_rate * 3600. / snst->guessed_bph;
-		zoom_factor = PAPERSTRIP_ZOOM * (snst->trace_zoom > 0 ? snst->trace_zoom : 1.0);
+		zoom_factor = paperstrip_zoom_factor(snst);
 	}
 	if(!isfinite(chart_width) || chart_width <= 0 || !isfinite(zoom_factor) || zoom_factor <= 0)
 		return;
@@ -1296,13 +1327,13 @@ static void zoom_trace(struct output_panel *op, double factor)
 	struct snapshot *snst = op->snst;
 	if(!snst)
 		return;
-	if(snst->trace_zoom <= 0)
-		snst->trace_zoom = 1.0;
-	snst->trace_zoom *= factor;
-	if(snst->trace_zoom < 0.25)
-		snst->trace_zoom = 0.25;
-	if(snst->trace_zoom > 8.0)
-		snst->trace_zoom = 8.0;
+	/* One level of paperstrip_zoom_levels in the direction of factor */
+	int i = paperstrip_zoom_index(snst->trace_zoom);
+	if(factor > 1 && paperstrip_zoom_levels[i + 1])
+		i++;
+	else if(factor < 1 && i > 0)
+		i--;
+	snst->trace_zoom = paperstrip_zoom_levels[i];
 	gtk_widget_queue_draw(op->paperstrip_drawing_area);
 }
 
@@ -1320,13 +1351,13 @@ static void handle_paperstrip_setting_change(GtkSpinButton *spin, struct output_
 static void handle_zoom_out(GtkButton *b, struct output_panel *op)
 {
 	UNUSED(b);
-	zoom_trace(op, 1.0 / 1.25);
+	zoom_trace(op, 0.5);
 }
 
 static void handle_zoom_in(GtkButton *b, struct output_panel *op)
 {
 	UNUSED(b);
-	zoom_trace(op, 1.25);
+	zoom_trace(op, 2);
 }
 
 static void handle_zoom_reset(GtkButton *b, struct output_panel *op)
