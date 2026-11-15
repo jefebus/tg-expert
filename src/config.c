@@ -75,6 +75,22 @@ void load_config(struct main_window *w)
 	}
 
 	CONFIG_FIELDS(LOAD);
+
+	/* The input device is saved by name: device numbers change between sessions */
+	gchar *name = g_key_file_get_string(w->config_file, "tg", AUDIO_DEVICE_NAME_KEY, NULL);
+	if(name) {
+		g_free(w->audio_device_name);
+		w->audio_device_name = name;
+	}
+}
+
+/* Whether the saved input device name differs from the current one */
+static int audio_device_name_changed(struct main_window *w)
+{
+	gchar *saved = g_key_file_get_string(w->config_file, "tg", AUDIO_DEVICE_NAME_KEY, NULL);
+	int changed = g_strcmp0(saved, w->audio_device_name) != 0;
+	g_free(saved);
+	return changed;
 }
 
 void save_config(struct main_window *w)
@@ -88,6 +104,8 @@ void save_config(struct main_window *w)
 	w -> conf_data -> PLACE = w -> PLACE;
 
 	CONFIG_FIELDS(SAVE);
+	if(w->audio_device_name)
+		g_key_file_set_string(w->config_file, "tg", AUDIO_DEVICE_NAME_KEY, w->audio_device_name);
 
 #ifdef DEBUG
 	GError *ge = NULL;
@@ -112,6 +130,9 @@ void save_on_change(struct main_window *w)
 	}
 
 	CONFIG_FIELDS(CHANGED);
+
+	if(w->audio_device_name && audio_device_name_changed(w))
+		save_config(w);
 }
 
 /* Saved watches

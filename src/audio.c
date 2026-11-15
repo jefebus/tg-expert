@@ -26,10 +26,13 @@ uint64_t timestamp = 0;
 pthread_mutex_t audio_mutex;
 static int audio_mutex_initialized = 0;
 static PaDeviceIndex selected_input_device = paNoDevice;
+static int selected_api_type = AUDIO_API_DEFAULT;	// PaHostApiTypeId, or AUDIO_API_DEFAULT
 static int selected_sample_rate = PA_SAMPLE_RATE;
 static float input_level = 0;
 static int audio_errors_quiet = 0;
 static int pa_init_count = 0;
+static int stream_open = 0;	// an input stream is running on selected_input_device
+static char *preferred_device_name = NULL;	// device to look up by name when none is selected
 
 /* Report an audio error, unless the caller collects errors and reports one itself */
 static void audio_error(const char *format, ...)
@@ -48,6 +51,18 @@ static void audio_error(const char *format, ...)
 void set_audio_errors_quiet(int quiet)
 {
 	audio_errors_quiet = quiet;
+}
+
+/* The host API in use: the selected one if this PortAudio build has it,
+ * otherwise PortAudio's default. Requires PortAudio to be initialized. */
+static PaHostApiIndex current_host_api(void)
+{
+	if(selected_api_type != AUDIO_API_DEFAULT) {
+		PaHostApiIndex api = Pa_HostApiTypeIdToHostApiIndex((PaHostApiTypeId)selected_api_type);
+		if(api >= 0)
+			return api;
+	}
+	return Pa_GetDefaultHostApi();
 }
 
 /* Data for PA callback to use */
@@ -148,19 +163,45 @@ int start_portaudio(int *nominal_sample_rate, double *real_sample_rate)
 	}
 #endif
 
-	/* A device chosen explicitly does not need a system default input */
+	PaHostApiIndex api = current_host_api();
+	const PaHostApiInfo *api_info = api >= 0 ? Pa_GetHostApiInfo(api) : NULL;
+	if(!api_info) {
+		audio_error("No audio system available");
+		return 1;
+	}
+	if(selected_api_type != AUDIO_API_DEFAULT && api_info->type != (PaHostApiTypeId)selected_api_type)
+		fprintf(stderr, "Audio: selected audio system %d is not available, using %s\n",
+			selected_api_type, api_info->name);
+
+	/* Only devices of the current audio system are used. A device chosen
+	 * explicitly does not need a default input. */
 	PaDeviceIndex input_device = paNoDevice;
 	if(selected_input_device != paNoDevice) {
 		const PaDeviceInfo *selected_info = Pa_GetDeviceInfo(selected_input_device);
-		if(selected_info && selected_info->maxInputChannels > 0)
+		if(selected_info && selected_info->maxInputChannels > 0 && selected_info->hostApi == api)
 			input_device = selected_input_device;
 		else
-			fprintf(stderr, "Audio: selected device %d is not usable, falling back to default\n", (int)selected_input_device);
+			fprintf(stderr, "Audio: selected device %d is not usable with %s, falling back to default\n",
+				(int)selected_input_device, api_info->name);
+	}
+	/* A device saved by name (at startup): device numbers change between sessions */
+	if(input_device == paNoDevice && selected_input_device == paNoDevice && preferred_device_name) {
+		for(PaDeviceIndex i = 0; i < Pa_GetDeviceCount(); i++) {
+			const PaDeviceInfo *di = Pa_GetDeviceInfo(i);
+			if(di && di->hostApi == api && di->maxInputChannels > 0 && di->name &&
+					!strcmp(di->name, preferred_device_name)) {
+				input_device = i;
+				break;
+			}
+		}
+		if(input_device == paNoDevice)
+			fprintf(stderr, "Audio: saved input '%s' not found in %s, using the default input\n",
+				preferred_device_name, api_info->name);
 	}
 	if(input_device == paNoDevice) {
-		input_device = Pa_GetDefaultInputDevice();
+		input_device = api_info->defaultInputDevice;
 		if(input_device == paNoDevice) {
-			audio_error("No default audio input device found");
+			audio_error("No default audio input device found for %s", api_info->name);
 			return 1;
 		}
 	}
@@ -205,7 +246,10 @@ int start_portaudio(int *nominal_sample_rate, double *real_sample_rate)
 
 		/* Try JACK fallback if ALSA device failed */
 		PaHostApiIndex jack_api = Pa_HostApiTypeIdToHostApiIndex(paJACK);
-		if(jack_api >= 0 && failed_api && failed_api->type == paALSA) {
+		/* Only when no audio system was chosen explicitly: the device list
+		 * shows a single audio system, and JACK would be outside it. */
+		if(jack_api >= 0 && failed_api && failed_api->type == paALSA &&
+				selected_api_type == AUDIO_API_DEFAULT) {
 			const PaHostApiInfo *jack_info = Pa_GetHostApiInfo(jack_api);
 			if(jack_info && jack_info->defaultInputDevice != paNoDevice) {
 				PaDeviceIndex jack_device = jack_info->defaultInputDevice;
@@ -237,7 +281,7 @@ int start_portaudio(int *nominal_sample_rate, double *real_sample_rate)
 			/* Emit platform-specific hint before the generic error */
 			if(failed_api && failed_api->type == paALSA)
 				audio_error("Audio device is busy. If JACK (jackd/PipeWire-JACK) is running, "
-				      "try selecting the JACK input device from the device list or stop JACK first.");
+				      "try selecting JACK in the audio settings or stop JACK first.");
 #ifdef __APPLE__
 			if(failed_api && failed_api->type == paCoreAudio)
 				audio_error("Could not open audio input on macOS. Check System Settings > "
@@ -256,6 +300,7 @@ int start_portaudio(int *nominal_sample_rate, double *real_sample_rate)
 	*nominal_sample_rate = selected_sample_rate;
 	*real_sample_rate = info->sampleRate;
 	selected_input_device = input_device;
+	stream_open = 1;
 	{
 		const PaDeviceInfo *di = Pa_GetDeviceInfo(input_device);
 		const PaHostApiInfo *hi = di ? Pa_GetHostApiInfo(di->hostApi) : NULL;
@@ -285,7 +330,11 @@ int list_audio_input_devices(int **devices, char ***names, int *count, int *defa
 	*devices = NULL;
 	*names = NULL;
 	*count = 0;
-	*default_device = (int)Pa_GetDefaultInputDevice();
+	PaHostApiIndex api = current_host_api();
+	const PaHostApiInfo *api_info = api >= 0 ? Pa_GetHostApiInfo(api) : NULL;
+	if(!api_info)
+		return 1;
+	*default_device = (int)api_info->defaultInputDevice;
 
 	int ndevices = Pa_GetDeviceCount();
 	if(ndevices < 0)
@@ -302,7 +351,7 @@ int list_audio_input_devices(int **devices, char ***names, int *count, int *defa
 	int used = 0;
 	for(int i = 0; i < ndevices; i++) {
 		const PaDeviceInfo *di = Pa_GetDeviceInfo((PaDeviceIndex)i);
-		if(!di || di->maxInputChannels <= 0)
+		if(!di || di->maxInputChannels <= 0 || di->hostApi != api)
 			continue;
 
 		devs[used] = i;
@@ -337,6 +386,148 @@ void free_audio_input_devices(int *devices, char **names, int count)
 	free(devices);
 }
 
+int list_audio_apis(int **types, char ***names, int *count, int *current_type)
+{
+	if(!types || !names || !count || !current_type)
+		return 1;
+
+	*types = NULL;
+	*names = NULL;
+	*count = 0;
+
+	int napis = Pa_GetHostApiCount();
+	PaHostApiIndex current = current_host_api();
+	if(napis <= 0 || current < 0)
+		return 1;
+
+	int *t = malloc(napis * sizeof(*t));
+	char **n = malloc(napis * sizeof(*n));
+	if(!t || !n) {
+		free(t);
+		free(n);
+		return 1;
+	}
+
+	int used = 0;
+	for(int i = 0; i < napis; i++) {
+		const PaHostApiInfo *hi = Pa_GetHostApiInfo((PaHostApiIndex)i);
+		if(!hi)
+			continue;
+		t[used] = (int)hi->type;
+		n[used] = strdup(hi->name ? hi->name : "Unknown audio system");
+		if(!n[used]) {
+			for(int j = 0; j < used; j++)
+				free(n[j]);
+			free(t);
+			free(n);
+			return 1;
+		}
+		if(i == current)
+			*current_type = (int)hi->type;
+		used++;
+	}
+
+	*types = t;
+	*names = n;
+	*count = used;
+	return 0;
+}
+
+void free_audio_apis(int *types, char **names, int count)
+{
+	free_audio_input_devices(types, names, count);
+}
+
+void set_audio_api(int type)
+{
+	selected_api_type = type;
+}
+
+/* The audio system in use (PaHostApiTypeId), or AUDIO_API_DEFAULT if unknown */
+int get_audio_api(void)
+{
+	if(pa_init_count <= 0)
+		return AUDIO_API_DEFAULT;
+	const PaHostApiInfo *hi = Pa_GetHostApiInfo(current_host_api());
+	return hi ? (int)hi->type : AUDIO_API_DEFAULT;
+}
+
+const char *get_audio_api_name(void)
+{
+	if(pa_init_count <= 0)
+		return NULL;
+	const PaHostApiInfo *hi = Pa_GetHostApiInfo(current_host_api());
+	return hi ? hi->name : NULL;
+}
+
+/* The default input of the audio system in use, or AUDIO_DEVICE_DEFAULT if it has none */
+int get_default_audio_input_device(void)
+{
+	if(pa_init_count <= 0)
+		return AUDIO_DEVICE_DEFAULT;
+	const PaHostApiInfo *hi = Pa_GetHostApiInfo(current_host_api());
+	return hi && hi->defaultInputDevice != paNoDevice ? (int)hi->defaultInputDevice : AUDIO_DEVICE_DEFAULT;
+}
+
+/* Look up this device by name on the next start, when no device is selected */
+void set_audio_input_device_name(const char *name)
+{
+	free(preferred_device_name);
+	preferred_device_name = name && *name ? strdup(name) : NULL;
+}
+
+/* Name of the open input device, or NULL if no stream is open */
+const char *get_audio_input_device_name(void)
+{
+	if(!stream_open)
+		return NULL;
+	const PaDeviceInfo *di = Pa_GetDeviceInfo(selected_input_device);
+	return di ? di->name : NULL;
+}
+
+/* Whether rate is one tg offers. Faster rates do not fit the analysis buffers. */
+int sample_rate_valid(int rate)
+{
+	static const int rates[] = SAMPLE_RATES;
+	for(int i = 0; rates[i]; i++)
+		if(rates[i] == rate && rate <= (int)MAX_SAMPLE_RATE)
+			return 1;
+	return 0;
+}
+
+/* Rates from SAMPLE_RATES that the device accepts, in increasing order.
+ * PortAudio cannot list them, so each one is checked with Pa_IsFormatSupported. */
+int list_supported_sample_rates(int device, int *rates, int max)
+{
+	static const int candidates[] = SAMPLE_RATES;
+	if(pa_init_count <= 0 || device < 0 || device >= Pa_GetDeviceCount())
+		return 0;
+	const PaDeviceInfo *di = Pa_GetDeviceInfo((PaDeviceIndex)device);
+	if(!di || di->maxInputChannels <= 0)
+		return 0;
+
+	PaStreamParameters p;
+	p.device = (PaDeviceIndex)device;
+	p.channelCount = di->maxInputChannels > 2 ? 2 : di->maxInputChannels;
+	p.sampleFormat = paFloat32;
+	p.suggestedLatency = di->defaultLowInputLatency;
+	p.hostApiSpecificStreamInfo = NULL;
+
+	int n = 0;
+	for(int i = 0; candidates[i] && n < max; i++) {
+		int rate = candidates[i];
+		if(rate > (int)MAX_SAMPLE_RATE)
+			continue;
+		int ok = Pa_IsFormatSupported(&p, NULL, rate) == paFormatIsSupported;
+		/* A device in use may refuse the check (exclusive access), but its rate works */
+		if(!ok && stream_open && device == selected_input_device && rate == selected_sample_rate)
+			ok = 1;
+		if(ok)
+			rates[n++] = rate;
+	}
+	return n;
+}
+
 void set_audio_input_device(int device)
 {
 	selected_input_device = device >= 0 ? (PaDeviceIndex)device : paNoDevice;
@@ -369,6 +560,7 @@ float get_audio_level(void)
 int terminate_portaudio()
 {
 	debug("Closing portaudio\n");
+	stream_open = 0;
 	if(pa_init_count <= 0)
 		return 0;
 	pa_init_count--;
