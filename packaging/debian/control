@@ -1,15 +1,19 @@
 Source: tg-expert
-Maintainer: Marcello Mamino <vacaboja@gmail.com>
+Maintainer: jefebus <160006785+jefebus@users.noreply.github.com>
 Section: misc
 Priority: optional
 Standards-Version: 3.9.8
+Homepage: https://github.com/jefebus/tg-expert
 Build-Depends: debhelper (>= 9), libgtk-3-dev (>= 3.14), portaudio19-dev (>=19), libfftw3-dev (>=3.3)
 
 Package: tg-expert
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Program for timing mechanical watches
- tg-expert (tg-expert) is a program to evaluate the performance of mechanical
+ Tg Expert (tg-expert) is a program to evaluate the performance of mechanical
  watch movements. It works with the noise produced by a watch mechanism, and it
  produces real-time readings of the rate (or accuracy) and various other
- operational parameters. It is based on Tg by Marcello Mamino.
+ operational parameters. It also records long-term trends per watch position.
+ .
+ It is based on Tg by Marcello Mamino and contributors, and on tg-timer by
+ Alejandro Grigera.

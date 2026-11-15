@@ -1,5 +1,6 @@
-tg-timer (0.5.2-1) UNRELEASED; urgency=medium
+tg-expert (0.9.0-1) unstable; urgency=medium
 
-  * We don't keep a changelog.
+  * First release under the name tg-expert, based on Tg and tg-timer.
+    See CHANGELOG.md for the changes.
 
- -- Marcello Mamino <m2@ciovil.li>  Sat, 16 May 2020 05:47:27 +0200
+ -- jefebus <jefebus@users.noreply.github.com>  Sun, 15 Nov 2026 18:49:23 +0100
