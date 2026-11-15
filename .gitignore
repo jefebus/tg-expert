@@ -46,9 +46,15 @@ Makefile.in
 *.trs
 *.tar.gz
 
-# build directories
+# translations compiled by make (the .po and .pot files are sources)
+/po/*.gmo
+/po/locale/
+/po/stamp-locale
+
+# build directories and packages
 /deb
 /msi
 /msi-resources
+*.deb
 /tg-expert-manual-*.pdf
 /tg-expert-manual.pdf

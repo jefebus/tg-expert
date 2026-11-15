@@ -13,6 +13,11 @@ PKG_CHECK_MODULES([FFTW], [fftw3f])
 
 AC_CHECK_TOOL([WINDRES], [windres])
 AC_PATH_PROG([TYPST], [typst])
+AC_PATH_PROG([MSGFMT], [msgfmt])
+AC_PATH_PROG([MSGMERGE], [msgmerge])
+AC_PATH_PROG([XGETTEXT], [xgettext])
+AM_CONDITIONAL([HAVE_MSGFMT], [test x$MSGFMT != x])
+AS_IF([test x$MSGFMT = x], [AC_MSG_WARN([msgfmt not found: the program will be built without translations])])
 AM_CONDITIONAL([HAVE_TYPST], [test x$TYPST != x])
 AM_CONDITIONAL([HAVE_WINDRES], [test x$WINDRES != x])
 
@@ -22,7 +27,7 @@ AM_COND_IF([BE_WINDOWS], [AC_CONFIG_LINKS([icons/tg-timer.ico:icons/tg-timer.ico
 CC_CHECK_LDFLAGS([-Wl,--as-needed], [AC_SUBST([AM_LDFLAGS], [-Wl,--as-needed])], [])
 CC_CHECK_CFLAGS_APPEND([-Wall -Wextra], [], [])
 
-AC_OUTPUT([Makefile icons/Makefile])
+AC_OUTPUT([Makefile icons/Makefile po/Makefile])
 
 AC_MSG_RESULT([
         $PACKAGE_NAME $VERSION

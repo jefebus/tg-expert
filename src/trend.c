@@ -23,7 +23,8 @@
  * are recorded, if the signal is good, together with the watch position.
  * Periods without signal are left out. The recording starts over when a
  * setting that changes the results changes (bph, lift angle, cal, sample
- * rate, light algorithm), and it stops after TREND_MAX_HOURS hours.
+ * rate, light algorithm), and it stops after TREND_MAX_HOURS hours. With
+ * the bph guessed, a short-lived different guess is left out instead.
  * Runs in the GUI thread only. */
 
 #include "tg.h"
@@ -174,15 +175,36 @@ void trend_update(struct trend *t, const struct snapshot *s, int position)
 	if(!s->pb || s->is_old || s->guessed_bph <= 0 || !isfinite(s->rate) || !isfinite(s->be))
 		return;	// no good signal: a gap
 
-	/* Readings taken with other settings are not comparable. Checked only
-	 * with a good signal: without one, guessed_bph falls back to DEFAULT_BPH
-	 * (e.g. while the watch is turned to another position), which is not a
-	 * change of setting. */
-	if(t->count && (s->guessed_bph != t->bph || s->la != t->la || s->cal != t->cal ||
+	gint64 now = g_get_monotonic_time();
+
+	/* Readings taken with other settings are not comparable: the recording
+	 * starts over when the user changes lift angle, cal, sample rate or the
+	 * light algorithm. Checked only with a good signal: without one,
+	 * guessed_bph falls back to DEFAULT_BPH, which is not a change of setting. */
+	if(t->count && (s->la != t->la || s->cal != t->cal ||
 			s->nominal_sr != t->nominal_sr || s->is_light != t->is_light))
 		trend_reset(t);
 
-	gint64 now = g_get_monotonic_time();
+	if(t->count && s->guessed_bph != t->bph) {
+		if(s->bph) {
+			trend_reset(t);	// the user chose another bph
+		} else {
+			/* bph is guessed from each period. While the watch is turned
+			 * or the signal is poor, the guess can jump to another rate for
+			 * a while: those readings are wrong (the rate is computed for
+			 * the wrong bph), so they are left out, like a gap. Only a guess
+			 * that stays different for TREND_GUESS_CHANGE_S seconds, such as
+			 * a wrong first guess, starts the recording over. */
+			if(!t->guess_mismatch_us)
+				t->guess_mismatch_us = now;
+			if(now - t->guess_mismatch_us < (gint64)TREND_GUESS_CHANGE_S * 1000000)
+				return;
+			trend_reset(t);
+		}
+	} else {
+		t->guess_mismatch_us = 0;
+	}
+
 	if(t->count && now - t->last_us < (gint64)TREND_INTERVAL_S * 1000000)
 		return;
 	if(t->count >= TREND_MAX_SAMPLES) {

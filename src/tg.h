@@ -27,6 +27,8 @@
 #include <fftw3.h>
 #include <stdarg.h>
 #include <gtk/gtk.h>
+#include <glib/gi18n.h>	// _() translates a string, N_() marks one for later translation
+#include <locale.h>
 #include <pthread.h>
 
 #ifdef __CYGWIN__
@@ -41,6 +43,11 @@
  * is opened instead. */
 #ifndef DOCDIR
 #define DOCDIR ""
+#endif
+/* Translations: PACKAGE.mo in LOCALEDIR/<language>/LC_MESSAGES (set by the
+ * build to $(localedir)), or in share/locale of the installation */
+#ifndef LOCALEDIR
+#define LOCALEDIR ""
 #endif
 #define MANUAL_FILE_NAME "tg-expert-manual.pdf"
 #define MANUAL_URL "https://github.com/jefebus/tg-expert/releases/latest"
@@ -271,6 +278,7 @@ void compute_results(struct snapshot *s);
 /* trend.c: long-term statistics of the live measurement */
 #define TREND_INTERVAL_S 2	// one reading every 2 s
 #define TREND_MAX_HOURS 100
+#define TREND_GUESS_CHANGE_S 60	// a guessed bph must differ this long to restart the trend
 #define TREND_MAX_SAMPLES (TREND_MAX_HOURS * 3600 / TREND_INTERVAL_S)
 
 struct trend_sample {
@@ -295,6 +303,7 @@ struct trend {
 	// settings the readings were taken with
 	int bph, cal, nominal_sr, is_light;
 	double la;
+	gint64 guess_mismatch_us;	// since when the guessed bph differs from bph, 0 if it does not
 	struct trend_stats rate, amp, be;
 	struct trend_stats pos_rate[POS_COUNT], pos_amp[POS_COUNT], pos_be[POS_COUNT];
 };
