@@ -60,6 +60,7 @@
 #define PAPERSTRIP_WINDOW_MS 30.0	// paperstrip width at 1x zoom (nearest whole division of the beat)
 #define PAPERSTRIP_WINDOW_MS_CAL 10.0	// the same in calibration (of a second)
 #define PAPERSTRIP_MARGIN .2
+#define PAPERSTRIP_DOT_SIZE 2 // width and height of a beat dot in pixels
 #define PAPERSTRIP_DIVISIONS 10 // vertical grid, shared by the ms and amplitude scales (25 deg each)
 
 #define MIN_BPH 8100
@@ -278,6 +279,7 @@ struct output_panel {
 	void *paperstrip_settings_data;
 	double guide_rate;           // filtered rate (s/d) for the paper strip rate guide
 	gint64 guide_time;           // monotonic time of the last filter update, 0 = restart
+	int trace_centered;          // the live trace was centred since it appeared
 	float audio_meter_level;
 	gint64 audio_meter_time;
 	int audio_meter_active;
