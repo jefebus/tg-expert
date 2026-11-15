@@ -62,27 +62,43 @@ dist_mime_DATA = icons/tg-timer.xml
 
 dist_man_MANS = docs/tg-expert.1
 
-# The user manual, built with Typst when configure finds it.
-# The program looks for it in $(docdir).
+# The user manual in English, Spanish and German, built with Typst when
+# configure finds it. The program looks for tg-expert-manual-<lang>.pdf in
+# $(docdir), then for the English tg-expert-manual.pdf.
 if HAVE_TYPST
-doc_DATA = tg-expert-manual.pdf
-CLEANFILES = tg-expert-manual.pdf
-MANUAL_FILES = $(srcdir)/docs/manual/main.typ \
-		 $(srcdir)/docs/manual/lib.typ \
-		 $(srcdir)/docs/manual/chapters/introduction.typ \
-		 $(srcdir)/docs/manual/chapters/installation.typ \
-		 $(srcdir)/docs/manual/chapters/first-start.typ \
-		 $(srcdir)/docs/manual/chapters/microphone.typ \
-		 $(srcdir)/docs/manual/chapters/main-window.typ \
-		 $(srcdir)/docs/manual/chapters/measuring.typ \
-		 $(srcdir)/docs/manual/chapters/trend.typ \
-		 $(srcdir)/docs/manual/chapters/calibration.typ \
-		 $(srcdir)/docs/manual/chapters/files.typ \
-		 $(srcdir)/docs/manual/chapters/troubleshooting.typ \
-		 $(srcdir)/docs/manual/chapters/appendix.typ
-tg-expert-manual.pdf: $(MANUAL_FILES)
-	$(TYPST) compile $(srcdir)/docs/manual/main.typ $@
-manual: tg-expert-manual.pdf
+MANUALS = tg-expert-manual.pdf tg-expert-manual-es.pdf tg-expert-manual-de.pdf
+doc_DATA = $(MANUALS)
+CLEANFILES = $(MANUALS)
+MANUAL_DIR = $(srcdir)/docs/manual
+MANUAL_EN = $(MANUAL_DIR)/main.typ $(MANUAL_DIR)/lib.typ \
+	    $(MANUAL_DIR)/chapters/introduction.typ $(MANUAL_DIR)/chapters/installation.typ \
+	    $(MANUAL_DIR)/chapters/first-start.typ $(MANUAL_DIR)/chapters/microphone.typ \
+	    $(MANUAL_DIR)/chapters/main-window.typ $(MANUAL_DIR)/chapters/measuring.typ \
+	    $(MANUAL_DIR)/chapters/trend.typ $(MANUAL_DIR)/chapters/calibration.typ \
+	    $(MANUAL_DIR)/chapters/files.typ $(MANUAL_DIR)/chapters/troubleshooting.typ \
+	    $(MANUAL_DIR)/chapters/appendix.typ
+MANUAL_ES = $(MANUAL_DIR)/main-es.typ $(MANUAL_DIR)/lib.typ \
+	    $(MANUAL_DIR)/es/introduction.typ $(MANUAL_DIR)/es/installation.typ \
+	    $(MANUAL_DIR)/es/first-start.typ $(MANUAL_DIR)/es/microphone.typ \
+	    $(MANUAL_DIR)/es/main-window.typ $(MANUAL_DIR)/es/measuring.typ \
+	    $(MANUAL_DIR)/es/trend.typ $(MANUAL_DIR)/es/calibration.typ \
+	    $(MANUAL_DIR)/es/files.typ $(MANUAL_DIR)/es/troubleshooting.typ \
+	    $(MANUAL_DIR)/es/appendix.typ
+MANUAL_DE = $(MANUAL_DIR)/main-de.typ $(MANUAL_DIR)/lib.typ \
+	    $(MANUAL_DIR)/de/introduction.typ $(MANUAL_DIR)/de/installation.typ \
+	    $(MANUAL_DIR)/de/first-start.typ $(MANUAL_DIR)/de/microphone.typ \
+	    $(MANUAL_DIR)/de/main-window.typ $(MANUAL_DIR)/de/measuring.typ \
+	    $(MANUAL_DIR)/de/trend.typ $(MANUAL_DIR)/de/calibration.typ \
+	    $(MANUAL_DIR)/de/files.typ $(MANUAL_DIR)/de/troubleshooting.typ \
+	    $(MANUAL_DIR)/de/appendix.typ
+TYPST_FLAGS = --input version=$(PACKAGE_VERSION)
+tg-expert-manual.pdf: $(MANUAL_EN)
+	$(TYPST) compile $(TYPST_FLAGS) $(MANUAL_DIR)/main.typ $@
+tg-expert-manual-es.pdf: $(MANUAL_ES)
+	$(TYPST) compile $(TYPST_FLAGS) $(MANUAL_DIR)/main-es.typ $@
+tg-expert-manual-de.pdf: $(MANUAL_DE)
+	$(TYPST) compile $(TYPST_FLAGS) $(MANUAL_DIR)/main-de.typ $@
+manual: $(MANUALS)
 else
 manual:
 	@echo "Typst was not found when configure ran. Install it (https://typst.app)" >&2

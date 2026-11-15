@@ -82,5 +82,9 @@ share\locale\es\LC_MESSAGES\gdk-pixbuf.mo
 share\locale\es\LC_MESSAGES\glib20.mo
 share\locale\es\LC_MESSAGES\gtk30-properties.mo
 share\locale\es\LC_MESSAGES\gtk30.mo
+share\locale\de\LC_MESSAGES\gdk-pixbuf.mo
+share\locale\de\LC_MESSAGES\glib20.mo
+share\locale\de\LC_MESSAGES\gtk30-properties.mo
+share\locale\de\LC_MESSAGES\gtk30.mo
 bin\gspawn-win64-helper.exe
 bin\gspawn-win64-helper-console.exe

@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='windows-1252'?>
+<?xml version='1.0' encoding='utf-8'?>
 <Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
   <Product Name='tg-expert' Id='#UUID#' UpgradeCode='ed9a22fc-68e1-4038-b075-c41127282fe9'
     Language='1033' Codepage='1252' Version='#VERSIONX#' Manufacturer='tg-expert'>
@@ -46,6 +46,12 @@
                 <Component Id='Manual' Guid='#UUID#'>
                   <File Id='Manual' Name='tg-expert-manual.pdf' DiskId='1' Source='tg-expert-manual.pdf' KeyPath='yes' />
                 </Component>
+                <Component Id='ManualEs' Guid='#UUID#'>
+                  <File Id='ManualEs' Name='tg-expert-manual-es.pdf' DiskId='1' Source='tg-expert-manual-es.pdf' KeyPath='yes' />
+                </Component>
+                <Component Id='ManualDe' Guid='#UUID#'>
+                  <File Id='ManualDe' Name='tg-expert-manual-de.pdf' DiskId='1' Source='tg-expert-manual-de.pdf' KeyPath='yes' />
+                </Component>
               </Directory>
             </Directory>
           </Directory>
@@ -58,6 +64,10 @@
           <Component Id='ProgramMenuDir' Guid='#UUID#'>
             <Shortcut Id='startmenuManual' Name='tg-expert manual' Description='tg-expert user manual (PDF)'
                       Target='[MANUALDIR]tg-expert-manual.pdf' WorkingDirectory='MANUALDIR' />
+            <Shortcut Id='startmenuManualEs' Name='tg-expert manual (Español)' Description='Manual de usuario de tg-expert (PDF)'
+                      Target='[MANUALDIR]tg-expert-manual-es.pdf' WorkingDirectory='MANUALDIR' />
+            <Shortcut Id='startmenuManualDe' Name='tg-expert Handbuch (Deutsch)' Description='Benutzerhandbuch von tg-expert (PDF)'
+                      Target='[MANUALDIR]tg-expert-manual-de.pdf' WorkingDirectory='MANUALDIR' />
             <RemoveFolder Id='ProgramMenuDir' On='uninstall' />
             <RegistryValue Root='HKCU' Key='Software\[Manufacturer]\[ProductName]' Type='string' Value='' KeyPath='yes' />
           </Component>
@@ -72,6 +82,8 @@
       <ComponentRef Id='License' />
       <ComponentRef Id='Readme' />
       <ComponentRef Id='Manual' />
+      <ComponentRef Id='ManualEs' />
+      <ComponentRef Id='ManualDe' />
       <ComponentGroupRef Id='Resources' />
       <ComponentRef Id='ProgramMenuDir' />
     </Feature>
