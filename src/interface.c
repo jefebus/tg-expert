@@ -28,8 +28,6 @@ int testing = 0;
 #endif
 
 int preset_bph[] = PRESET_BPH;
-static const int available_sample_rates[] = {22050, 32000, 44100, 48000, 96000, 0};
-static const char *available_sample_rate_labels[] = {"22.05 kHz", "32 kHz", "44.1 kHz", "48 kHz", "96 kHz", NULL};
 
 static guint kick_computer(struct main_window *w);
 guint save_on_change_timer(struct main_window *w);
@@ -374,80 +372,18 @@ static void handle_cal_change(GtkSpinButton *b, struct main_window *w)
 	gtk_widget_queue_draw(w->notebook);
 }
 
-/* The audio input is a button with the device name, cut to AUDIO_NAME_CHARS
- * characters (its tooltip has the full name). Opening it lists every device in full. */
-#define AUDIO_NAME_CHARS 24
-
-static void audio_show(struct main_window *w, const char *name, int is_default)
+/* Restart audio with another audio system, input device or sample rate.
+ * The change is applied when the computation thread has stopped, in
+ * computer_terminated(). Used by the audio settings dialog. */
+void request_audio_restart(struct main_window *w, int api, int device, int rate)
 {
-	gtk_label_set_text(GTK_LABEL(w->audio_label), name);
-	gchar *tip = g_strconcat(name, is_default ? " (default device)" : "", NULL);
-	gtk_widget_set_tooltip_text(w->audio_combo_box, tip);
-	g_free(tip);
-}
-
-static void audio_refresh_selection(struct main_window *w)
-{
-	int *devices = NULL;
-	char **names = NULL;
-	int count = 0;
-	int default_device = AUDIO_DEVICE_DEFAULT;
-	if(!list_audio_input_devices(&devices, &names, &count, &default_device)) {
-		for(int i = 0; i < count; i++) {
-			if(devices[i] == w->audio_device) {
-				audio_show(w, names[i], devices[i] == default_device);
-				break;
-			}
-		}
-		free_audio_input_devices(devices, names, count);
-	} else {
-		audio_show(w, "No audio input", 0);
-	}
-}
-
-/* Use a device: the same steps the old combo box took when its selection changed */
-static void audio_apply_device(struct main_window *w, int device)
-{
-	if(!w->controls_active || device == w->audio_device) return;
+	if(!w->controls_active || w->calibrate || w->restart_audio) return;
+	w->pending_audio_api = api;
 	w->pending_audio_device = device;
-	w->pending_audio_rate = w->nominal_sr;
+	w->pending_audio_rate = rate;
 	w->restart_audio = 1;
-	gtk_widget_set_tooltip_text(w->audio_combo_box, "Opening audio input...");
-	gtk_widget_set_sensitive(w->audio_combo_box, FALSE);
-	gtk_widget_set_sensitive(w->sample_rate_combo_box, FALSE);
-
-	lock_computer(w->computer);
-	if(w->computer->recompute >= 0)
-		kill_computer(w);
-	unlock_computer(w->computer);
-}
-
-static void handle_audio_pick(GtkButton *item, struct main_window *w)
-{
-	GtkWidget *popover = gtk_widget_get_ancestor(GTK_WIDGET(item), GTK_TYPE_POPOVER);
-	if(popover) gtk_widget_hide(popover);
-
-	audio_apply_device(w, GPOINTER_TO_INT(g_object_get_data(G_OBJECT(item), "device")));
-}
-
-static void handle_sample_rate_change(GtkComboBox *b, struct main_window *w)
-{
-	if(!w->controls_active) return;
-	const gchar *id = gtk_combo_box_get_active_id(b);
-	if(!id) return;
-
-	char *end = NULL;
-	long sample_rate = strtol(id, &end, 10);
-	if(!end || *end || sample_rate <= 0)
-		return;
-	if((int)sample_rate == w->nominal_sr)
-		return;
-
-	w->pending_audio_device = w->audio_device;
-	w->pending_audio_rate = (int)sample_rate;
-	w->restart_audio = 1;
-	gtk_widget_set_sensitive(w->audio_combo_box, FALSE);
-	gtk_widget_set_sensitive(w->sample_rate_combo_box, FALSE);
+	w->audio_message = NULL;
+	update_sensitivity(w);
 
 	lock_computer(w->computer);
 	if(w->computer->recompute >= 0)
@@ -495,6 +431,7 @@ static void on_shutdown(GApplication *app, void *p)
 			computer_destroy(w->computer);
 		op_destroy(w->active_panel);
 		close_config(w);
+		g_free(w->audio_device_name);
 		free(w);
 	}
 	terminate_portaudio();
@@ -515,6 +452,37 @@ static void remove_runtime_timers(struct main_window *w)
 	}
 }
 
+/* Shown once at startup when no input could be opened, with a way to fix it */
+static void startup_audio_warning(struct main_window *w)
+{
+	GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(w->window),
+		GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+		GTK_MESSAGE_WARNING, GTK_BUTTONS_NONE, "No audio input could be opened.");
+	gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog),
+		"Choose an audio system and input device in the audio settings, "
+		"or check the system's microphone settings.");
+	gtk_dialog_add_buttons(GTK_DIALOG(dialog),
+		"_Close", GTK_RESPONSE_CLOSE,
+		"_Audio settings…", GTK_RESPONSE_ACCEPT,
+		NULL);
+	gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_ACCEPT);
+	int response = gtk_dialog_run(GTK_DIALOG(dialog));
+	gtk_widget_destroy(dialog);
+	if(response == GTK_RESPONSE_ACCEPT)
+		audio_settings_open(w);
+}
+
+/* One attempt to open the audio input. Errors are collected by the caller. */
+static int open_audio(int device, int rate, double *real_sr)
+{
+	int nominal = rate;
+	terminate_portaudio();
+	set_audio_input_device(device);
+	set_audio_sample_rate(rate);
+	*real_sr = rate;
+	return start_portaudio(&nominal, real_sr);
+}
+
 static guint computer_terminated(struct main_window *w)
 {
 	if(w->zombie) {
@@ -526,54 +494,46 @@ static guint computer_terminated(struct main_window *w)
 		if(w->restart_audio) {
 			int requested_device = w->pending_audio_device;
 			int requested_rate = w->pending_audio_rate;
-			int actual_rate = requested_rate;
-			double real_rate = 0;
-			int failed = 0;
+			double real_sr;
+			/* The audio system changes even if no device can be opened,
+			 * so that the settings dialog lists its devices */
+			w->audio_api = w->pending_audio_api;
+			set_audio_api(w->audio_api);
+			set_audio_input_device_name(NULL);
 			/* Collect errors from the attempts and report once at the end */
 			set_audio_errors_quiet(1);
-			terminate_portaudio();
-			set_audio_input_device(requested_device);
-			set_audio_sample_rate(requested_rate);
-			failed = start_portaudio(&actual_rate, &real_rate);
-			if(failed && requested_device != AUDIO_DEVICE_DEFAULT) {
-				terminate_portaudio();
-				set_audio_input_device(AUDIO_DEVICE_DEFAULT);
-				set_audio_sample_rate(requested_rate);
-				actual_rate = requested_rate;
-				failed = start_portaudio(&actual_rate, &real_rate);
-			}
-			if(failed && requested_rate != PA_SAMPLE_RATE) {
-				terminate_portaudio();
-				set_audio_input_device(AUDIO_DEVICE_DEFAULT);
-				set_audio_sample_rate(PA_SAMPLE_RATE);
-				actual_rate = PA_SAMPLE_RATE;
-				failed = start_portaudio(&actual_rate, &real_rate);
-			}
+			int failed = open_audio(requested_device, requested_rate, &real_sr);
+			if(failed && requested_rate != PA_SAMPLE_RATE)
+				failed = open_audio(requested_device, PA_SAMPLE_RATE, &real_sr);
+			if(failed && requested_device != AUDIO_DEVICE_DEFAULT)
+				failed = open_audio(AUDIO_DEVICE_DEFAULT, PA_SAMPLE_RATE, &real_sr);
 			set_audio_errors_quiet(0);
+
+			w->audio_ok = !failed;
 			if(failed) {
-				/* PortAudio stays initialized so the device list keeps working */
+				/* PortAudio stays initialized so that devices can still be listed */
 				w->audio_device = AUDIO_DEVICE_DEFAULT;
 				w->nominal_sr = PA_SAMPLE_RATE;
-				set_audio_input_device(w->audio_device);
-				set_audio_sample_rate(w->nominal_sr);
-				audio_show(w, "No audio input", 0);
-				error("Could not open the audio input. It may be in use or disabled. "
-				      "Choose another device, or check Windows microphone settings.");
+				w->audio_message = "Could not open this input. It may be in use or disabled.";
 			} else {
 				w->audio_device = get_audio_input_device();
 				w->nominal_sr = get_audio_sample_rate();
-				audio_refresh_selection(w);
-				if(w->audio_device != requested_device || w->nominal_sr != requested_rate)
-					error("The requested audio input or rate is unavailable; using a fallback.");
+				const char *name = get_audio_input_device_name();
+				g_free(w->audio_device_name);
+				w->audio_device_name = g_strdup(name ? name : "");
+				/* A request for the default input is met by whichever device that is */
+				if(requested_device != AUDIO_DEVICE_DEFAULT && w->audio_device != requested_device)
+					w->audio_message = "The chosen input could not be opened; using the default input.";
+				else if(w->nominal_sr != requested_rate)
+					w->audio_message = "The chosen rate is not available; using the default rate.";
 			}
+			w->pending_audio_api = w->audio_api;
 			w->pending_audio_device = w->audio_device;
 			w->pending_audio_rate = w->nominal_sr;
 			w->restart_audio = 0;
-			if(w->sample_rate_combo_box) {
-				char id[32];
-				sprintf(id, "%d", w->nominal_sr);
-				gtk_combo_box_set_active_id(GTK_COMBO_BOX(w->sample_rate_combo_box), id);
-			}
+			/* The settings dialog shows the result itself */
+			if(w->audio_message && !audio_settings_is_open(w))
+				error("%s", w->audio_message);
 		}
 
 		struct computer *c = start_computer(w->nominal_sr, w->bph, w->la, w->cal, w->is_light);
@@ -689,9 +649,8 @@ static void update_sensitivity(struct main_window *w)
 	gtk_widget_set_sensitive(w->bph_combo_box, settings);
 	gtk_widget_set_sensitive(w->la_spin_button, settings);
 	gtk_widget_set_sensitive(w->cal_spin_button, settings);
-	// Changing input or rate would restart audio and invalidate the calibration
-	gtk_widget_set_sensitive(w->audio_combo_box, settings);
-	gtk_widget_set_sensitive(w->sample_rate_combo_box, settings);
+	// The audio settings dialog locks itself when audio cannot be changed
+	audio_settings_update(w);
 
 	// Always allow stopping a running calibration, whichever tab is shown
 	gtk_widget_set_sensitive(w->cal_button, live || w->calibrate);
@@ -1350,80 +1309,15 @@ static void init_main_window(struct main_window *w)
 	// Audio bar
 	hbox = make_bar(w);
 
-	// Audio input: a button with the device name; opening it lists every device in full
-	w->audio_combo_box = gtk_menu_button_new();
-	gtk_box_pack_start(GTK_BOX(hbox), w->audio_combo_box, FALSE, FALSE, 0);
-
-	w->audio_label = gtk_label_new("");
-	gtk_label_set_max_width_chars(GTK_LABEL(w->audio_label), AUDIO_NAME_CHARS);
-	gtk_label_set_ellipsize(GTK_LABEL(w->audio_label), PANGO_ELLIPSIZE_END);
-	GtkWidget *audio_button_content = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
-	gtk_box_pack_start(GTK_BOX(audio_button_content), w->audio_label, FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(audio_button_content),
-		gtk_image_new_from_icon_name("pan-down-symbolic", GTK_ICON_SIZE_MENU), FALSE, FALSE, 0);
-	gtk_container_add(GTK_CONTAINER(w->audio_combo_box), audio_button_content);
-
-	GtkWidget *audio_list = gtk_box_new(GTK_ORIENTATION_VERTICAL, 2);
-	gtk_container_set_border_width(GTK_CONTAINER(audio_list), 6);
-	GtkWidget *audio_popover = gtk_popover_new(w->audio_combo_box);
-	gtk_container_add(GTK_CONTAINER(audio_popover), audio_list);
-	gtk_menu_button_set_popover(GTK_MENU_BUTTON(w->audio_combo_box), audio_popover);
-
-	int *audio_devices = NULL;
-	char **audio_names = NULL;
-	int audio_count = 0;
-	int default_audio_device = AUDIO_DEVICE_DEFAULT;
-	if(!list_audio_input_devices(&audio_devices, &audio_names, &audio_count, &default_audio_device)) {
-		int i, chosen = w->audio_device != AUDIO_DEVICE_DEFAULT ? w->audio_device : default_audio_device;
-		int found = 0;
-		for(i = 0; i < audio_count; i++)
-			if(audio_devices[i] == chosen) found = 1;
-		if(!found && audio_count > 0)
-			chosen = audio_devices[0];
-
-		for(i = 0; i < audio_count; i++) {
-			int is_default = audio_devices[i] == default_audio_device;
-			gchar *full = g_strconcat(audio_names[i], is_default ? " (default)" : "", NULL);
-			GtkWidget *item = gtk_button_new_with_label(full);
-			g_free(full);
-			gtk_button_set_relief(GTK_BUTTON(item), GTK_RELIEF_NONE);
-			gtk_widget_set_halign(gtk_bin_get_child(GTK_BIN(item)), GTK_ALIGN_START);
-			g_object_set_data(G_OBJECT(item), "device", GINT_TO_POINTER(audio_devices[i]));
-			g_object_set_data(G_OBJECT(item), "default", GINT_TO_POINTER(is_default));
-			g_object_set_data_full(G_OBJECT(item), "name", g_strdup(audio_names[i]), g_free);
-			g_signal_connect(item, "clicked", G_CALLBACK(handle_audio_pick), w);
-			gtk_box_pack_start(GTK_BOX(audio_list), item, FALSE, FALSE, 0);
-
-			if(audio_devices[i] == chosen) {
-				w->audio_device = chosen;
-				audio_show(w, audio_names[i], is_default);
-			}
-		}
-		free_audio_input_devices(audio_devices, audio_names, audio_count);
-	}
-	if(audio_count == 0)
-		audio_show(w, "No audio device", 0);
-	gtk_widget_show_all(audio_list);
-
-	// Sample rate label
-	label = gtk_label_new("rate");
-	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
-
-	// Sample rate combo box
-	w->sample_rate_combo_box = gtk_combo_box_text_new();
-	gtk_box_pack_start(GTK_BOX(hbox), w->sample_rate_combo_box, FALSE, FALSE, 0);
-	for(i = 0; available_sample_rates[i]; i++) {
-		char id[32];
-		sprintf(id, "%d", available_sample_rates[i]);
-		gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(w->sample_rate_combo_box), id, available_sample_rate_labels[i]);
-	}
-	{
-		char id[32];
-		sprintf(id, "%d", w->nominal_sr);
-		if(!gtk_combo_box_set_active_id(GTK_COMBO_BOX(w->sample_rate_combo_box), id))
-			gtk_combo_box_set_active(GTK_COMBO_BOX(w->sample_rate_combo_box), 2);
-	}
-	g_signal_connect(w->sample_rate_combo_box, "changed", G_CALLBACK(handle_sample_rate_change), w);
+	// Audio input in use (device, audio system, rate): opens the audio settings dialog
+	w->audio_button = gtk_button_new();
+	gtk_button_set_relief(GTK_BUTTON(w->audio_button), GTK_RELIEF_NONE);
+	w->audio_button_label = gtk_label_new("");
+	gtk_label_set_max_width_chars(GTK_LABEL(w->audio_button_label), 40);
+	gtk_label_set_ellipsize(GTK_LABEL(w->audio_button_label), PANGO_ELLIPSIZE_END);
+	gtk_container_add(GTK_CONTAINER(w->audio_button), w->audio_button_label);
+	gtk_box_pack_start(GTK_BOX(hbox), w->audio_button, FALSE, FALSE, 0);
+	g_signal_connect_swapped(w->audio_button, "clicked", G_CALLBACK(audio_settings_open), w);
 
 	// Calibration label
 	label = gtk_label_new("cal");
@@ -1540,6 +1434,11 @@ static void init_main_window(struct main_window *w)
 	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), light_checkbox);
 	g_signal_connect(light_checkbox, "toggled", G_CALLBACK(handle_light), w);
 	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(light_checkbox), w->is_light);
+
+	// ... Audio settings: audio system, input device and rate
+	GtkWidget *audio_settings_item = gtk_menu_item_new_with_label("Audio settings…");
+	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), audio_settings_item);
+	g_signal_connect_swapped(audio_settings_item, "activate", G_CALLBACK(audio_settings_open), w);
 
 	// ... Start / Stop calibration (label switches with the state)
 	w->cal_button = gtk_menu_item_new_with_label("Start calibration");
@@ -1668,6 +1567,14 @@ static void start_interface(GApplication* app, void *p)
 	w->restart_audio = 0;
 	w->pending_audio_device = AUDIO_DEVICE_DEFAULT;
 	w->pending_audio_rate = PA_SAMPLE_RATE;
+	w->audio_api = AUDIO_API_DEFAULT;
+	w->pending_audio_api = AUDIO_API_DEFAULT;
+	w->audio_device_name = NULL;
+	w->audio_message = NULL;
+	w->audio_ok = 0;
+	w->audio_button = NULL;
+	w->audio_button_label = NULL;
+	w->audio_settings = NULL;
 	w->watch_updating = 0;
 	w->position_updating = 0;
 	w->live_position = POS_NONE;
@@ -1679,41 +1586,48 @@ static void start_interface(GApplication* app, void *p)
 	if(!isfinite(w->paperstrip_window_seconds) || w->paperstrip_window_seconds < 10.0 ||
 		w->paperstrip_window_seconds > 86400.0)
 		w->paperstrip_window_seconds = 60.0;
-	/* Always start with the default input; some drivers block while opening. */
-	w->audio_device = AUDIO_DEVICE_DEFAULT;
-	set_audio_input_device(w->audio_device);
-	set_audio_sample_rate(w->nominal_sr);
+	/* Only use rates the analysis buffers can hold (a saved 96 kHz would overflow them) */
+	if(!sample_rate_valid(w->nominal_sr))
+		w->nominal_sr = PA_SAMPLE_RATE;
+	w->pending_audio_api = w->audio_api;
+	set_audio_api(w->audio_api);
 
-	int audio_failed = 0;
-	real_sr = w->nominal_sr;
+	/* Reopen the saved input by name, since device numbers change between
+	 * sessions: first at the saved rate, then at the default rate. If that
+	 * fails, do the same with the default input. */
+	int saved_rate = w->nominal_sr;
+	int have_name = w->audio_device_name && *w->audio_device_name;
+	int audio_failed = 1;
 	set_audio_errors_quiet(1);
-	if(start_portaudio(&w->nominal_sr, &real_sr)) {
-		/* Retry with the default rate only if a different rate was saved.
-		 * PortAudio is left initialized on failure so that the device
-		 * list can still be shown and another input chosen. */
-		if(w->nominal_sr != PA_SAMPLE_RATE) {
-			terminate_portaudio();
-			w->nominal_sr = PA_SAMPLE_RATE;
-			set_audio_sample_rate(w->nominal_sr);
-			real_sr = w->nominal_sr;
-			if(start_portaudio(&w->nominal_sr, &real_sr))
-				audio_failed = 1;
-			else
-				error("Saved sample rate unavailable; using the default rate.");
-		} else {
-			audio_failed = 1;
-		}
-		if(audio_failed) {
-			w->nominal_sr = PA_SAMPLE_RATE;
-			real_sr = w->nominal_sr;
-			set_audio_sample_rate(w->nominal_sr);
-		}
+	for(int attempt = 0; attempt < 4 && audio_failed; attempt++) {
+		int use_name = attempt < 2;
+		int rate = attempt % 2 ? (int)PA_SAMPLE_RATE : saved_rate;
+		if(use_name && !have_name) continue;
+		if(attempt % 2 && saved_rate == PA_SAMPLE_RATE) continue;
+		set_audio_input_device_name(use_name ? w->audio_device_name : NULL);
+		audio_failed = open_audio(AUDIO_DEVICE_DEFAULT, rate, &real_sr);
 	}
+	set_audio_input_device_name(NULL);
 	set_audio_errors_quiet(0);
-	if(!audio_failed) {
+
+	w->audio_ok = !audio_failed;
+	if(audio_failed) {
+		/* PortAudio stays initialized so that devices can still be listed */
+		w->audio_device = AUDIO_DEVICE_DEFAULT;
+		w->nominal_sr = PA_SAMPLE_RATE;
+		real_sr = w->nominal_sr;
+	} else {
 		w->audio_device = get_audio_input_device();
 		w->nominal_sr = get_audio_sample_rate();
+		/* The saved name is kept, so the input is used again once it is back */
+		const char *name = get_audio_input_device_name();
+		if(have_name && (!name || strcmp(name, w->audio_device_name)))
+			w->audio_message = "The saved input was not found; using the default input.";
+		else if(w->nominal_sr != saved_rate)
+			w->audio_message = "The saved rate is not available; using the default rate.";
 	}
+	w->pending_audio_device = w->audio_device;
+	w->pending_audio_rate = w->nominal_sr;
 
 	if(w->la < MIN_LA || w->la > MAX_LA) w->la = DEFAULT_LA;
 	if(w->bph < MIN_BPH || w->bph > MAX_BPH) w->bph = 0;
@@ -1741,14 +1655,12 @@ static void start_interface(GApplication* app, void *p)
 	op_set_paperstrip_settings_callback(w->active_panel, handle_paperstrip_settings_changed, w);
 
 	init_main_window(w);
-	if(audio_failed) {
-		/* No stream is open: let the user pick any device from the list */
-		w->audio_device = AUDIO_DEVICE_DEFAULT;
-		w->pending_audio_device = AUDIO_DEVICE_DEFAULT;
-		audio_show(w, "No audio input", 0);
-		error("No default audio input found. Choose an input device with the audio button, "
-		      "or check Windows microphone settings.");
-	}
+	audio_settings_update(w);
+#ifdef DEBUG
+	if(!testing)
+#endif
+	if(audio_failed)
+		startup_audio_warning(w);
 
 	w->kick_timeout = g_timeout_add_full(G_PRIORITY_LOW,100,(GSourceFunc)kick_computer,w,NULL);
 	w->save_timeout = g_timeout_add_full(G_PRIORITY_LOW,10000,(GSourceFunc)save_on_change_timer,w,NULL);

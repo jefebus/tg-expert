@@ -44,6 +44,10 @@
 #define NSTEPS 4
 #define PA_SAMPLE_RATE 44100u
 #define PA_BUFF_SIZE (PA_SAMPLE_RATE << (NSTEPS + FIRST_STEP))
+/* The longest analysis step holds 2^(NSTEPS-1+FIRST_STEP) seconds of audio,
+ * which must fit in the PA_BUFF_SIZE ring buffer: 88200 Hz at most. */
+#define MAX_SAMPLE_RATE (PA_BUFF_SIZE >> (NSTEPS - 1 + FIRST_STEP))
+#define SAMPLE_RATES { 22050, 32000, 44100, 48000, 0 }
 
 #define OUTPUT_FONT 40
 #define OUTPUT_WINDOW_HEIGHT 70
@@ -67,6 +71,7 @@
 #define MIN_CAL -1000 // 0.1 s/d
 #define MAX_CAL 1000 // 0.1 s/d
 #define AUDIO_DEVICE_DEFAULT -1
+#define AUDIO_API_DEFAULT -1	// use PortAudio's default host API
 
 #define PRESET_BPH { 12000, 14400, 17280, 18000, 19800, 21600, 25200, 28800, 36000, 43200, 72000, 0 };
 
@@ -135,6 +140,16 @@ int terminate_portaudio();
 void set_audio_errors_quiet(int quiet);
 int list_audio_input_devices(int **devices, char ***names, int *count, int *default_device);
 void free_audio_input_devices(int *devices, char **names, int count);
+int list_audio_apis(int **types, char ***names, int *count, int *current_type);
+void free_audio_apis(int *types, char **names, int count);
+void set_audio_api(int type);
+int get_audio_api(void);
+const char *get_audio_api_name(void);
+int get_default_audio_input_device(void);
+void set_audio_input_device_name(const char *name);
+const char *get_audio_input_device_name(void);
+int list_supported_sample_rates(int device, int *rates, int max);
+int sample_rate_valid(int rate);
 void set_audio_input_device(int device);
 int get_audio_input_device(void);
 void set_audio_sample_rate(int sample_rate);
@@ -295,9 +310,9 @@ struct main_window {
 	GtkWidget *watch_delete_button;
 	int watch_updating; // set while the UI is being changed programmatically
 	GtkWidget *bph_combo_box;
-	GtkWidget *audio_combo_box;
-	GtkWidget *audio_label;	// the device name shown in the audio button
-	GtkWidget *sample_rate_combo_box;
+	GtkWidget *audio_button;	// shows the input in use, opens the audio settings
+	GtkWidget *audio_button_label;
+	struct audio_settings *audio_settings;	// the audio settings dialog, NULL when closed
 	GtkWidget *la_spin_button;
 	GtkWidget *cal_spin_button;
 	GtkWidget *snapshot_button;
@@ -325,6 +340,7 @@ struct main_window {
 	int calibrate;
 	int bph;
 	int audio_device;
+	int audio_api;	// PaHostApiTypeId, or AUDIO_API_DEFAULT
 	double la; // deg
 	int cal; // 0.1 s/d
 	double paperstrip_tick_seconds;
@@ -333,6 +349,10 @@ struct main_window {
 	int restart_audio;
 	int pending_audio_device;
 	int pending_audio_rate;
+	int pending_audio_api;
+	gchar *audio_device_name;	// input device to reopen at startup (saved by name)
+	int audio_ok;	// an input stream is open
+	const char *audio_message;	// result of the last audio change, or NULL
 
 	GKeyFile *config_file;
 	gchar *config_file_name;
@@ -350,6 +370,12 @@ extern int testing;
 
 void print_debug(char *format,...);
 void error(char *format,...);
+void request_audio_restart(struct main_window *w, int api, int device, int rate);
+
+/* audio_settings.c */
+void audio_settings_open(struct main_window *w);
+void audio_settings_update(struct main_window *w);
+int audio_settings_is_open(struct main_window *w);
 
 /* config.c */
 #define CONFIG_FIELDS(OP) \
@@ -358,9 +384,12 @@ void error(char *format,...);
 	OP(calibration, cal, int) \
 	OP(light_algorithm, is_light, int) \
 	OP(audio_device, audio_device, int) \
+	OP(audio_api, audio_api, int) \
 	OP(audio_rate, nominal_sr, int) \
 	OP(paperstrip_tick_seconds, paperstrip_tick_seconds, double) \
 	OP(paperstrip_window_seconds, paperstrip_window_seconds, double)
+
+#define AUDIO_DEVICE_NAME_KEY "audio_device_name"
 
 struct conf_data {
 #define DEF(NAME,PLACE,TYPE) TYPE PLACE;
