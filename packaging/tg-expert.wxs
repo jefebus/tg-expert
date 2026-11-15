@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='windows-1252'?>
 <Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
-  <Product Name='tg-expert' Id='95df3b52-91c0-4aa6-87f0-d706834484c0' UpgradeCode='ed9a22fc-68e1-4038-b075-c41127282fe9'
+  <Product Name='tg-expert' Id='8c7fcc05-819b-4f10-b6bb-80dd3a309768' UpgradeCode='ed9a22fc-68e1-4038-b075-c41127282fe9'
     Language='1033' Codepage='1252' Version='0.9.0' Manufacturer='tg-expert'>
 
     <Package Id='*' Keywords='Installer'
@@ -17,7 +17,7 @@
       <Directory Id='ProgramFilesFolder' Name='PFiles'>
         <Directory Id='INSTALLDIR' Name='tg-expert'>
 
-          <Component Id='MainExecutable' Guid='179abec3-26ae-4154-a252-6783db6f8102'>
+          <Component Id='MainExecutable' Guid='e2db9130-9e4a-4fea-813c-fb6178d78a30'>
             <File Id='TgEXE' Name='tg-expert.exe' DiskId='1' Source='tg-expert.exe' KeyPath='yes'>
               <Shortcut Id='startmenuTg' Directory='ProgramMenuDir' Name='tg-expert 0.9.0' WorkingDirectory='INSTALLDIR' Icon='TgExpert.exe' IconIndex='0' Advertise='yes' />
               <Shortcut Id='desktopTg' Directory='DesktopFolder' Name='tg-expert 0.9.0' WorkingDirectory='INSTALLDIR' Icon='TgExpert.exe' IconIndex='0' Advertise='yes' />
@@ -30,11 +30,11 @@
             </ProgId>
           </Component>
 
-          <Component Id='License' Guid='68335d1d-7d7c-49f3-bee3-aa5884c5bfb7'>
+          <Component Id='License' Guid='9ef899df-53f2-44f3-95d3-7648d8e94510'>
             <File Id='License' Name='LICENSE' DiskId='1' Source='LICENSE' KeyPath='yes' />
           </Component>
 
-          <Component Id='Readme' Guid='018c9d96-0138-4ef3-b089-bbe1576dca1f'>
+          <Component Id='Readme' Guid='a600d92f-39a8-49b6-95f4-bffd38f001f9'>
             <File Id='Readme' Name='README.md' DiskId='1' Source='README.md' KeyPath='yes' />
           </Component>
 
@@ -43,7 +43,7 @@
           <Directory Id='ManualShareDir' Name='share'>
             <Directory Id='ManualDocDir' Name='doc'>
               <Directory Id='MANUALDIR' Name='tg-expert'>
-                <Component Id='Manual' Guid='e72d1b89-79fd-4c2d-b733-ebefaad51b5a'>
+                <Component Id='Manual' Guid='78adeece-b849-4e4f-8b1b-ede9c0a94d75'>
                   <File Id='Manual' Name='tg-expert-manual.pdf' DiskId='1' Source='tg-expert-manual.pdf' KeyPath='yes' />
                 </Component>
               </Directory>
@@ -55,7 +55,7 @@
 
       <Directory Id='ProgramMenuFolder' Name='Programs'>
         <Directory Id='ProgramMenuDir' Name='tg-expert 0.9.0'>
-          <Component Id='ProgramMenuDir' Guid='fc8c455a-5dff-4961-820c-29f6b8c63024'>
+          <Component Id='ProgramMenuDir' Guid='5e4b4180-8d04-476c-a5bf-3433afdf97c1'>
             <Shortcut Id='startmenuManual' Name='tg-expert manual' Description='tg-expert user manual (PDF)'
                       Target='[MANUALDIR]tg-expert-manual.pdf' WorkingDirectory='MANUALDIR' />
             <RemoveFolder Id='ProgramMenuDir' On='uninstall' />
