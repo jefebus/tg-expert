@@ -853,21 +853,20 @@ static int paperstrip_zoom_index(double trace_zoom)
 	return best;
 }
 
-/* Windows per beat (per second in calibration). A beat is drawn at its time
- * modulo the window, so this must be a whole number: then consecutive beats,
- * one beat apart, fall on the same column. With a fraction every beat moves by
- * that fraction of a window, the dots jump and tic and toc swap places. So the
- * window is the whole division of the beat nearest to the wanted width, e.g. at
- * 28800 bph (125 ms) 1x is 125/4 = 31.25 ms instead of 30 ms. */
+/* Beat period (a second in calibration) divided by the strip width. The width
+ * is the same for every bph; beats outside it are not drawn. It cannot be
+ * wider than one beat, so at 0.25x a fast beat fills the strip. */
 static double paperstrip_zoom_factor(const struct snapshot *snst)
 {
 	double zoom = paperstrip_zoom_levels[paperstrip_zoom_index(snst->trace_zoom)];
 	int bph = snst->guessed_bph > 0 ? snst->guessed_bph : (snst->bph ? snst->bph : DEFAULT_BPH);
 	double period_ms = snst->calibrate ? 1000. : 3600000. / bph;
 	double wanted_ms = (snst->calibrate ? PAPERSTRIP_WINDOW_MS_CAL : PAPERSTRIP_WINDOW_MS) / zoom;
-	double n = round(period_ms / wanted_ms);
+	double n = period_ms / wanted_ms;
 	return n < 1 ? 1 : n;
 }
+
+static int center_trace(struct output_panel *op);
 
 static gboolean paperstrip_draw_event(GtkWidget *widget, cairo_t *c, struct output_panel *op)
 {
@@ -878,6 +877,12 @@ static gboolean paperstrip_draw_event(GtkWidget *widget, cairo_t *c, struct outp
 		snst->events_count > 0 &&
 		snst->events_wp >= 0 &&
 		snst->events_wp < snst->events_count;
+	// The strip is a fixed ms range, so a new trace would usually start outside
+	// it: centre the live trace once when it appears (start, Clear, audio restart)
+	if(!valid_events_wp || !snst->events[snst->events_wp])
+		op->trace_centered = 0;
+	else if(op->computer && !op->trace_centered)
+		op->trace_centered = center_trace(op);
 	uint64_t time = snst->timestamp ? snst->timestamp : get_timestamp(snst->is_light);
 	double sweep;
 	double zoom_factor;
@@ -1112,27 +1117,30 @@ static gboolean paperstrip_draw_event(GtkWidget *widget, cairo_t *c, struct outp
 
 	// Beats: one dot per beat, tic in grey and toc in gold (neutral white for
 	// the reference ticks of a calibration). Faded when the signal is lost.
+	// The strip is a fixed ms range around the centre of the beat position
+	// (trace_centering): beats outside it are not drawn, nothing wraps.
 	for(i = snst->events_wp; valid_events_wp;) {
 		if(!snst->events_count || !snst->events[i]) break;
-		double event = now - snst->events[i] + snst->trace_centering + sweep * PAPERSTRIP_MARGIN / (2 * zoom_factor);
-		int column = floor(fmod(event, (sweep / zoom_factor)) * strip_width / (sweep / zoom_factor));
-		int row = floor(event / row_samples);
+		double age = now - snst->events[i];
+		int row = floor(age / row_samples);
 		if(row >= plot_bottom) break;
 
-		struct color dot = COL_WAVE;
-		if(!snst->calibrate && snst->events_tictoc)
-			dot = snst->events_tictoc[i] ? COL_TIC : COL_TOC;
-		set_signal_color(c, dot, stopped);
-
+		// Position in the beat, relative to the centre: -sweep/2 to sweep/2.
+		// Consecutive beats are one sweep apart, so they fall on the same column.
+		double phase = fmod(age + snst->trace_centering, sweep);
+		if(phase < 0) phase += sweep;
 		// Mirrored horizontally: later in the beat is further left, so a
 		// fast watch (positive rate) leans right, parallel to the rate guide
-		double y = plot_bottom - 1 - row;
-		cairo_rectangle(c, width - 1 - column, y, 1, 1);
-		cairo_fill(c);
-		if(column < width - strip_width) {
-			// Repeat one window to the left, so that the trace looks continuous
-			// across the window edge. It is the same beat, so the same row.
-			cairo_rectangle(c, width - 1 - column - strip_width, y, 1, 1);
+		double x = floor(width / 2.0 - (phase - sweep / 2) * zoom_factor * strip_width / sweep);
+		if(x >= 0 && x < width) {
+			struct color dot = COL_WAVE;
+			if(!snst->calibrate && snst->events_tictoc)
+				dot = snst->events_tictoc[i] ? COL_TIC : COL_TOC;
+			set_signal_color(c, dot, stopped);
+			// A square of PAPERSTRIP_DOT_SIZE px: around the beat position across,
+			// from its row upwards, so that the newest row stays inside the plot
+			cairo_rectangle(c, x - (PAPERSTRIP_DOT_SIZE - 1) / 2, plot_bottom - row - PAPERSTRIP_DOT_SIZE,
+				PAPERSTRIP_DOT_SIZE, PAPERSTRIP_DOT_SIZE);
 			cairo_fill(c);
 		}
 		if(--i < 0) i = snst->events_count - 1;
@@ -1253,46 +1261,46 @@ static void handle_clear_trace(GtkButton *b, struct output_panel *op)
 	}
 }
 
+/* Put the newest beat in the centre of the strip. Returns 0 if there is no beat yet. */
+static int center_trace(struct output_panel *op)
+{
+	struct snapshot *snst = op->snst;
+	if(!snst || !snst->events || snst->events_count <= 0)
+		return 0;
+	if(snst->events_wp < 0 || snst->events_wp >= snst->events_count)
+		return 0;
+	uint64_t last_ev = snst->events[snst->events_wp];
+	if(!last_ev)
+		return 0;
+	double sweep;
+	double time = snst->timestamp ? snst->timestamp : get_timestamp(snst->is_light);
+	if(snst->calibrate) {
+		sweep = (double) snst->nominal_sr;
+	} else {
+		if(snst->sample_rate <= 0 || snst->guessed_bph <= 0)
+			return 0;
+		sweep = snst->sample_rate * 3600. / snst->guessed_bph;
+	}
+	if(!isfinite(sweep) || sweep <= 0)
+		return 0;
+	double now = sweep * ceil(time / sweep);
+	if(!isfinite(now))
+		return 0;
+	// The drawing puts the beat at fmod(age + trace_centering, sweep); the centre is sweep / 2
+	double new_centering = fmod(0.5 * sweep - fmod(now - last_ev, sweep), sweep);
+	if(new_centering < 0)
+		new_centering += sweep;
+	if(!isfinite(new_centering))
+		return 0;
+	snst->trace_centering = new_centering;
+	gtk_widget_queue_draw(op->paperstrip_drawing_area);
+	return 1;
+}
+
 static void handle_center_trace(GtkButton *b, struct output_panel *op)
 {
 	UNUSED(b);
-	struct snapshot *snst = op->snst;
-	if(!snst || !snst->events || snst->events_count <= 0)
-		return;
-	if(snst->events_wp < 0 || snst->events_wp >= snst->events_count)
-		return;
-	uint64_t last_ev = snst->events[snst->events_wp];
-	double new_centering;
-	if(last_ev) {
-		double sweep;
-		double zoom_factor;
-		double time = snst->timestamp ? snst->timestamp : get_timestamp(snst->is_light);
-		double now;
-		double chart_width;
-		if(snst->calibrate) {
-			sweep = (double) snst->nominal_sr;
-			zoom_factor = paperstrip_zoom_factor(snst);
-		} else {
-			if(snst->sample_rate <= 0 || snst->guessed_bph <= 0)
-				return;
-			sweep = snst->sample_rate * 3600. / snst->guessed_bph;
-			zoom_factor = paperstrip_zoom_factor(snst);
-		}
-		if(!isfinite(sweep) || sweep <= 0 || !isfinite(zoom_factor) || zoom_factor <= 0)
-			return;
-		now = sweep * ceil(time / sweep);
-		chart_width = sweep / zoom_factor;
-		if(!isfinite(now) || !isfinite(chart_width) || chart_width <= 0)
-			return;
-		new_centering = fmod(0.5 * chart_width - fmod(now - last_ev, chart_width), chart_width);
-		if(new_centering < 0)
-			new_centering += chart_width;
-	} else 
-		new_centering = 0;
-	if(!isfinite(new_centering))
-		return;
-	snst->trace_centering = new_centering;
-	gtk_widget_queue_draw(op->paperstrip_drawing_area);
+	center_trace(op);
 }
 
 static void shift_trace(struct output_panel *op, double direction)
@@ -1313,10 +1321,9 @@ static void shift_trace(struct output_panel *op, double direction)
 	}
 	if(!isfinite(chart_width) || chart_width <= 0 || !isfinite(zoom_factor) || zoom_factor <= 0)
 		return;
-	chart_width /= zoom_factor;
-	if(!isfinite(chart_width) || chart_width <= 0)
-		return;
-	snst->trace_centering = fmod(snst->trace_centering + chart_width * 0.1 * direction, chart_width);
+	// One grid division of the strip; the position is kept within one beat
+	double step = chart_width / zoom_factor / PAPERSTRIP_DIVISIONS;
+	snst->trace_centering = fmod(snst->trace_centering + step * direction, chart_width);
 	if(snst->trace_centering < 0)
 		snst->trace_centering += chart_width;
 	gtk_widget_queue_draw(op->paperstrip_drawing_area);
@@ -1520,6 +1527,7 @@ struct output_panel *init_output_panel(struct computer *comp, struct snapshot *s
 	op->updating_paperstrip_settings = 0;
 	op->paperstrip_settings_changed = NULL;
 	op->paperstrip_settings_data = NULL;
+	op->trace_centered = 0;
 
 	op->panel = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
 	gtk_container_set_border_width(GTK_CONTAINER(op->panel), border);
