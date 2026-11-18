@@ -57,4 +57,4 @@ En comparación con un cronocomparador de hardware:
   [B.E. (ms)], [Error de batido, también denominado error de alternancia.],
   [BEAT (bph)], [Frecuencia de batido o alternancias por hora del movimiento.],
 )
-#note[*Antes de interpretar los resultados:* calibra la entrada de audio para confiar en RATE y utiliza el ángulo de alzamiento del calibre para interpretar AMP. La calibración no modifica la amplitud ni el error de batido.]
+#note(color: orange)[*Antes de interpretar los resultados:* calibra la entrada de audio para confiar en RATE y utiliza el ángulo de alzamiento del calibre para interpretar AMP. La calibración no modifica la amplitud ni el error de batido.]
