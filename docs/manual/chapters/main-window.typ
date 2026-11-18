@@ -87,8 +87,9 @@ The buttons below the strip:
 
 The settings below the buttons:
 
-/ Y mark: the time between marks on the vertical axis, in seconds.
-/ Y window: the time span shown vertically, in seconds. It is fixed and
+/ Y mark (s): the time between marks on the vertical axis, in seconds. + and
+  − change it by 1 s. Smaller values, such as 0.5, can be typed.
+/ Y window (s): the time span shown vertically, in seconds. It is fixed and
   does not change by itself.
 
 == The waveform panels

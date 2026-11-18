@@ -43,3 +43,20 @@ tg-expert keeps its settings in `tg-expert.ini`, in the user configuration
 folder (`%LOCALAPPDATA%` on Windows, `~/.config` on Linux). It stores the
 window size, the audio settings, the cal value, the saved watches and the
 paperstrip settings. Deleting it resets the program to its defaults.
+
+== Language
+
+The program shows its texts in the language of the operating system:
+English, Spanish or German. For any other language it uses English.
+#ui[User manual] in the menu opens the manual in the same language.
+
+Some things stay the same in every language, so that readings can be
+compared with any timegrapher:
+
+- numbers always use a point as the decimal separator, as in +2.5 s/d;
+- the results table headers RATE, AMP., B.E., L.A. and BEAT, and its units;
+- the position codes DU, DD, CU, CD, CL and CR;
+- the calibration status: cal (wait), cal (acq.), cal (done), cal (fail).
+
+On Linux, the language can be chosen when starting the program, for
+example `LANGUAGE=es tg-expert`.

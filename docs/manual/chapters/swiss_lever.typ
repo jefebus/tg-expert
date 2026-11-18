@@ -69,9 +69,8 @@ Watch timing literature usually describes three main acoustic pulses within each
 
 The actual waveform contains bipolar oscillations, rebounds, and resonance tails. A short mechanical impact excites many frequencies in the movement, bridges, main plate, case, crystal, and the sensor itself. Therefore, the height of each peak depends not only on the mechanical contact but also on the contact point, watch position, microphone pressure, and frequency response of the recording system.
 
-#note(
-  [Do not interpret each peak as a specific component: The waveform is the combined response of the escapement, movement, case, support, and microphone. The identification of unlocking, impulse, and locking is based on their timing. An individual oscillation in the waveform cannot be assigned unambiguously to a specific mechanical contact.]
-)
+#note[Do not interpret each peak as a specific component: The waveform is the combined response of the escapement, movement, case, support, and microphone. The identification of unlocking, impulse, and locking is based on their timing. An individual oscillation in the waveform cannot be assigned unambiguously to a specific mechanical contact.]
+
 
 === Differences Between Tic and Toc
 
