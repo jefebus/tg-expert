@@ -1,5 +1,5 @@
 // tg-expert user manual, German.
-// Build: typst compile docs/manual/main-de.typ tg-expert-manual-de.pdf
+// Build: typst compile --root . docs/manual/main-de.typ tg-expert-manual-de.pdf
 // Translation of main.typ and chapters/; terms in po/GLOSSARY.md.
 //
 // Copyright (C) 2026 jefebus

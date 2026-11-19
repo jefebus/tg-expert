@@ -2,7 +2,7 @@
 // Paths in these functions (images/) are relative to this file.
 // Presentation adapted from Guia_rapida_tg-expert_es.typ.
 
-#let version = sys.inputs.at("version", default: "(development version)")
+#let version = sys.inputs.at("version", default: read("../../version").trim())
 
 #let navy = rgb("17324D")
 #let teal = rgb("147D83")

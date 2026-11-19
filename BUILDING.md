@@ -96,13 +96,10 @@ after installing Typst.
 To build the PDFs by hand, for example as release assets:
 
 ```sh
-typst compile --input version=0.10.0 docs/manual/main.typ    tg-expert-manual-0.10.0.pdf
-typst compile --input version=0.10.0 docs/manual/main-es.typ tg-expert-manual-0.10.0-es.pdf
-typst compile --input version=0.10.0 docs/manual/main-de.typ tg-expert-manual-0.10.0-de.pdf
+typst compile --root . docs/manual/main.typ    tg-expert-manual.pdf
+typst compile --root . docs/manual/main-es.typ tg-expert-manual-es.pdf
+typst compile --root . docs/manual/main-de.typ tg-expert-manual-de.pdf
 ```
-
-`--input version=` sets the version shown on the cover; without it, the
-cover says "(development version)".
 
 When a chapter changes in English, update the same file in `es/` and `de/`.
 The terms are in `po/GLOSSARY.md`, and the names of buttons and menus must
