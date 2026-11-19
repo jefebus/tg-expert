@@ -64,8 +64,7 @@ of s/d).*
 *The amplitude is missing or implausible.*
 
 - Check the lift angle.
-- The amplitude needs the separate clicks inside each beat to be audible. A
-  weak or noisy signal may give a rate but no amplitude.
+- Amplitude needs a reliable acoustic lift-time measurement: the unlocking onset and the strong final locking/banking reference must be detectable. A weak or noisy signal may give a stable rate but no reliable amplitude.
 
 *The rate is consistently off compared with the watch's real behavior.*
 

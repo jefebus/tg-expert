@@ -1,4 +1,5 @@
 #import "../lib.typ": *
+
 #set heading(numbering: "A.1")
 #counter(heading).update(0)
 = Límites
@@ -25,7 +26,7 @@
   fuerte que puede grabar la entrada.
 / Diagrama de marcha: la representación de los tiempos de batido, que debe su
   nombre a los diagramas en papel de los cronocomparadores antiguos.
-/ Error de batido: la diferencia de tiempo entre el tic y el toc, en ms.
+/ Error de batido: la asimetría temporal positiva entre los semiperíodos alternos Tic-a-Toc y Toc-a-Tic, en ms.
 / Error posicional: la mayor diferencia de marcha media entre posiciones.
 / Marcha: el adelanto o atraso del reloj, en s/día.
 / .tgj: el formato de archivo de Tg, tg-timer y tg-expert.

@@ -1,4 +1,5 @@
 #import "../lib.typ": *
+
 = Kalibrierung <calibration>
 == Warum
 tg-expert misst die Schläge mit dem Takt der Soundkarte. Dieser Takt stammt

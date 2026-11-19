@@ -20,7 +20,7 @@
 
 / Amplitude: the swing of the balance wheel from its rest position, in degrees.
 / Beat: one tic or one toc. The balance makes two beats per oscillation.
-/ Beat error: the time difference between tic and toc, in ms.
+/ Beat error: the positive timing asymmetry between the alternating Tic-to-Toc and Toc-to-Tic semiperiods, in ms.
 / bph: beats per hour.
 / cal: the correction for the sound card clock, in s/d.
 / dBFS: decibels relative to full scale. 0 dBFS is the loudest signal the

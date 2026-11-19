@@ -68,3 +68,4 @@ DD, ...) marks each change of position. The controls below the page set:
   falling as the mainspring unwinds, and the rate graph shows how the rate
   follows it.
 4. Take a snapshot and save it. The Trend data is saved with it.
+#note[*Before changing settings:* take a snapshot and save it if you need to keep the current Trend recording. Changing bph, lift angle, cal, audio input, sample rate, or Light algorithm resets the Trend data. For long recordings, enter the known bph instead of relying on automatic detection.]

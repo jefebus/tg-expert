@@ -53,3 +53,13 @@ Compared with a hardware timegrapher:
   case, a quiet room and a calibrated sound card, readings are repeatable to
   a fraction of a second per day. With a poor setup the numbers can be
   misleading.
+
+== Readings at a glance
+#table(columns: (24%, 76%),
+  table.header([Reading], [Practical meaning]),
+  [RATE (s/d)], [Daily gain or loss; a positive value means the watch gains. Calibration corrects this reading.],
+  [AMP. (°)], [Balance amplitude. Its calculation depends on the configured lift angle.],
+  [B.E. (ms)], [Beat error: the timing asymmetry between the two alternating beats.],
+  [BEAT (bph)], [Beat rate, or beats per hour, of the movement.],
+)
+#note(color: orange)[*Before interpreting the results:* calibrate the audio input before trusting RATE, and use the movement's correct lift angle when interpreting AMP. Calibration does not affect amplitude or beat error.]

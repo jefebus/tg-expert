@@ -1,4 +1,5 @@
 #import "../lib.typ": *
+
 = Erster Start
 Beim Start öffnet tg-expert das Standardeingabegerät des Standard-Audiosystems.
 Lässt sich kein Eingang öffnen, erscheint die Meldung #ui[Es konnte kein
@@ -39,6 +40,4 @@ Die Uhr an das Mikrofon halten und die Pegelanzeige beobachten.
   das nicht, hört das Programm auf ein anderes Gerät.
 Die Statusanzeige neben der Uhr in der Ergebnistabelle zeigt, ob das Programm
 einen Schlag erkennt. Siehe @main-window.
-#note[Kalibrieren Sie die Soundkarte, bevor Sie der Gangabweichung trauen
-(siehe @calibration). Der Wert cal bleibt gespeichert, das ist also nur einmal
-pro Computer und Eingang nötig.]
+#note[Kalibrieren Sie die Soundkarte, bevor Sie der Gangabweichung trauen (siehe @calibration). Der Wert cal bleibt zwischen Sitzungen gespeichert. Nach einem Wechsel des Audioeingangs oder der Abtastrate muss neu kalibriert werden; weitere Fälle stehen unter @calibration.]

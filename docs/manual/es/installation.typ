@@ -1,8 +1,9 @@
 #import "../lib.typ": *
+
 = Instalación
 == Windows
-Descargue `tg-expert_0.9.0.msi` de la
-#link("https://github.com/jefebus/tg-expert/releases/latest")[página de versiones]
+Descargue el instalador `.msi` de Windows de la versión más reciente en la
+#link("https://github.com/jefebus/tg-expert/releases")[página de versiones]
 y ejecútelo. El instalador coloca tg-expert en su propia carpeta dentro de
 `Program Files`, añade entradas al menú Inicio para el programa y para este
 manual, y asocia los archivos `.tgj` con el programa.
@@ -15,11 +16,16 @@ Para desinstalarlo, use *Configuración > Aplicaciones* en Windows.
 #note[Windows puede preguntar si se permite al programa usar el micrófono. Si
 se denegó el acceso al micrófono, véase @troubleshooting.]
 == Linux
-Todavía no hay un paquete binario para Linux. Compile desde el código fuente
-como se describe en `BUILDING.md`, incluido en el archivo tar del código
-fuente, y después ejecute `make install`. Así se instalan el programa, la
-página de manual, una entrada de escritorio y el tipo de archivo `.tgj`, y
-este manual si Typst estaba disponible durante la compilación.
+Hay un paquete `.deb` para sistemas Debian y Ubuntu x86-64 (amd64) en la versión
+más reciente de la
+#link("https://github.com/jefebus/tg-expert/releases")[página de versiones].
+Descárguelo e instálelo con su gestor de paquetes.
+
+También puede compilar desde el código fuente como se describe en
+`BUILDING.md`, incluido en el archivo tar del código fuente, y después
+ejecutar `make install`. Así se instalan el programa, la página de manual,
+una entrada de escritorio y el tipo de archivo `.tgj`, y este manual si Typst
+estaba disponible durante la compilación.
 == macOS
 No hay paquete para macOS. Compilar desde el código fuente con Homebrew
 debería funcionar siguiendo `BUILDING.md`, pero no se ha verificado para esta

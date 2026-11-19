@@ -1,4 +1,5 @@
 #import "../lib.typ": *
+
 = Das Mikrofon <microphone>
 Die meisten schlechten Messwerte stammen vom Audioaufbau und nicht vom
 Programm: ein schwaches oder rauschendes Mikrofon, ein Mikrofon zu weit von

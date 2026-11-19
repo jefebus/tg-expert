@@ -24,6 +24,6 @@
 #include "es/trend.typ"
 #include "es/calibration.typ"
 #include "es/files.typ"
-/*#include "es/swiss_lever.typ"*/
+#include "es/swiss_lever.typ"
 #include "es/troubleshooting.typ"
 #include "es/appendix.typ"

@@ -1,4 +1,5 @@
 #import "../lib.typ": *
+
 = Fehlersuche <troubleshooting>
 == Kein Eingang
 *Beim Start erscheint die Meldung "Es konnte kein Audioeingang geöffnet
@@ -53,9 +54,7 @@ Gangabweichung ist absurd (Hunderte von s/t).*
   #ui[Verlauf] zeigt, wie stark.
 *Die Amplitude fehlt oder ist unplausibel.*
 - Den Hebungswinkel prüfen.
-- Für die Amplitude müssen die getrennten Klicks innerhalb jedes Schlags
-  hörbar sein. Ein schwaches oder verrauschtes Signal kann eine
-  Gangabweichung, aber keine Amplitude ergeben.
+- Für die Amplitude muss die akustische Hebungszeit zuverlässig messbar sein: Der Beginn der Auslösung und die starke Schlussreferenz aus Sperrung/Anschlag müssen erkennbar sein. Ein schwaches oder verrauschtes Signal kann eine stabile Gangabweichung, aber keine zuverlässige Amplitude liefern.
 *Die Gangabweichung weicht durchgehend vom tatsächlichen Gang der Uhr ab.*
 - Die Soundkarte kalibrieren (siehe @calibration) und nach jeder Änderung des
   Audioeingangs oder der Abtastrate erneut kalibrieren.
