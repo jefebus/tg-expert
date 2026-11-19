@@ -28,7 +28,7 @@ The manual explains microphone placement, gain, noise and calibration.
 ## Manual
 
 The user manual is built from `docs/manual/` with [Typst](https://typst.app)
-and published as `tg-expert-manual-0.9.0.pdf` with each release.
+and published as `tg-expert-manual.pdf` with each release.
 
 ## Credits and history
 
