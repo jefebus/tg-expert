@@ -1,27 +1,58 @@
 # Changelog
 
-## Unreleased
+## 0.10.0
+
+Spanish and German localization, expanded documentation, and improvements to
+the paperstrip and long-term statistics.
 
 ### Added
 
-- Spanish and German translations of the interface. The language follows the
-  system. Numbers always use a point as the decimal separator, and the
-  results table headers, position codes and calibration status stay in
-  English in every language.
-- The user manual in Spanish and German. "User manual" opens it in the
-  language of the interface. The Windows installer includes the three
-  manuals, each with its Start menu shortcut, and the translations.
+- Spanish and German translations of the interface, including menus, dialogs,
+  tooltips, panel titles, paperstrip legends and the Trend page. The language
+  follows the system settings.
+- User manuals in Spanish and German. "User manual" opens the manual in the
+  preferred language when available, falling back to English.
+- Illustrated manual chapter on the Swiss lever escapement: its mechanical
+  phases, acoustic pulses, and how tg-expert derives rate, beat error and
+  amplitude. Includes guidance on measurement reliability and the limits of
+  interpreting the waveform.
+- Paperstrip wrapping: dots crossing either vertical margin reappear at the
+  opposite margin. The wrap interval follows the current millisecond scale
+  and zoom, with duplicate dots near the margins where needed. Center
+  continues to put the newest beat in the middle.
 
 ### Changed
 
-- The paperstrip Y mark goes up and down by 1 s with + and -.
-- The Y mark and Y window labels show their unit (s).
+- The paperstrip Y mark increases and decreases by 1 s with + and -, and by
+  10 s with the page keys. Finer values can still be entered manually.
+- The Y mark and Y window labels now show their unit, seconds.
+- Manuals share a redesigned layout with consistent colors, tables,
+  headings, note boxes and page footers.
+- Expanded documentation on sound-card calibration, installation, language
+  selection, saving measurements and Trend behavior in automatic bph mode.
+- Manual version numbers are taken automatically from the project version.
+- The Windows installer includes all three manuals, each with its own Start
+  menu shortcut, plus Spanish and German interface translations.
+- With Typst available, `make manual` builds all three manuals and
+  `make install` installs them.
+- Added gettext translation build and maintenance support. Builds without
+  `msgfmt` remain available in English; Windows installer builds require
+  the translation catalogs.
 
 ### Fixed
 
-- With the bph set to "guess", the Trend statistics no longer start over
-  when the guessed beat rate changes for a short time, for example while the
-  watch is turned to another position. Those readings are left out.
+- With bph set to "guess", short-lived changes in the detected beat rate no
+  longer erase the Trend statistics, for example while turning the watch
+  or during a weak signal. Those readings are excluded. A different guessed
+  beat rate must persist for one minute before restarting the recording.
+
+### Compatibility
+
+- No changes to the snapshot or configuration file formats.
+- Existing `.tgj` files from Tg, tg-timer and tg-expert remain supported.
+- Numbers continue to use a point as the decimal separator in every
+  language. Results-table headers, position codes and calibration status
+  indicators remain in English.
 
 ## 0.9.0
 
