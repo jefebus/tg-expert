@@ -60,6 +60,10 @@ Das Gangdiagramm hat eine feste Breite. Am oberen Rand verlaufen zwei Skalen,
 die sich dieselben senkrechten Rasterlinien teilen: die Amplitude in Grad und
 die Zeit innerhalb des Fensters in ms. Die Zeitangaben links sind Minuten und
 Sekunden.
+Punkte, die einen senkrechten Rand überschreiten, erscheinen am anderen Rand
+wieder. Der Wiederholungsabstand folgt der aktuellen ms-Skala und dem Zoom.
+Nahe einem Rand kann ein Punkt auf beiden Seiten erscheinen; Zentrieren setzt
+den neuesten Schlag weiterhin in die Mitte.
 Die weiteren Linien, wie in der Legende unten aufgeführt:
 - *Amplitude*: die rosa Linie, abzulesen auf der Gradskala oben;
 - *Gang-Hilfslinie*: die gestrichelten blauen Linien neigen sich mit der

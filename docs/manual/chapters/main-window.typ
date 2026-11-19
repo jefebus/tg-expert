@@ -66,6 +66,10 @@ The paperstrip has a fixed width. Two scales run along the top and share the
 same vertical grid lines: the amplitude in degrees, and the time within the
 window in ms. The time labels on the left are minutes and seconds.
 
+Dots crossing either vertical margin reappear at the opposite margin. The
+wrap interval follows the current ms scale and zoom. Near a margin, a dot
+can appear on both sides; Center still puts the newest beat in the middle.
+
 The other lines, as listed in the legend at the bottom:
 
 - *amplitude*: the pink line, read on the degree scale at the top;

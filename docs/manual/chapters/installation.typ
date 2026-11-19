@@ -14,9 +14,6 @@ On every system, #ui[User manual] in the menu opens this manual. If the
 manual isn't installed, it opens the releases page, where the PDF can be
 downloaded.
 
-tg-expert installs next to tg-timer and does not replace it. The two
-programs keep separate settings.
-
 To uninstall, use *Settings > Apps* in Windows.
 
 #note[Windows may ask whether to allow the program to use the microphone. If

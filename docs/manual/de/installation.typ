@@ -11,8 +11,6 @@ Programm.
 Auf jedem System öffnet #ui[Benutzerhandbuch] im Menü dieses Handbuch. Ist das
 Handbuch nicht installiert, öffnet sich die Releases-Seite, von der sich das
 PDF herunterladen lässt.
-tg-expert wird neben tg-timer installiert und ersetzt es nicht. Beide
-Programme verwenden getrennte Einstellungen.
 Zum Deinstallieren dient *Einstellungen > Apps* in Windows.
 #note[Windows fragt möglicherweise, ob das Programm das Mikrofon verwenden
 darf. Wurde der Zugriff verweigert, siehe @troubleshooting.]
