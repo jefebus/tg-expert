@@ -2,12 +2,25 @@
 
 = Calibración <calibration>
 == Por qué
-tg-expert mide el tiempo de los batidos con el reloj de la tarjeta de sonido.
-Este reloj es un cristal barato y puede adelantar o atrasar varios segundos
-por día. Ese error se suma directamente a la marcha medida. La calibración lo
-mide frente a una referencia de cuarzo, y a partir de entonces el programa lo
-resta.
-La amplitud y el error de batido no dependen de la calibración.
+Un ordenador contiene varios relojes electrónicos internos. 
+La placa principal y el procesador utilizan sus propias 
+referencias de reloj, pero para tg-expert la más importante 
+es la de la tarjeta o interfaz de sonido: es la que determina 
+la frecuencia real con la que se toman las muestras de audio 
+y, por tanto, la escala de tiempo con la que el programa mide 
+los batidos del reloj.
+
+Estos relojes suelen derivarse de cristales de cuarzo económicos. 
+Su error puede ser de varias decenas de partes por millón (ppm)
+y varía ligeramente con la temperatura. Una ppm significa una 
+parte por millón: en una medida de tiempo equivale a 0,0864 
+segundos por día. Por ejemplo, un error de 50 ppm equivalen a 4,32 s/d. 
+Aunque parezca pequeño, ese error se suma directamente al RATE calculado por tg-expert.
+
+La calibración mide el error efectivo del reloj de la tarjeta de sonido 
+frente a una referencia de cuarzo y lo expresa en s/d. A partir de entonces, 
+el programa lo resta de las medidas para que el RATE corresponda al reloj 
+analizado y no al error de la base de tiempos del ordenador.
 == Cómo
 Necesita un reloj de cuarzo que haga tic una vez por segundo, por ejemplo un
 reloj de cuarzo analógico con segundero. Su precisión pasa a ser la precisión

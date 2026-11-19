@@ -2,12 +2,27 @@
 
 = Kalibrierung <calibration>
 == Warum
-tg-expert misst die Schläge mit dem Takt der Soundkarte. Dieser Takt stammt
-von einem billigen Quarz und kann um mehrere Sekunden pro Tag vor- oder
-nachgehen. Dieser Fehler geht direkt in die gemessene Gangabweichung ein. Die
-Kalibrierung misst ihn gegen eine Quarzreferenz, und das Programm zieht ihn
-von da an ab.
-Amplitude und Abfallfehler hängen nicht von der Kalibrierung ab.
+Ein Computer enthält mehrere interne elektronische Taktgeber. 
+Hauptplatine und Prozessor verwenden eigene Taktreferenzen. 
+Für tg-expert ist jedoch vor allem der Takt der Soundkarte 
+oder des Audio-Interfaces maßgebend: Er bestimmt die tatsächliche 
+Audio-Abtastrate und damit die Zeitskala, mit der das Programm 
+die Schläge der Uhr misst.
+
+Diese Taktgeber basieren meist auf preiswerten Quarzen. Ihre 
+Abweichung kann einige zehn Millionstel (parts per million, ppm) 
+betragen und ändert sich leicht mit der Temperatur. Eine ppm
+bedeutet ein Millionstel; als Zeitabweichung entspricht dies 0,0864 
+Sekunden pro Tag. So entsprechen beispielsweise 50 ppm einer Abweichung von 4,32 s/t. 
+Auch wenn dies gering erscheint, geht dieser Fehler direkt in die 
+von tg-expert berechnete Gangabweichung (RATE) ein.
+
+Bei der Kalibrierung wird die tatsächliche Abweichung des 
+Soundkartentakts gegen eine Quarzreferenz gemessen und in s/d 
+angegeben. Das Programm zieht diesen Wert anschließend von den
+Messungen ab, sodass RATE die Gangabweichung der geprüften Uhr 
+und nicht den Fehler der Computer-Zeitbasis wiedergibt.
+
 == Wie
 Sie benötigen eine Quarzuhr oder Quarzwanduhr, die einmal pro Sekunde tickt,
 zum Beispiel eine analoge Quarzarmbanduhr mit Sekundenzeiger. Ihre Genauigkeit
