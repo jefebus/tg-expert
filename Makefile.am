@@ -70,28 +70,31 @@ MANUALS = tg-expert-manual.pdf tg-expert-manual-es.pdf tg-expert-manual-de.pdf
 doc_DATA = $(MANUALS)
 CLEANFILES = $(MANUALS)
 MANUAL_DIR = $(srcdir)/docs/manual
-MANUAL_EN = $(MANUAL_DIR)/main.typ $(MANUAL_DIR)/lib.typ \
+MANUAL_EN = $(srcdir)/version $(MANUAL_DIR)/main.typ $(MANUAL_DIR)/lib.typ \
 	    $(MANUAL_DIR)/chapters/introduction.typ $(MANUAL_DIR)/chapters/installation.typ \
 	    $(MANUAL_DIR)/chapters/first-start.typ $(MANUAL_DIR)/chapters/microphone.typ \
 	    $(MANUAL_DIR)/chapters/main-window.typ $(MANUAL_DIR)/chapters/measuring.typ \
 	    $(MANUAL_DIR)/chapters/trend.typ $(MANUAL_DIR)/chapters/calibration.typ \
-	    $(MANUAL_DIR)/chapters/files.typ $(MANUAL_DIR)/chapters/troubleshooting.typ \
+	    $(MANUAL_DIR)/chapters/files.typ $(MANUAL_DIR)/chapters/swiss_lever.typ \
+	    $(MANUAL_DIR)/chapters/troubleshooting.typ \
 	    $(MANUAL_DIR)/chapters/appendix.typ
-MANUAL_ES = $(MANUAL_DIR)/main-es.typ $(MANUAL_DIR)/lib.typ \
+MANUAL_ES = $(srcdir)/version $(MANUAL_DIR)/main-es.typ $(MANUAL_DIR)/lib.typ \
 	    $(MANUAL_DIR)/es/introduction.typ $(MANUAL_DIR)/es/installation.typ \
 	    $(MANUAL_DIR)/es/first-start.typ $(MANUAL_DIR)/es/microphone.typ \
 	    $(MANUAL_DIR)/es/main-window.typ $(MANUAL_DIR)/es/measuring.typ \
 	    $(MANUAL_DIR)/es/trend.typ $(MANUAL_DIR)/es/calibration.typ \
-	    $(MANUAL_DIR)/es/files.typ $(MANUAL_DIR)/es/troubleshooting.typ \
+	    $(MANUAL_DIR)/es/files.typ $(MANUAL_DIR)/es/swiss_lever.typ \
+	    $(MANUAL_DIR)/es/troubleshooting.typ \
 	    $(MANUAL_DIR)/es/appendix.typ
-MANUAL_DE = $(MANUAL_DIR)/main-de.typ $(MANUAL_DIR)/lib.typ \
+MANUAL_DE = $(srcdir)/version $(MANUAL_DIR)/main-de.typ $(MANUAL_DIR)/lib.typ \
 	    $(MANUAL_DIR)/de/introduction.typ $(MANUAL_DIR)/de/installation.typ \
 	    $(MANUAL_DIR)/de/first-start.typ $(MANUAL_DIR)/de/microphone.typ \
 	    $(MANUAL_DIR)/de/main-window.typ $(MANUAL_DIR)/de/measuring.typ \
 	    $(MANUAL_DIR)/de/trend.typ $(MANUAL_DIR)/de/calibration.typ \
-	    $(MANUAL_DIR)/de/files.typ $(MANUAL_DIR)/de/troubleshooting.typ \
+	    $(MANUAL_DIR)/de/files.typ $(MANUAL_DIR)/de/swiss_lever.typ \
+	    $(MANUAL_DIR)/de/troubleshooting.typ \
 	    $(MANUAL_DIR)/de/appendix.typ
-TYPST_FLAGS = --input version=$(PACKAGE_VERSION)
+TYPST_FLAGS = --root "$(srcdir)"
 tg-expert-manual.pdf: $(MANUAL_EN)
 	$(TYPST) compile $(TYPST_FLAGS) $(MANUAL_DIR)/main.typ $@
 tg-expert-manual-es.pdf: $(MANUAL_ES)
@@ -111,6 +114,7 @@ EXTRA_DIST = autogen.sh \
 	     icons \
 	     packaging \
 	     docs/manual \
+	     version \
 	     LICENSE \
 	     README.md \
 	     BUILDING.md \
