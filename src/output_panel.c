@@ -859,7 +859,7 @@ static int paperstrip_zoom_index(double trace_zoom)
 }
 
 /* Beat period (a second in calibration) divided by the strip width. The width
- * is the same for every bph; beats outside it are not drawn. It cannot be
+ * is the same for every bph; beats wrap at its edges. It cannot be
  * wider than one beat, so at 0.25x a fast beat fills the strip. */
 static double paperstrip_zoom_factor(const struct snapshot *snst)
 {
@@ -922,6 +922,8 @@ static gboolean paperstrip_draw_event(GtkWidget *widget, cairo_t *c, struct outp
 		stopped = 1;
 
 	int strip_width = round(width / (1 + PAPERSTRIP_MARGIN));
+	if(strip_width <= 0)
+		return FALSE;
 	int left_margin = (width - strip_width) / 2;
 	int right_margin = (width + strip_width) / 2;
 
@@ -1122,8 +1124,8 @@ static gboolean paperstrip_draw_event(GtkWidget *widget, cairo_t *c, struct outp
 
 	// Beats: one dot per beat, tic in grey and toc in gold (neutral white for
 	// the reference ticks of a calibration). Faded when the signal is lost.
-	// The strip is a fixed ms range around the centre of the beat position
-	// (trace_centering): beats outside it are not drawn, nothing wraps.
+	// Repeat the fixed ms window between the margins, including copies in
+	// the outer margins so dots remain visible on both sides of a crossing.
 	for(i = snst->events_wp; valid_events_wp;) {
 		if(!snst->events_count || !snst->events[i]) break;
 		double age = now - snst->events[i];
@@ -1137,14 +1139,19 @@ static gboolean paperstrip_draw_event(GtkWidget *widget, cairo_t *c, struct outp
 		// Mirrored horizontally: later in the beat is further left, so a
 		// fast watch (positive rate) leans right, parallel to the rate guide
 		double x = floor(width / 2.0 - (phase - sweep / 2) * zoom_factor * strip_width / sweep);
-		if(x >= 0 && x < width) {
-			struct color dot = COL_WAVE;
-			if(!snst->calibrate && snst->events_tictoc)
-				dot = snst->events_tictoc[i] ? COL_TIC : COL_TOC;
-			set_signal_color(c, dot, stopped);
+		x = fmod(x - left_margin, strip_width);
+		if(x < 0) x += strip_width;
+		x += left_margin;
+		struct color dot = COL_WAVE;
+		if(!snst->calibrate && snst->events_tictoc)
+			dot = snst->events_tictoc[i] ? COL_TIC : COL_TOC;
+		set_signal_color(c, dot, stopped);
+		const double dot_left = (PAPERSTRIP_DOT_SIZE - 1) / 2;
+		for(x -= strip_width; x - dot_left < width; x += strip_width) {
+			if(x - dot_left + PAPERSTRIP_DOT_SIZE <= 0) continue;
 			// A square of PAPERSTRIP_DOT_SIZE px: around the beat position across,
 			// from its row upwards, so that the newest row stays inside the plot
-			cairo_rectangle(c, x - (PAPERSTRIP_DOT_SIZE - 1) / 2, plot_bottom - row - PAPERSTRIP_DOT_SIZE,
+			cairo_rectangle(c, x - dot_left, plot_bottom - row - PAPERSTRIP_DOT_SIZE,
 				PAPERSTRIP_DOT_SIZE, PAPERSTRIP_DOT_SIZE);
 			cairo_fill(c);
 		}
