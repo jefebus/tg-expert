@@ -1,4 +1,5 @@
 #import "../lib.typ": *
+
 = Primer inicio
 Al iniciarse, tg-expert abre el dispositivo de entrada predeterminado del
 sistema de audio predeterminado. Si no puede abrirse ninguna entrada, muestra

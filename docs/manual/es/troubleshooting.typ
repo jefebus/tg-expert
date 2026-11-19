@@ -76,8 +76,7 @@ inició.
 === La amplitud falta o no es verosímil
 
 - Compruebe el ángulo de alzamiento.
-- Para calcular la amplitud deben oírse los clics separados dentro de cada
-  batido. Una señal débil o ruidosa puede dar la marcha pero no la amplitud.
+- La amplitud necesita una medida fiable del tiempo de alzamiento acústico: deben detectarse el inicio del desbloqueo y la referencia final fuerte de bloqueo/tope. Una señal débil o ruidosa puede dar una marcha estable pero una amplitud poco fiable.
 === La marcha se desvía de forma constante respecto al comportamiento real del reloj
 
 - Calibre la tarjeta de sonido (véase @calibration), y vuelva a calibrar

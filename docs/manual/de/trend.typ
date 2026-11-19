@@ -1,4 +1,5 @@
 #import "../lib.typ": *
+
 = Langzeitmessung <trend>
 Die Gangabweichung einer Uhr ändert sich, wenn sich die Zugfeder entspannt
 und wenn die Uhr zwischen Lagen wechselt. Die Seite #ui[Verlauf] zeichnet die
@@ -56,3 +57,4 @@ Bedienelemente unten auf der Seite legen fest:
   Gangabweichungs-Diagramm zeigt, wie die Gangabweichung ihr folgt.
 4. Eine Aufnahme machen und speichern. Die Daten des Verlaufs werden mit
   gespeichert.
+#note[*Vor dem Ändern von Einstellungen:* Erstellen und speichern Sie eine Aufnahme, wenn die aktuelle Verlaufsaufzeichnung erhalten bleiben soll. Änderungen an bph, Hebungswinkel, cal, Audioeingang, Abtastrate oder Leichter Algorithmus setzen die Verlaufsdaten zurück. Für lange Aufzeichnungen die bekannte Schlagzahl eingeben, anstatt sich auf die automatische Erkennung zu verlassen.]

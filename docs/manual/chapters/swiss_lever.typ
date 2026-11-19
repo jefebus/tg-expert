@@ -6,7 +6,7 @@ This chapter explains what the waveform displayed by tg-expert represents, how i
 
 The main idea is that a tic or a toc is not a single impact. Each beat contains several mechanical actions occurring very close together. Three main acoustic pulses can usually be identified in the sound. tg-expert processes the complete acoustic pulse train and extracts repeatable timing references from it.
 
-== Escapement Operation and Formation of the tic-toc Sound
+== Escapement Operation and Formation of the Tic-Toc Sound
 
 The Swiss lever escapement connects the going train, which delivers energy from the mainspring, to the regulating organ formed by the balance wheel and hairspring. During each beat, the balance impulse jewel moves the pallet fork, the escape wheel is unlocked, an impulse is transmitted, and the escape wheel is locked again. During the following beat, the same sequence is repeated on the opposite pallet stone.
 
@@ -98,9 +98,9 @@ The tg-expert algorithm is derived from the open-source tg program. It does not 
   [3], [Rectification], [`fabs()` converts the bipolar signal into a positive magnitude.],
   [4], [Low-pass filter], [Extracts the time-domain envelope of the acoustic pulse train.],
   [5], [FFT-based autocorrelation], [Finds periodicity without requiring a fixed tic waveform.],
-  [6], [Cycle folding], [Aligns multiple ticks and tocks to create a representative waveform.],
+  [6], [Cycle folding], [Aligns multiple tic and toc to create a representative waveform.],
   [7], [Trimmed mean], [Discards the highest 20% of values to reduce the effect of accidental impacts.],
-  [8], [tic-toc separation], [Searches for the opposite action close to half the period.],
+  [8], [Tic-Toc separation], [Searches for the opposite action close to half the period.],
   [9], [Lift time], [Locates the detectable beginning of the acoustic pulse before each reference event.],
   [10], [Template correlation], [Locates the individual events used to generate the trace.],
 )
@@ -132,34 +132,19 @@ Rate measurement depends primarily on the pattern repeating consistently. A reco
 )
 
 === Beat Error
-
-The algorithm searches for the tic-to-toc separation close to half the period between equivalent events. The difference between the measured separation and the ideal halfway point provides an initial estimate of beat error.
-
-Physically, beat error indicates that the two alternating escapement actions are not centered in time around the equilibrium position of the balance. The program refines the result using the pulse durations detected in both directions.
+Beat error describes the timing asymmetry between the two alternating semiperiods: Tic to the following Toc, and Toc to the following Tic. tg-expert compares these alternating intervals and reports B.E. as a positive value in milliseconds.
 
 === Amplitude Calculation
 
 Amplitude is not calculated from the height of the sound waveform. tg-expert estimates the time during which the balance passes through the lift angle and combines this time with the lift angle configured for the movement.
 
-For approximately sinusoidal balance motion, the code applies:
-
-$ A = L A / (2 sin(pi t_L / T)) $
-
-Where:
-
-- $A$ is the angular amplitude of the balance.
-- $L A$ is the lift angle entered by the user.
-- $t_L$ is the lift time estimated from the acoustic pulse train.
-- $T$ is the period between equivalent events used by the algorithm.
-
-For the same lift angle, a balance oscillating with a high amplitude crosses the central region *at a higher speed*. Therefore:
+The calculation assumes approximately sinusoidal balance motion. For the same lift angle, a balance oscillating with a high amplitude crosses the central region *at a higher speed*. Therefore:
 
 - a short lift time corresponds to a higher amplitude;
 - a long lift time corresponds to a lower amplitude.
 
-The algorithm smooths the waveform using a window of approximately 1 ms. It then calculates a threshold based on the global maximum and the background level. For each tic and toc, it searches backwards from the central reference until it finds the detectable beginning of the pulse train. It then follows the rising envelope to a local maximum and converts the detected position into a duration.
+The algorithm smooths the waveform using a window of approximately 1 ms. It then calculates a threshold based on the global maximum and the background level. For each Tic and Toc, it searches backwards from the central reference until it finds the detectable beginning of the pulse train. This onset is combined with the strong final locking/banking reference to obtain the acoustic lift time shown by the waveform display.
 
-The program accepts the calculation if the tic and toc amplitudes are between 135° and 360° and differ by less than 60°. If the check fails, it increases the threshold and attempts to locate another pulse edge.
 
 #note(
   [Effect of missing the unlocking pulse. If the first sound remains below the detection threshold, tg-expert starts measuring too late. The estimated lift time becomes shorter and the formula produces an artificially high amplitude. The resulting value may still appear reasonable if it passes the algorithm's internal plausibility checks.]
@@ -174,7 +159,7 @@ The lift angle is also critical. Because it is a direct multiplier in the equati
   inset: 5pt,
   stroke: rgb("B7C1CA"),
   table.header([*Element*], [*Treatment in tg-expert*]),
-  [tic versus toc], [Yes. The two directions are located and kept separate.],
+  [Tic versus Toc], [Yes. The two directions are located and kept separate.],
   [Three acoustic pulses], [They are not classified individually. They form part of a composite envelope.],
   [Peak height], [It affects detection and thresholding, but does not determine amplitude.],
   [Lift time], [Yes. It is estimated using the detectable beginning of the acoustic pulse train.],
@@ -195,7 +180,7 @@ Reliability should be assessed before interpreting the numerical results. The fo
   [Background], [Low and stable between beats.], [Continuous noise, knocks, or changing noise level.],
   [Unlocking], [Visible, clean, and repeatable onset.], [Buried, intermittent, or varying onset.],
   [Final pulse], [Strong but not clipped.], [Flat top, clipping, or excessive resonance tail.],
-  [tic and toc], [Both are detected consistently.], [One disappears or changes continuously.],
+  [Tic and Toc], [Both are detected consistently.], [One disappears or changes continuously.],
   [Trace], [Well-defined line without duplicate events.], [Clouds, jumps, or double triggering.],
   [Rate], [Stable over several measurement windows.], [Abrupt changes without a physical change in the watch.],
   [Amplitude], [Plausible and consistent over equivalent measurement windows.], [Large jumps while the rate remains stable.],

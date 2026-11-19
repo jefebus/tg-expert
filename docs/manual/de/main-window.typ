@@ -1,4 +1,5 @@
 #import "../lib.typ": *
+
 = Das Hauptfenster <main-window>
 #shot("main-window.png", [Das Hauptfenster bei der Messung einer Uhr mit 28800 bph.])
 Das Fenster besteht aus einer oberen Leiste, einer Reiterzeile, der

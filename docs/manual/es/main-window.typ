@@ -1,4 +1,5 @@
 #import "../lib.typ": *
+
 = La ventana principal <main-window>
 #shot("main-window.png", [La ventana principal midiendo un reloj de 28800 bph.])
 La ventana tiene una barra superior, una fila de pestañas, la tabla de

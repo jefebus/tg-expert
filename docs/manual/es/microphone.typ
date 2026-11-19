@@ -1,4 +1,5 @@
 #import "../lib.typ": *
+
 = El micrófono <microphone>
 La mayoría de las malas lecturas se deben a la instalación de audio y no al
 programa: un micrófono débil o ruidoso, un micrófono demasiado lejos del

@@ -4,8 +4,8 @@
 
 == Windows
 
-Download `tg-expert_0.9.0.msi` from the
-#link("https://github.com/jefebus/tg-expert/releases/latest")[releases page]
+Download the Windows `.msi` installer from the latest release on the
+#link("https://github.com/jefebus/tg-expert/releases")[releases page]
 and run it. The installer puts tg-expert in its own folder under
 `Program Files`, adds Start menu entries for the program and for this manual,
 and associates `.tgj` files with the program.
@@ -24,10 +24,15 @@ the microphone was denied, see @troubleshooting.]
 
 == Linux
 
-There is no binary package for Linux yet. Build from source as described in
-`BUILDING.md` in the source tarball, then run `make install`. This installs
-the program, the man page, a desktop entry and the `.tgj` file type, and this
-manual if Typst was available during the build.
+A `.deb` package for Debian and Ubuntu systems on x86-64 (amd64) is available in the
+latest release on the
+#link("https://github.com/jefebus/tg-expert/releases")[releases page].
+Download and install it using your package manager.
+
+Alternatively, build from source as described in `BUILDING.md` in the
+source tarball, then run `make install`. This installs the program, the man
+page, a desktop entry and the `.tgj` file type, and this manual if Typst was
+available during the build.
 
 == macOS
 

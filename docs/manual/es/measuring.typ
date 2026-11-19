@@ -1,4 +1,5 @@
 #import "../lib.typ": *
+
 = Medir un reloj <measuring>
 == Ajustar los bph y el ángulo de alzamiento
 1. Busque la frecuencia de batido y el ángulo de alzamiento del mecanismo. Las

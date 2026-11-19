@@ -1,4 +1,5 @@
 #import "../lib.typ": *
+
 = Einführung
 tg-expert hört über den Audioeingang des Computers eine mechanische Uhr ab
 und misst, wie das Werk läuft. Das Programm erfüllt die Aufgabe einer
@@ -50,3 +51,13 @@ Im Vergleich zu einer Hardware-Zeitwaage gilt:
   einem ruhigen Raum und einer kalibrierten Soundkarte sind die Messwerte auf
   einen Bruchteil einer Sekunde pro Tag reproduzierbar. Bei einem schlechten
   Aufbau können die Zahlen irreführend sein.
+
+== Messwerte auf einen Blick
+#table(columns: (24%, 76%),
+  table.header([Messwert], [Praktische Bedeutung]),
+  [RATE (s/d)], [Tägliches Vor- oder Nachgehen; ein positiver Wert bedeutet Vorgehen. Die Kalibrierung korrigiert diesen Messwert.],
+  [AMP. (°)], [Amplitude der Unruh. Die Berechnung hängt vom eingestellten Hebungswinkel ab.],
+  [B.E. (ms)], [Abfallfehler: die zeitliche Asymmetrie zwischen den beiden wechselnden Schlägen.],
+  [BEAT (bph)], [Schlagzahl des Werks in Schlägen pro Stunde.],
+)
+#note(color: orange)[*Vor der Auswertung:* Kalibrieren Sie den Audioeingang, bevor Sie RATE vertrauen, und verwenden Sie für AMP den korrekten Hebungswinkel des Werks. Die Kalibrierung beeinflusst weder Amplitude noch Abfallfehler.]

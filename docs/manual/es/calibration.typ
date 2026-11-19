@@ -1,4 +1,5 @@
 #import "../lib.typ": *
+
 = Calibración <calibration>
 == Por qué
 tg-expert mide el tiempo de los batidos con el reloj de la tarjeta de sonido.

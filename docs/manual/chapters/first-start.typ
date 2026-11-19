@@ -46,5 +46,4 @@ Hold the watch against the microphone and watch the meter.
 The status indicator next to the clock in the results table tells you
 whether the program recognizes a beat. See @main-window.
 
-#note[Calibrate the sound card before trusting the rate (see @calibration).
-The cal value is kept, so this is needed once per computer and input.]
+#note[Calibrate the sound card before trusting the rate (see @calibration). The cal value is retained between sessions. Recalibrate after changing the audio input or sample rate; see @calibration for the other cases.]

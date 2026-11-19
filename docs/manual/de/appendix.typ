@@ -1,4 +1,5 @@
 #import "../lib.typ": *
+
 #set heading(numbering: "A.1")
 #counter(heading).update(0)
 = Grenzwerte
@@ -13,7 +14,7 @@
   [Kalibrierung], [etwa 15 Minuten (900 Ticks einer 1-Hz-Quarzreferenz)],
 )
 = Glossar
-/ Abfallfehler: der zeitliche Unterschied zwischen Tick und Tack, in ms.
+/ Abfallfehler: die positive zeitliche Asymmetrie zwischen den wechselnden Halbperioden Tick-zu-Tack und Tack-zu-Tick, in ms.
 / Amplitude: der Ausschlag der Unruh aus ihrer Ruhelage, in Grad.
 / Aufnahme: eine eingefrorene Kopie einer Messung, in einem eigenen Reiter
   aufbewahrt.

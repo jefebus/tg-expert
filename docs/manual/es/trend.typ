@@ -1,4 +1,5 @@
 #import "../lib.typ": *
+
 = Medición a largo plazo <trend>
 La marcha de un reloj cambia a medida que se desarma el muelle real y cuando
 el reloj cambia de posición. La página #ui[Tendencia] registra la medición a

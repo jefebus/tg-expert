@@ -1,4 +1,5 @@
 #import "../lib.typ": *
+
 = Introducción
 tg-expert escucha un reloj mecánico a través de la entrada de audio del
 ordenador y mide cómo funciona el mecanismo. Hace el trabajo de un

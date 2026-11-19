@@ -1,8 +1,9 @@
 #import "../lib.typ": *
+
 = Installation
 == Windows
-`tg-expert_0.9.0.msi` von der
-#link("https://github.com/jefebus/tg-expert/releases/latest")[Releases-Seite]
+Das Windows-Installationsprogramm `.msi` aus der neuesten Version auf der
+#link("https://github.com/jefebus/tg-expert/releases")[Releases-Seite]
 herunterladen und ausführen. Das Installationsprogramm legt tg-expert in
 einem eigenen Ordner unter `Program Files` ab, fügt Startmenü-Einträge für das
 Programm und für dieses Handbuch hinzu und verknüpft `.tgj`-Dateien mit dem
@@ -16,11 +17,16 @@ Zum Deinstallieren dient *Einstellungen > Apps* in Windows.
 #note[Windows fragt möglicherweise, ob das Programm das Mikrofon verwenden
 darf. Wurde der Zugriff verweigert, siehe @troubleshooting.]
 == Linux
-Für Linux gibt es noch kein Binärpaket. Das Programm ist aus dem Quellcode zu
-bauen, wie in `BUILDING.md` im Quellarchiv beschrieben, anschließend ist
-`make install` auszuführen. Dies installiert das Programm, die Man-Page, einen
-Desktop-Eintrag und den Dateityp `.tgj`, außerdem dieses Handbuch, sofern
-Typst beim Bauen verfügbar war.
+Für Debian- und Ubuntu-Systeme mit x86-64 (amd64) steht in der neuesten Version auf
+der #link("https://github.com/jefebus/tg-expert/releases")[Releases-Seite]
+ein `.deb`-Paket zur Verfügung. Dieses herunterladen und mit der
+Paketverwaltung installieren.
+
+Alternativ lässt sich das Programm aus dem Quellcode bauen, wie in
+`BUILDING.md` im Quellarchiv beschrieben; anschließend ist `make install`
+auszuführen. Dies installiert das Programm, die Man-Page, einen Desktop-Eintrag
+und den Dateityp `.tgj`, außerdem dieses Handbuch, sofern Typst beim Bauen
+verfügbar war.
 == macOS
 Es gibt kein macOS-Paket. Das Bauen aus dem Quellcode mit Homebrew sollte
 nach `BUILDING.md` funktionieren, wurde für diese Version aber nicht
@@ -47,4 +53,4 @@ Zeitwaage vergleichen lassen:
 - die Lagenkürzel DU, DD, CU, CD, CL und CR;
 - der Kalibrierstatus: cal (wait), cal (acq.), cal (done), cal (fail).
 Unter Linux lässt sich die Sprache beim Start des Programms wählen, zum
-Beispiel mit `LANGUAGE=es tg-expert`.
+Beispiel mit `LANGUAGE=de tg-expert`.
