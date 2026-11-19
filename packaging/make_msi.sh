@@ -51,13 +51,13 @@ do
 	out="$TARGET/tg-expert-manual${suffix}.pdf"
 	if command -v typst >/dev/null 2>&1
 	then
-		typst compile --input version="$VERSION" "$ABSDIR/../docs/manual/$src" "$out"
+		typst compile --root "$ABSDIR/.." "$ABSDIR/../docs/manual/$src" "$out"
 	elif test -f "$prebuilt"
 	then
 		cp "$prebuilt" "$out"
 	else
 		echo "Error: typst is not in PATH and $prebuilt does not exist."
-		echo "Build it with: typst compile docs/manual/$src tg-expert-manual-${VERSION}${suffix}.pdf"
+		echo "Build it with: typst compile --root . docs/manual/$src tg-expert-manual-${VERSION}${suffix}.pdf"
 		exit 1
 	fi
 done

@@ -4,12 +4,24 @@
 
 == Why
 
-tg-expert times the beats with the sound card clock. This clock is a cheap
-crystal, and it may run fast or slow by several seconds per day. That error
-adds directly to the measured rate. Calibration measures it against a quartz
-reference, and the program subtracts it from then on.
+A computer contains several internal electronic clocks. 
+The main board and the processor use their own clock references, 
+but the most important one for tg-expert is the clock in the sound 
+card or audio interface. It determines the actual audio sampling 
+frequency and therefore the time scale used by the program to 
+time the watch beats.
 
-The amplitude and beat error don't depend on calibration.
+These clocks are usually derived from inexpensive quartz crystals. 
+Their error may be several tens of parts per million (ppm), and it 
+changes slightly with temperature. One ppm means one part per million; 
+as a time error, it corresponds to 0.0864 seconds per day. For example, 
+10 ppm is 0.864 s/d, while 50 ppm is 4.32 s/d. Small as it may seem,
+this error is added directly to the RATE calculated by tg-expert.
+
+Calibration measures the effective error of the sound card clock 
+against a quartz reference and expresses it in s/d. The program then 
+subtracts this value from subsequent measurements, so that RATE 
+represents the watch under test and not the error of the computer's time base.
 
 == How
 
