@@ -15,7 +15,7 @@ partir de la temporización de estos batidos, el programa obtiene:
   270° a 310° con la esfera arriba. Una amplitud baja suele indicar un muelle
   real débil, aceite sucio o desgaste.
 / Error de batido: la diferencia de tiempo entre el tic y el toc, en
-  milisegundos. Cero significa que el volante está centrado («en batido»).
+  milisegundos. Cero significa que el volante está centrado.
 / Frecuencia de batido (bph): el número de batidos por hora para el que está
   diseñado el mecanismo, por ejemplo 18000, 21600, 28800 o 36000. La marcha se
   calcula respecto a este valor, por lo que debe ser correcto.

@@ -10,8 +10,6 @@ manual, y asocia los archivos `.tgj` con el programa.
 En cualquier sistema, #ui[Manual de usuario] en el menú abre este manual. Si
 el manual no está instalado, abre la página de versiones, desde donde puede
 descargarse el PDF.
-tg-expert se instala junto a tg-timer y no lo sustituye. Los dos programas
-mantienen ajustes independientes.
 Para desinstalarlo, use *Configuración > Aplicaciones* en Windows.
 #note[Windows puede preguntar si se permite al programa usar el micrófono. Si
 se denegó el acceso al micrófono, véase @troubleshooting.]

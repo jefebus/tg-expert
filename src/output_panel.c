@@ -21,8 +21,8 @@
 
 /* Colour semantics, the same in every panel:
  *   tic = grey, toc = gold, amplitude = magenta, rate/reference = azure,
- *   axes and grids = white (solid = major, dotted = minor), error = red,
- *   status OK (watch icon, calibration done) = green.
+ *   beat error, axes and grids = white (solid = major, dotted = minor),
+ *   error = red, status OK (watch icon, calibration done) = green.
  * A stale reading keeps its colour but is drawn faded. */
 cairo_pattern_t *black,*white,*red,*green;
 
@@ -31,6 +31,7 @@ static const struct color COL_TIC  = {.722, .722, .722};
 static const struct color COL_TOC  = {.980, .761, .020};
 static const struct color COL_AMP  = {1, .310, .816}; // magenta #FF4FD0
 static const struct color COL_RATE = {.302, .651, 1};
+static const struct color COL_BE   = {.710, .486, 1}; // purple #B57CFF
 static const struct color COL_WAVE = {.902, .902, .902}; // neutral, for both beats
 static const struct color COL_AXIS = {1, 1, 1};
 
@@ -379,7 +380,7 @@ static void draw_results_table(cairo_t *c, double x0, double width, double heigh
 		else if(i == 1)
 			set_signal_color(c, COL_AMP, snst->is_old);
 		else if(i == 2)
-			set_signal_color(c, COL_AXIS, snst->is_old);
+			set_signal_color(c, COL_BE, snst->is_old);
 		else
 			set_color(c, COL_AXIS, 1);
 		cairo_text_extents(c, unit[i], &e);
@@ -1451,18 +1452,25 @@ struct trend_column {
 	int gap_before;	// no reading for a while before it: the line is broken
 };
 
+enum trend_series {
+	TREND_SERIES_RATE,
+	TREND_SERIES_AMPLITUDE,
+	TREND_SERIES_BEAT_ERROR
+};
+
 /* Collapse the readings between t0 and t1 into pixel columns, at most max of
- * them. Rate, or amplitude (readings without one are skipped). */
+ * them. Series: rate, amplitude (readings without one are skipped), or beat error. */
 static int trend_columns(const struct trend *t, double t0, double t1, double gx, double gw,
-	int amplitude, struct trend_column *cols, int max)
+	enum trend_series series, struct trend_column *cols, int max)
 {
 	int n = 0;
 	double prev_t = -1;
 	for(int i = 0; i < t->count; i++) {
 		const struct trend_sample *s = &t->samples[i];
 		if(s->t < t0 || s->t > t1) continue;
-		double v = amplitude ? s->amp : s->rate;
-		if(amplitude && v <= 0) continue;
+		double v = series == TREND_SERIES_RATE ? s->rate :
+			series == TREND_SERIES_AMPLITUDE ? s->amp : s->be;
+		if(series == TREND_SERIES_AMPLITUDE && v <= 0) continue;
 		double x = floor(gx + (s->t - t0) / (t1 - t0) * gw) + .5;
 		int gap = prev_t >= 0 && s->t - prev_t > 3 * TREND_INTERVAL_S;
 		prev_t = s->t;
@@ -1526,6 +1534,25 @@ static void trend_hline(cairo_t *c, double gx, double gw, double y, int major, c
 	set_dotted(c, 0);
 	set_color(c, COL_AXIS, 0.7);
 	trend_text(c, gx - 4, y + 4, 1, label);
+}
+
+static void trend_draw_average(cairo_t *c, double gx, double gw,
+	double y_top, double y_bottom, double v_min, double v_max,
+	const struct trend_stats *stats, struct color col)
+{
+	double mean = trend_stats_mean(stats);
+	if(!stats->n || mean < v_min || mean > v_max)
+		return;
+
+	static const double dashes[2] = {6, 4};
+	double y = round(y_bottom - (mean - v_min) / (v_max - v_min) *
+		(y_bottom - y_top)) + .5;
+	cairo_set_dash(c, dashes, 2, 0);
+	cairo_move_to(c, gx, y);
+	cairo_line_to(c, gx + gw, y);
+	set_color(c, col, 0.8);
+	cairo_stroke(c);
+	set_dotted(c, 0);
 }
 
 static gboolean trend_draw_event(GtkWidget *widget, cairo_t *c, struct output_panel *op)
@@ -1599,7 +1626,7 @@ static gboolean trend_draw_event(GtkWidget *widget, cairo_t *c, struct output_pa
 		/* TRANSLATORS: Trend page row: amplitude in degrees. Keep the degree sign. Short, shown in a narrow column */
 		{N_("Ampl. \xC2\xB0"), COL_AMP, &t->amp, last->amp, 0, 0},
 		/* TRANSLATORS: Trend page row: beat error in milliseconds (ms). Short, shown in a narrow column */
-		{N_("Beat err. ms"), COL_AXIS, &t->be, last->be, 1, 0},
+		{N_("Beat err. ms"), COL_BE, &t->be, last->be, 1, 0},
 	};
 	cairo_set_font_size(c, font);
 	for(int r = 0; r < 3; r++) {
@@ -1683,7 +1710,7 @@ static gboolean trend_draw_event(GtkWidget *widget, cairo_t *c, struct output_pa
 			set_color(c, COL_AMP, 1);
 			trend_text(c, label_w + 3 * col_w, y, 1, s);
 			snprintf(s, sizeof(s), "%.1f", trend_stats_mean(&t->pos_be[p]));
-			set_color(c, COL_AXIS, 0.9);
+			set_color(c, COL_BE, 1);
 			trend_text(c, label_w + 4 * col_w, y, 1, s);
 			y += line;
 			if(code) {
@@ -1707,15 +1734,18 @@ static gboolean trend_draw_event(GtkWidget *widget, cairo_t *c, struct output_pa
 		y += line * 1.2;
 	}
 
-	// Graphs: rate on top, amplitude below, on the same time axis
+	// Graphs share a time axis: rate, amplitude, then beat error
 	const double area_top = y;
 	const double area_bottom = height - (font + 6);
-	if(area_bottom - area_top < 8 * font)
+	if(area_bottom - area_top < 11 * font)
 		return FALSE;	// not enough room
 	const double gx = 3.5 * font, gw = width - gx - 8;
-	const double split = area_top + (area_bottom - area_top) * 0.55;
-	const double rate_top = area_top + font * 1.2, rate_bottom = split - font * 0.5;
-	const double amp_top = split + font * 1.2, amp_bottom = area_bottom;
+	const double graph_height = (area_bottom - area_top) / 3;
+	const double split1 = area_top + graph_height;
+	const double split2 = area_top + 2 * graph_height;
+	const double rate_top = area_top + font * 1.2, rate_bottom = split1 - font * 0.5;
+	const double amp_top = split1 + font * 1.2, amp_bottom = split2 - font * 0.5;
+	const double be_top = split2 + font * 1.2, be_bottom = area_bottom;
 
 	double t1 = elapsed, t0 = 0;
 	if(op->trend_span_s > 0) {
@@ -1745,6 +1775,8 @@ static gboolean trend_draw_event(GtkWidget *widget, cairo_t *c, struct output_pa
 		cairo_line_to(c, x, rate_bottom);
 		cairo_move_to(c, x, amp_top);
 		cairo_line_to(c, x, amp_bottom);
+		cairo_move_to(c, x, be_top);
+		cairo_line_to(c, x, be_bottom);
 		set_axis_style(c, COL_AXIS, 0);
 		cairo_stroke(c);
 		set_dotted(c, 0);
@@ -1754,7 +1786,7 @@ static gboolean trend_draw_event(GtkWidget *widget, cairo_t *c, struct output_pa
 	}
 
 	// Rate: fixed range or the smallest round one that holds the readings shown
-	int n = trend_columns(t, t0, t1, gx, gw, 0, cols, max_cols);
+	int n = trend_columns(t, t0, t1, gx, gw, TREND_SERIES_RATE, cols, max_cols);
 	double range = op->trend_rate_range;
 	if(range <= 0) {
 		double m = 0;
@@ -1774,18 +1806,8 @@ static gboolean trend_draw_event(GtkWidget *widget, cairo_t *c, struct output_pa
 		snprintf(s, sizeof(s), k ? "%+g" : "0", v);
 		trend_hline(c, gx, gw, rate_bottom - (v + range) / (2 * range) * (rate_bottom - rate_top), k == 0, s);
 	}
-	// Average since the start, dashed
 	double mean = trend_stats_mean(&t->rate);
-	if(fabs(mean) <= range) {
-		static const double dashes[2] = {6, 4};
-		double ym = round(rate_bottom - (mean + range) / (2 * range) * (rate_bottom - rate_top)) + .5;
-		cairo_set_dash(c, dashes, 2, 0);
-		cairo_move_to(c, gx, ym);
-		cairo_line_to(c, gx + gw, ym);
-		set_color(c, COL_RATE, 0.8);
-		cairo_stroke(c);
-		set_dotted(c, 0);
-	}
+	trend_draw_average(c, gx, gw, rate_top, rate_bottom, -range, range, &t->rate, COL_RATE);
 	trend_draw_series(c, cols, n, rate_top, rate_bottom, -range, range, COL_RATE);
 	cairo_set_font_size(c, font * 0.9);
 	set_color(c, COL_RATE, 1);
@@ -1799,14 +1821,44 @@ static gboolean trend_draw_event(GtkWidget *widget, cairo_t *c, struct output_pa
 		snprintf(s, sizeof(s), "%d", v);
 		trend_hline(c, gx, gw, amp_bottom - (v - 120) / 240.0 * (amp_bottom - amp_top), 0, s);
 	}
-	n = trend_columns(t, t0, t1, gx, gw, 1, cols, max_cols);
+	n = trend_columns(t, t0, t1, gx, gw, TREND_SERIES_AMPLITUDE, cols, max_cols);
+	double amp_mean = trend_stats_mean(&t->amp);
+	trend_draw_average(c, gx, gw, amp_top, amp_bottom, 120, 360, &t->amp, COL_AMP);
 	trend_draw_series(c, cols, n, amp_top, amp_bottom, 120, 360, COL_AMP);
-	free(cols);
 	cairo_set_font_size(c, font * 0.9);
 	set_color(c, COL_AMP, 1);
-	trend_text(c, gx, amp_top - font * 0.4, 0, _("Amplitude (\xC2\xB0)"));
+	snprintf(s, sizeof(s), _("Amplitude (\xC2\xB0), dashed: average %.1f"), amp_mean);
+	trend_text(c, gx, amp_top - font * 0.4, 0, s);
 
-	// Position changes: a line through both graphs, with the new position
+	// Beat error: automatic range from zero to the smallest round value that holds the readings
+	n = trend_columns(t, t0, t1, gx, gw, TREND_SERIES_BEAT_ERROR, cols, max_cols);
+	double be_range = 100;
+	double max_be = 0;
+	for(i = 0; i < n; i++)
+		max_be = fmax(max_be, cols[i].max);
+	static const double be_ranges[] = {1, 2, 5, 10, 20, 50, 100, 0};
+	for(i = 0; be_ranges[i]; i++)
+		if(max_be <= be_ranges[i]) {
+			be_range = be_ranges[i];
+			break;
+		}
+	cairo_set_font_size(c, font * 0.8);
+	cairo_set_line_width(c, 1);
+	for(int k = 0; k <= 4; k++) {
+		double v = be_range * k / 4;
+		snprintf(s, sizeof(s), "%g", v);
+		trend_hline(c, gx, gw, be_bottom - v / be_range * (be_bottom - be_top), k == 0, s);
+	}
+	double be_mean = trend_stats_mean(&t->be);
+	trend_draw_average(c, gx, gw, be_top, be_bottom, 0, be_range, &t->be, COL_BE);
+	trend_draw_series(c, cols, n, be_top, be_bottom, 0, be_range, COL_BE);
+	cairo_set_font_size(c, font * 0.9);
+	set_color(c, COL_BE, 1);
+	snprintf(s, sizeof(s), _("Beat error (ms), dashed: average %.1f"), be_mean);
+	trend_text(c, gx, be_top - font * 0.4, 0, s);
+	free(cols);
+
+	// Position changes: a line through all three graphs, with the new position
 	cairo_set_font_size(c, font * 0.8);
 	int prev_pos = -1;
 	for(i = 0; i < t->count; i++) {
@@ -1816,7 +1868,7 @@ static gboolean trend_draw_event(GtkWidget *widget, cairo_t *c, struct output_pa
 			double px = round(gx + (x->t - t0) / (t1 - t0) * gw) + .5;
 			if(prev_pos >= 0) {
 				cairo_move_to(c, px, rate_top);
-				cairo_line_to(c, px, amp_bottom);
+				cairo_line_to(c, px, be_bottom);
 				set_color(c, COL_TOC, 0.8);
 				cairo_stroke(c);
 			}
@@ -2111,7 +2163,7 @@ struct output_panel *init_output_panel(struct computer *comp, struct snapshot *s
 	op->trend_drawing_area = gtk_drawing_area_new();
 	gtk_widget_set_size_request(op->trend_drawing_area, 300, 0);
 	gtk_box_pack_start(GTK_BOX(trend_page),
-		titled_frame(op->trend_drawing_area, _("Trend: rate and amplitude since the start")), TRUE, TRUE, 0);
+		titled_frame(op->trend_drawing_area, _("Trend: rate, amplitude, and BE over time")), TRUE, TRUE, 0);
 	g_signal_connect(op->trend_drawing_area, "draw", G_CALLBACK(trend_draw_event), op);
 	gtk_widget_set_events(op->trend_drawing_area, GDK_EXPOSURE_MASK);
 
