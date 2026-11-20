@@ -644,6 +644,31 @@ static int menu_item_wanted(GtkWidget *item)
 	return GPOINTER_TO_INT(g_object_get_data(G_OBJECT(item), "enabled-wanted")) != 2;
 }
 
+static struct trend *current_trend(struct main_window *w, GtkWidget **tab)
+{
+	int page = gtk_notebook_get_current_page(GTK_NOTEBOOK(w->notebook));
+	GtkWidget *current = page >= 0 ?
+		gtk_notebook_get_nth_page(GTK_NOTEBOOK(w->notebook), page) : NULL;
+	if(tab)
+		*tab = current;
+	if(!current)
+		return NULL;
+	struct output_panel *op = g_object_get_data(G_OBJECT(current), "op-pointer");
+	if(op)
+		return op->trend;
+	return w->active_panel ? w->active_panel->trend : NULL;
+}
+
+static void update_export_item(struct main_window *w)
+{
+	if(!w->export_item)
+		return;
+	struct trend *trend = current_trend(w, NULL);
+	int enabled = trend && trend->count > 0;
+	if(menu_item_wanted(w->export_item) != enabled)
+		set_menu_item_enabled(w, w->export_item, enabled);
+}
+
 /* Apply widget sensitivity from controls_active (real-time tab shown) and calibrate */
 static void update_sensitivity(struct main_window *w)
 {
@@ -667,6 +692,9 @@ static void update_sensitivity(struct main_window *w)
 	gtk_widget_set_sensitive(w->light_item, !w->calibrate);
 	gtk_widget_set_sensitive(w->save_item, menu_item_wanted(w->save_item) && !w->calibrate);
 	gtk_widget_set_sensitive(w->save_all_item, menu_item_wanted(w->save_all_item) && !w->calibrate);
+	if(w->export_item)
+		gtk_widget_set_sensitive(w->export_item,
+			menu_item_wanted(w->export_item) && !w->calibrate);
 	gtk_widget_set_sensitive(w->close_all_item, menu_item_wanted(w->close_all_item) && !w->calibrate);
 }
 
@@ -741,6 +769,7 @@ static void handle_tab_changed(GtkNotebook *nbk, GtkWidget *panel, guint x, stru
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w->la_spin_button), la);
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w->cal_spin_button), cal);
 	set_menu_item_enabled(w, w->save_item, !snap->calibrate && snap->pb);
+	update_export_item(w);
 
 	// Snapshot tabs show their own bph/la, so no saved watch is selected there
 	if(op)
@@ -1004,6 +1033,7 @@ static void handle_snapshot(GtkButton *b, struct main_window *w)
 	struct output_panel *op = add_new_tab(s, (char *)selected_watch(w), w);
 	// The snapshot keeps the long-term statistics as they are now
 	op->trend = trend_clone(w->active_panel->trend);
+	update_export_item(w);
 }
 
 /* Keyboard shortcut for the most frequent action: Ctrl+Space takes a snapshot.
@@ -1022,12 +1052,14 @@ static gboolean handle_key_press(GtkWidget *widget, GdkEventKey *event, struct m
 	return FALSE;
 }
 
-static void chooser_set_filters(GtkFileChooser *chooser)
+static void chooser_set_filters(GtkFileChooser *chooser, const char *extension)
 {
-	GtkFileFilter *tgj_filter = gtk_file_filter_new();
-	gtk_file_filter_set_name(tgj_filter, ".tgj");
-	gtk_file_filter_add_pattern(tgj_filter, "*.tgj");
-	gtk_file_chooser_add_filter(chooser, tgj_filter);
+	GtkFileFilter *file_filter = gtk_file_filter_new();
+	gtk_file_filter_set_name(file_filter, extension);
+	gchar *pattern = g_strdup_printf("*%s", extension);
+	gtk_file_filter_add_pattern(file_filter, pattern);
+	g_free(pattern);
+	gtk_file_chooser_add_filter(chooser, file_filter);
 
 	GtkFileFilter *all_filter = gtk_file_filter_new();
 	gtk_file_filter_set_name(all_filter, _("All files"));
@@ -1035,7 +1067,7 @@ static void chooser_set_filters(GtkFileChooser *chooser)
 	gtk_file_chooser_add_filter(chooser, all_filter);
 
 	// On windows seems not to work...
-	gtk_file_chooser_set_filter(chooser, tgj_filter);
+	gtk_file_chooser_set_filter(chooser, file_filter);
 }
 
 static FILE *fopen_check(char *filename, char *mode, struct main_window *w)
@@ -1071,67 +1103,101 @@ error:	g_free(name);
 	return f;
 }
 
-static FILE *choose_file_for_save(struct main_window *w, const char *title, char *suggestion)
+static FILE *save_selected_file(struct main_window *w, GtkFileChooser *chooser,
+	const char *extension, int force_extension)
 {
-	FILE *f = NULL;
-	GtkWidget *dialog = gtk_file_chooser_dialog_new (title,
-			GTK_WINDOW(w->window),
-			GTK_FILE_CHOOSER_ACTION_SAVE,
-			_("Cancel"),
-			GTK_RESPONSE_CANCEL,
-			_("Save"),
-			GTK_RESPONSE_ACCEPT,
-			NULL);
-	GtkFileChooser *chooser = GTK_FILE_CHOOSER (dialog);
-	if(suggestion)
-		gtk_file_chooser_set_current_name(chooser, suggestion);
-
-	chooser_set_filters(chooser);
-
-	if(GTK_RESPONSE_ACCEPT == gtk_dialog_run (GTK_DIALOG (dialog)))
-	{
-		GFile *gf = gtk_file_chooser_get_file(chooser);
-		char *filename = g_file_get_path(gf);
-		g_object_unref(gf);
-		if(!strcmp(".tgj", gtk_file_filter_get_name(gtk_file_chooser_get_filter(chooser)))) {
-			char *s = strdup(filename);
-			if(strlen(s) > 3 && strcasecmp(".tgj", s + strlen(s) - 4)) {
-				char *t = g_malloc(strlen(filename)+5);
-				sprintf(t,"%s.tgj",filename);
-				g_free(filename);
-				filename = t;
-			}
-			free(s);
-		}
-		struct stat stst;
-		int do_open = 0;
-		if(!stat(filename, &stst)) {
-			GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(w->window),
-				GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
-				GTK_MESSAGE_QUESTION,
-				GTK_BUTTONS_OK_CANCEL,
-				_("File %s already exists. Do you want to replace it?"),
-				filename);
-			do_open = GTK_RESPONSE_OK == gtk_dialog_run(GTK_DIALOG(dialog));
-			gtk_widget_destroy(dialog);
-		} else
-			do_open = 1;
-		if(do_open) {
-			f = fopen_check(filename, "wb", w);
-			if(f) {
-				char *uri = g_filename_to_uri(filename,NULL,NULL);
-				if(f && uri)
-					gtk_recent_manager_add_item(
-						gtk_recent_manager_get_default(), uri);
-				g_free(uri);
-			}
-		}
-		g_free (filename);
+	GFile *gf = gtk_file_chooser_get_file(chooser);
+	if(!gf) {
+		GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(w->window), 0,
+			GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE, _("Error opening file\n"));
+		gtk_dialog_run(GTK_DIALOG(dialog));
+		gtk_widget_destroy(dialog);
+		return NULL;
+	}
+	char *filename = g_file_get_path(gf);
+	g_object_unref(gf);
+	if(!filename) {
+		GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(w->window), 0,
+			GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE, _("Error opening file\n"));
+		gtk_dialog_run(GTK_DIALOG(dialog));
+		gtk_widget_destroy(dialog);
+		return NULL;
 	}
 
-	gtk_widget_destroy(dialog);
+	const char *filter_name = gtk_file_filter_get_name(gtk_file_chooser_get_filter(chooser));
+	int add_extension = force_extension || (filter_name && !strcmp(extension, filter_name));
+	size_t name_length = strlen(filename);
+	size_t extension_length = strlen(extension);
+	if(add_extension && (name_length < extension_length ||
+			strcasecmp(extension, filename + name_length - extension_length))) {
+		char *with_extension = g_strconcat(filename, extension, NULL);
+		g_free(filename);
+		filename = with_extension;
+	}
 
+	struct stat stst;
+	int do_open = 0;
+	if(!stat(filename, &stst)) {
+		GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(w->window),
+			GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+			GTK_MESSAGE_QUESTION,
+			GTK_BUTTONS_OK_CANCEL,
+			_("File %s already exists. Do you want to replace it?"),
+			filename);
+		do_open = GTK_RESPONSE_OK == gtk_dialog_run(GTK_DIALOG(dialog));
+		gtk_widget_destroy(dialog);
+	} else
+		do_open = 1;
+
+	FILE *f = NULL;
+	if(do_open) {
+		f = fopen_check(filename, "wb", w);
+		if(f) {
+			char *uri = g_filename_to_uri(filename,NULL,NULL);
+			if(uri)
+				gtk_recent_manager_add_item(gtk_recent_manager_get_default(), uri);
+			g_free(uri);
+		}
+	}
+	g_free(filename);
 	return f;
+}
+
+static FILE *choose_file_for_save_with_options(struct main_window *w, const char *title,
+	char *suggestion, const char *extension, GtkWidget *extra, GtkWidget *choice,
+	int *selected_choice, int force_extension)
+{
+	GtkWidget *dialog = gtk_file_chooser_dialog_new(title,
+		GTK_WINDOW(w->window),
+		GTK_FILE_CHOOSER_ACTION_SAVE,
+		_("Cancel"),
+		GTK_RESPONSE_CANCEL,
+		_("Save"),
+		GTK_RESPONSE_ACCEPT,
+		NULL);
+	GtkFileChooser *chooser = GTK_FILE_CHOOSER(dialog);
+	if(suggestion)
+		gtk_file_chooser_set_current_name(chooser, suggestion);
+	chooser_set_filters(chooser, extension);
+	if(extra) {
+		gtk_file_chooser_set_extra_widget(chooser, extra);
+		gtk_widget_show_all(extra);
+	}
+
+	FILE *f = NULL;
+	if(GTK_RESPONSE_ACCEPT == gtk_dialog_run(GTK_DIALOG(dialog))) {
+		if(selected_choice && choice)
+			*selected_choice = gtk_combo_box_get_active(GTK_COMBO_BOX(choice));
+		f = save_selected_file(w, chooser, extension, force_extension);
+	}
+	gtk_widget_destroy(dialog);
+	return f;
+}
+
+static FILE *choose_file_for_save(struct main_window *w, const char *title, char *suggestion)
+{
+	return choose_file_for_save_with_options(w, title, suggestion, ".tgj",
+		NULL, NULL, NULL, 0);
 }
 
 static void save_current(GtkMenuItem *m, struct main_window *w)
@@ -1212,6 +1278,122 @@ static void save_all(GtkMenuItem *m, struct main_window *w)
 	fclose(f);
 }
 
+static gboolean localized_csv_available(void)
+{
+	const char *msgid = "Localized CSV (semicolon, decimal comma)";
+	return strcmp(_(msgid), msgid) != 0;
+}
+
+static char *csv_suggested_name(struct main_window *w)
+{
+	int page = gtk_notebook_get_current_page(GTK_NOTEBOOK(w->notebook));
+	GtkWidget *tab = page >= 0 ?
+		gtk_notebook_get_nth_page(GTK_NOTEBOOK(w->notebook), page) : NULL;
+	if(!tab)
+		return NULL;
+
+	struct output_panel *op = g_object_get_data(G_OBJECT(tab), "op-pointer");
+	const char *clock_name = op ? g_object_get_data(G_OBJECT(tab), "tab-name") :
+		selected_watch(w);
+	GDateTime *now = g_date_time_new_now_local();
+	if(!now)
+		return NULL;
+	char *timestamp = g_date_time_format(now, "%Y-%m-%d %H-%M");
+	g_date_time_unref(now);
+	if(!timestamp)
+		return NULL;
+
+	char *safe_name = clock_name ? g_strdup(clock_name) : NULL;
+	if(safe_name) {
+		g_strstrip(safe_name);
+		for(char *p = safe_name; *p; p++)
+			if((guchar)*p < 0x20 || strchr("\\/:*?\"<>|", *p))
+				*p = '_';
+		size_t length = strlen(safe_name);
+		while(length && (safe_name[length - 1] == ' ' || safe_name[length - 1] == '.'))
+			safe_name[--length] = '_';
+		if(!length) {
+			g_free(safe_name);
+			safe_name = NULL;
+		}
+	}
+
+	char *suggestion = safe_name ?
+		g_strdup_printf("%s %s.csv", timestamp, safe_name) :
+		g_strconcat(timestamp, ".csv", NULL);
+	g_free(safe_name);
+	g_free(timestamp);
+	return suggestion;
+}
+
+static void export_trend_csv(GtkMenuItem *m, struct main_window *w)
+{
+	UNUSED(m);
+	struct trend *trend = current_trend(w, NULL);
+	if(!trend || !trend->count)
+		return;
+
+	char *suggestion = csv_suggested_name(w);
+	if(!suggestion) {
+		GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(w->window), 0,
+			GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE, _("Could not create the export filename."));
+		gtk_dialog_run(GTK_DIALOG(dialog));
+		gtk_widget_destroy(dialog);
+		return;
+	}
+
+	GtkWidget *format_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+	GtkWidget *format_label = gtk_label_new(_("CSV format"));
+	gtk_box_pack_start(GTK_BOX(format_box), format_label, FALSE, FALSE, 0);
+	GtkWidget *format_combo = gtk_combo_box_text_new();
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(format_combo), "portable",
+		_("Portable CSV (comma, decimal point)"));
+	gboolean has_localized_format = localized_csv_available();
+	if(has_localized_format)
+		gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(format_combo), "localized",
+			_("Localized CSV (semicolon, decimal comma)"));
+	gtk_combo_box_set_active(GTK_COMBO_BOX(format_combo),
+		w->csv_format == CSV_FORMAT_LOCALIZED && has_localized_format ? 1 : 0);
+	gtk_box_pack_start(GTK_BOX(format_box), format_combo, FALSE, FALSE, 0);
+
+	int format = w->csv_format;
+	FILE *f = choose_file_for_save_with_options(w, _("Export Trend as CSV"),
+		suggestion, ".csv", format_box, format_combo, &format, 1);
+	g_free(suggestion);
+	if(format != w->csv_format) {
+		w->csv_format = format;
+		save_config(w);
+	}
+	if(!f)
+		return;
+
+	char separator, decimal;
+	if(format == CSV_FORMAT_PORTABLE) {
+		separator = ',';
+		decimal = '.';
+	} else if(format == CSV_FORMAT_LOCALIZED && has_localized_format) {
+		separator = ';';
+		decimal = ',';
+	} else {
+		fclose(f);
+		GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(w->window), 0,
+			GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE, _("Invalid CSV format."));
+		gtk_dialog_run(GTK_DIALOG(dialog));
+		gtk_widget_destroy(dialog);
+		return;
+	}
+
+	int write_error = write_trend_csv(f, trend, separator, decimal);
+	if(fclose(f))
+		write_error = 1;
+	if(write_error) {
+		GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(w->window),0,
+			GTK_MESSAGE_ERROR,GTK_BUTTONS_CLOSE,_("Error writing file"));
+		gtk_dialog_run(GTK_DIALOG(dialog));
+		gtk_widget_destroy(dialog);
+	}
+}
+
 static void load_snapshots(FILE *f, char *name, struct main_window *w)
 {
 	struct snapshot **s;
@@ -1223,6 +1405,7 @@ static void load_snapshots(FILE *f, char *name, struct main_window *w)
 		for(i = 0; i < cnt; i++) {
 			struct output_panel *op = add_new_tab(s[i], names[i] ? names[i] : name, w);
 			op->trend = trends[i]; // NULL for files saved without one
+			update_export_item(w);
 			free(names[i]);
 		}
 		free(s);
@@ -1265,7 +1448,7 @@ static void load(GtkMenuItem *m, struct main_window *w)
 			NULL);
 	GtkFileChooser *chooser = GTK_FILE_CHOOSER (dialog);
 
-	chooser_set_filters(chooser);
+	chooser_set_filters(chooser, ".tgj");
 
 	if(GTK_RESPONSE_ACCEPT == gtk_dialog_run (GTK_DIALOG (dialog)))
 	{
@@ -1501,6 +1684,11 @@ static void init_main_window(struct main_window *w)
 	g_signal_connect(w->save_all_item, "activate", G_CALLBACK(save_all), w);
 	set_menu_item_enabled(w, w->save_all_item, FALSE);
 
+	w->export_item = gtk_menu_item_new_with_label(_("Export Trend as CSV…"));
+	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), w->export_item);
+	g_signal_connect(w->export_item, "activate", G_CALLBACK(export_trend_csv), w);
+	set_menu_item_enabled(w, w->export_item, FALSE);
+
 	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), gtk_separator_menu_item_new());
 
 	// ... Light checkbox
@@ -1622,6 +1810,7 @@ guint refresh(struct main_window *w)
 	unlock_computer(w->computer);
 	refresh_results(w);
 	trend_update(w->active_panel->trend, w->active_snapshot, w->live_position);
+	update_export_item(w);
 	op_set_snapshot(w->active_panel, w->active_snapshot);
 
 	int p = gtk_notebook_get_current_page(GTK_NOTEBOOK(w->notebook));
@@ -1660,6 +1849,7 @@ static void start_interface(GApplication* app, void *p)
 	w->is_light = 0;
 	w->paperstrip_tick_seconds = 10.0;
 	w->paperstrip_window_seconds = 60.0;
+	w->csv_format = CSV_FORMAT_PORTABLE;
 	w->nominal_sr = PA_SAMPLE_RATE;
 	w->audio_device = AUDIO_DEVICE_DEFAULT;
 	w->restart_audio = 0;
@@ -1678,6 +1868,8 @@ static void start_interface(GApplication* app, void *p)
 	w->live_position = POS_NONE;
 
 	load_config(w);
+	if(w->csv_format != CSV_FORMAT_PORTABLE && w->csv_format != CSV_FORMAT_LOCALIZED)
+		w->csv_format = CSV_FORMAT_PORTABLE;
 	if(!isfinite(w->paperstrip_tick_seconds) || w->paperstrip_tick_seconds < 0.01 ||
 		w->paperstrip_tick_seconds > 3600.0)
 		w->paperstrip_tick_seconds = 10.0;

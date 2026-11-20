@@ -49,6 +49,26 @@ situados bajo la página establecen:
 / Marcha: el intervalo vertical de la gráfica de marcha: #ui[Auto], ±10 s/día
   o ±50 s/día.
 / Mostrar: el tiempo mostrado: #ui[Todo], o la última 1, 6 o 24 horas.
+
+== Exportar datos
+
+Elige #ui[Exportar tendencia como CSV] en el menú de comandos para guardar
+los datos de tendencia de la pestaña activa. Los valores de tiempo son los
+segundos transcurridos desde el inicio del registro, no la hora del reloj. El
+archivo incluye los códigos de posición y los ajustes de medición. Solo se
+registran las lecturas con buena señal, por lo que los períodos omitidos
+aparecen como saltos; todas las filas exportadas se marcan como válidas. La
+amplitud queda vacía cuando no está disponible.
+
+En el diálogo para guardar, elige CSV portable (separador coma y punto
+decimal) o, si la interfaz está en español o alemán, CSV localizado
+(separador punto y coma y coma decimal). La opción elegida se guarda y se
+reutiliza en las siguientes exportaciones, incluso después de reiniciar el
+programa. Los nombres de las columnas y los valores descriptivos siguen el
+idioma de la interfaz; los códigos de posición se mantienen sin cambios.
+Ambos formatos usan UTF-8 con marca de orden de bytes para que Excel reconozca
+los caracteres acentuados.
+
 == Medir la reserva de marcha
 1. Dé cuerda completa al reloj y ajuste la posición.
 2. Inicie la medición y deje el reloj sin tocarlo.

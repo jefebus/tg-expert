@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tg-expert 0.10.0\n"
 "Report-Msgid-Bugs-To: https://github.com/jefebus/tg-expert/issues\n"
-"POT-Creation-Date: 2026-11-20 14:26+0100\n"
+"POT-Creation-Date: 2026-11-20 15:05+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -213,136 +213,160 @@ msgstr ""
 msgid "Failed to restart computation thread"
 msgstr ""
 
-#: src/interface.c:663
+#: src/interface.c:688
 msgid "Stop calibration"
 msgstr ""
 
-#: src/interface.c:663 src/interface.c:1535
+#: src/interface.c:688 src/interface.c:1731
 msgid "Start calibration"
 msgstr ""
 
-#: src/interface.c:788
+#: src/interface.c:817
 msgid "(not set)"
 msgstr ""
 
 #. TRANSLATORS: watch position. Translate the words, keep the code (DU) unchanged
-#: src/interface.c:790
+#: src/interface.c:819
 msgid "Dial up (DU)"
 msgstr ""
 
 #. TRANSLATORS: watch position. Translate the words, keep the code (DD) unchanged
-#: src/interface.c:792
+#: src/interface.c:821
 msgid "Dial down (DD)"
 msgstr ""
 
 #. TRANSLATORS: watch position. Translate the words, keep the code (CU) unchanged
-#: src/interface.c:794
+#: src/interface.c:823
 msgid "Crown up (CU)"
 msgstr ""
 
 #. TRANSLATORS: watch position. Translate the words, keep the code (CD) unchanged
-#: src/interface.c:796
+#: src/interface.c:825
 msgid "Crown down (CD)"
 msgstr ""
 
 #. TRANSLATORS: watch position. Translate the words, keep the code (CL) unchanged
-#: src/interface.c:798
+#: src/interface.c:827
 msgid "Crown left (CL)"
 msgstr ""
 
 #. TRANSLATORS: watch position. Translate the words, keep the code (CR) unchanged
-#: src/interface.c:800
+#: src/interface.c:829
 msgid "Crown right (CR)"
 msgstr ""
 
 #. TRANSLATORS: default title of a snapshot tab, short (tab title)
 #. TRANSLATORS: tab titles, short. "Real time" is the live measurement tab, "Snapshot" a kept measurement
-#: src/interface.c:812 src/interface.c:942
+#: src/interface.c:841 src/interface.c:971
 msgid "Snapshot"
 msgstr ""
 
-#: src/interface.c:886
+#: src/interface.c:915
 #, c-format
 msgid "Could not open the manual (%s): %s"
 msgstr ""
 
-#: src/interface.c:886
+#: src/interface.c:915
 msgid "unknown error"
 msgstr ""
 
-#: src/interface.c:942
+#: src/interface.c:971
 msgid "Real time"
 msgstr ""
 
-#: src/interface.c:1033
+#: src/interface.c:1065
 msgid "All files"
 msgstr ""
 
-#: src/interface.c:1066
+#: src/interface.c:1098 src/interface.c:1112 src/interface.c:1121
 msgid "Error opening file\n"
 msgstr ""
 
-#: src/interface.c:1080 src/interface.c:1261
-msgid "Cancel"
-msgstr ""
-
-#: src/interface.c:1082
-msgid "Save"
-msgstr ""
-
-#: src/interface.c:1113
+#: src/interface.c:1145
 #, c-format
 msgid "File %s already exists. Do you want to replace it?"
 msgstr ""
 
-#: src/interface.c:1155 src/interface.c:1493
+#: src/interface.c:1173 src/interface.c:1452
+msgid "Cancel"
+msgstr ""
+
+#: src/interface.c:1175
+msgid "Save"
+msgstr ""
+
+#: src/interface.c:1221 src/interface.c:1684
 msgid "Save current display"
 msgstr ""
 
-#: src/interface.c:1160 src/interface.c:1207
+#: src/interface.c:1226 src/interface.c:1273 src/interface.c:1399
 msgid "Error writing file"
 msgstr ""
 
-#: src/interface.c:1188 src/interface.c:1499
+#: src/interface.c:1254 src/interface.c:1690
 msgid "Save all snapshots"
 msgstr ""
 
-#: src/interface.c:1233
+#: src/interface.c:1347
+msgid "Could not create the export filename."
+msgstr ""
+
+#: src/interface.c:1354
+msgid "CSV format"
+msgstr ""
+
+#: src/interface.c:1358
+msgid "Portable CSV (comma, decimal point)"
+msgstr ""
+
+#: src/interface.c:1362
+msgid "Localized CSV (semicolon, decimal comma)"
+msgstr ""
+
+#: src/interface.c:1368
+msgid "Export Trend as CSV"
+msgstr ""
+
+#: src/interface.c:1388
+msgid "Invalid CSV format."
+msgstr ""
+
+#: src/interface.c:1424
 #, c-format
 msgid "Error reading file: %s"
 msgstr ""
 
-#: src/interface.c:1258 src/interface.c:1263 src/interface.c:1488
+#: src/interface.c:1449 src/interface.c:1454 src/interface.c:1679
 msgid "Open"
 msgstr ""
 
-#: src/interface.c:1341
+#: src/interface.c:1532
 msgid "Saved watches (bph and lift angle)"
 msgstr ""
 
-#: src/interface.c:1344
+#: src/interface.c:1535
 msgid "Save the current bph and lift angle as a watch"
 msgstr ""
 
-#: src/interface.c:1347
+#: src/interface.c:1538
 msgid "Delete the selected watch"
 msgstr ""
 
-#: src/interface.c:1352
+#: src/interface.c:1543
 msgid "Beats per hour (bph)"
 msgstr ""
 
 #. TRANSLATORS: first entry of the beats-per-hour list: the program detects the beat rate by itself. Short.
 #. * The program reads the entry back as a number and treats any non-numeric text as "guess".
-#: src/interface.c:1362
+#: src/interface.c:1553
 msgid "guess"
 msgstr ""
 
-#: src/interface.c:1382
+#: src/interface.c:1573 src/serializer.c:759
 msgid "Lift angle (degrees)"
 msgstr ""
 
-#: src/interface.c:1439
+#: src/interface.c:1630
 msgid ""
 "Position of the watch.\n"
 "\n"
@@ -356,11 +380,11 @@ msgid ""
 "snapshot."
 msgstr ""
 
-#: src/interface.c:1453
+#: src/interface.c:1644
 msgid "Take Snapshot"
 msgstr ""
 
-#: src/interface.c:1455
+#: src/interface.c:1646
 msgid ""
 "Keep the current\n"
 "measurement in a\n"
@@ -369,15 +393,19 @@ msgid ""
 "Shortcut: Ctrl+Space"
 msgstr ""
 
-#: src/interface.c:1465
+#: src/interface.c:1656
 msgid "Current snapshot:"
 msgstr ""
 
-#: src/interface.c:1507
+#: src/interface.c:1695
+msgid "Export Trend as CSV…"
+msgstr ""
+
+#: src/interface.c:1703
 msgid "Light algorithm"
 msgstr ""
 
-#: src/interface.c:1510
+#: src/interface.c:1706
 msgid ""
 "Reduces CPU load, \n"
 "for slow computers.\n"
@@ -395,11 +423,11 @@ msgid ""
 "restart your measurement."
 msgstr ""
 
-#: src/interface.c:1530
+#: src/interface.c:1726
 msgid "Audio settings…"
 msgstr ""
 
-#: src/interface.c:1537
+#: src/interface.c:1733
 msgid ""
 "Measures the error of\n"
 "your sound card clock,\n"
@@ -412,31 +440,31 @@ msgid ""
 "in the cal field."
 msgstr ""
 
-#: src/interface.c:1551
+#: src/interface.c:1747
 msgid "User manual"
 msgstr ""
 
-#: src/interface.c:1552
+#: src/interface.c:1748
 msgid "Open the user manual (PDF)."
 msgstr ""
 
-#: src/interface.c:1559
+#: src/interface.c:1755
 msgid "Close all snapshots"
 msgstr ""
 
-#: src/interface.c:1565
+#: src/interface.c:1761
 msgid "Quit"
 msgstr ""
 
-#: src/interface.c:1723
+#: src/interface.c:1923
 msgid "The saved input was not found; using the default input."
 msgstr ""
 
-#: src/interface.c:1725
+#: src/interface.c:1925
 msgid "The saved rate is not available; using the default rate."
 msgstr ""
 
-#: src/interface.c:1739
+#: src/interface.c:1939
 msgid "Error starting computation thread"
 msgstr ""
 
@@ -791,4 +819,56 @@ msgstr ""
 
 #: src/output_panel.c:2226
 msgid "Full period: tic and toc (highlighted)"
+msgstr ""
+
+#: src/serializer.c:757
+msgid "Elapsed time (s)"
+msgstr ""
+
+#: src/serializer.c:757
+msgid "Position (code)"
+msgstr ""
+
+#: src/serializer.c:757
+msgid "Rate (s/day)"
+msgstr ""
+
+#: src/serializer.c:758
+msgid "Amplitude (degrees)"
+msgstr ""
+
+#: src/serializer.c:758
+msgid "Beat error (ms)"
+msgstr ""
+
+#: src/serializer.c:758
+msgid "Validity"
+msgstr ""
+
+#: src/serializer.c:759
+msgid "Beat rate (bph)"
+msgstr ""
+
+#: src/serializer.c:759
+msgid "Calibration (s/day)"
+msgstr ""
+
+#: src/serializer.c:760
+msgid "Sample rate (Hz)"
+msgstr ""
+
+#: src/serializer.c:760
+msgid "Algorithm"
+msgstr ""
+
+#: src/serializer.c:797
+msgid "Valid"
+msgstr ""
+
+#: src/serializer.c:803
+msgid "Light"
+msgstr ""
+
+#: src/serializer.c:803
+msgid "Full"
 msgstr ""

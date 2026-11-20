@@ -51,6 +51,27 @@ unten auf der Seite legen fest:
   #ui[Auto], #ui[±10 s/t] oder #ui[±50 s/t].
 / Zeige: den angezeigten Zeitraum: #ui[Alle], #ui[Letzte Std.],
   #ui[Letzte 6 Std.] oder #ui[Letzte 24 Std.].
+
+== Daten exportieren
+
+Wählen Sie im Befehlsmenü #ui[Verlauf als CSV exportieren], um die
+Verlaufsdaten der aktiven Registerkarte zu speichern. Die Zeitwerte sind die
+verstrichenen Sekunden seit Beginn der Aufzeichnung, keine Uhrzeiten. Die
+Datei enthält Lagenkürzel und Messeinstellungen. Aufgezeichnet werden nur
+Messwerte mit gutem Signal, daher erscheinen ausgelassene Zeiträume als
+Lücken; jede exportierte Zeile ist als gültig markiert. Ist keine Amplitude
+verfügbar, bleibt das Feld leer.
+
+Im Speicherdialog können Sie zwischen portablem CSV (Komma als Trennzeichen,
+Dezimalpunkt) und lokalisiertem CSV (Semikolon als Trennzeichen,
+Dezimalkomma) wählen. Das lokalisierte Format wird nur angezeigt, wenn die
+Oberflächensprache Deutsch oder Spanisch ist. Die Auswahl wird gespeichert
+und bei späteren Exporten, auch nach einem Programmneustart, wiederverwendet.
+Spaltennamen und beschreibende Werte richten sich nach der
+Oberflächensprache; die Lagenkürzel bleiben unverändert.
+Beide Formate verwenden UTF-8 mit Byte-Reihenfolge-Markierung, damit Excel
+Sonderzeichen erkennt.
+
 == Gangreserve messen
 1. Die Uhr voll aufziehen und die Lage einstellen.
 2. Die Messung starten und die Uhr ungestört liegen lassen.
