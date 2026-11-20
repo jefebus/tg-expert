@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tg-expert 0.10.0\n"
 "Report-Msgid-Bugs-To: https://github.com/jefebus/tg-expert/issues\n"
-"POT-Creation-Date: 2026-11-20 15:05+0100\n"
+"POT-Creation-Date: 2026-11-20 15:38+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -213,160 +213,160 @@ msgstr ""
 msgid "Failed to restart computation thread"
 msgstr ""
 
-#: src/interface.c:688
+#: src/interface.c:689
 msgid "Stop calibration"
 msgstr ""
 
-#: src/interface.c:688 src/interface.c:1731
+#: src/interface.c:689 src/interface.c:1735
 msgid "Start calibration"
 msgstr ""
 
-#: src/interface.c:817
+#: src/interface.c:818
 msgid "(not set)"
 msgstr ""
 
 #. TRANSLATORS: watch position. Translate the words, keep the code (DU) unchanged
-#: src/interface.c:819
+#: src/interface.c:820
 msgid "Dial up (DU)"
 msgstr ""
 
 #. TRANSLATORS: watch position. Translate the words, keep the code (DD) unchanged
-#: src/interface.c:821
+#: src/interface.c:822
 msgid "Dial down (DD)"
 msgstr ""
 
 #. TRANSLATORS: watch position. Translate the words, keep the code (CU) unchanged
-#: src/interface.c:823
+#: src/interface.c:824
 msgid "Crown up (CU)"
 msgstr ""
 
 #. TRANSLATORS: watch position. Translate the words, keep the code (CD) unchanged
-#: src/interface.c:825
+#: src/interface.c:826
 msgid "Crown down (CD)"
 msgstr ""
 
 #. TRANSLATORS: watch position. Translate the words, keep the code (CL) unchanged
-#: src/interface.c:827
+#: src/interface.c:828
 msgid "Crown left (CL)"
 msgstr ""
 
 #. TRANSLATORS: watch position. Translate the words, keep the code (CR) unchanged
-#: src/interface.c:829
+#: src/interface.c:830
 msgid "Crown right (CR)"
 msgstr ""
 
 #. TRANSLATORS: default title of a snapshot tab, short (tab title)
 #. TRANSLATORS: tab titles, short. "Real time" is the live measurement tab, "Snapshot" a kept measurement
-#: src/interface.c:841 src/interface.c:971
+#: src/interface.c:842 src/interface.c:976
 msgid "Snapshot"
 msgstr ""
 
-#: src/interface.c:915
+#: src/interface.c:916
 #, c-format
 msgid "Could not open the manual (%s): %s"
 msgstr ""
 
-#: src/interface.c:915
+#: src/interface.c:916
 msgid "unknown error"
 msgstr ""
 
-#: src/interface.c:971
+#: src/interface.c:976
 msgid "Real time"
 msgstr ""
 
-#: src/interface.c:1065
+#: src/interface.c:1077
 msgid "All files"
 msgstr ""
 
-#: src/interface.c:1098 src/interface.c:1112 src/interface.c:1121
+#: src/interface.c:1110 src/interface.c:1124 src/interface.c:1133
 msgid "Error opening file\n"
 msgstr ""
 
-#: src/interface.c:1145
+#: src/interface.c:1157
 #, c-format
 msgid "File %s already exists. Do you want to replace it?"
 msgstr ""
 
-#: src/interface.c:1173 src/interface.c:1452
+#: src/interface.c:1185 src/interface.c:1456
 msgid "Cancel"
 msgstr ""
 
-#: src/interface.c:1175
+#: src/interface.c:1187
 msgid "Save"
 msgstr ""
 
-#: src/interface.c:1221 src/interface.c:1684
+#: src/interface.c:1233 src/interface.c:1688
 msgid "Save current display"
 msgstr ""
 
-#: src/interface.c:1226 src/interface.c:1273 src/interface.c:1399
+#: src/interface.c:1238 src/interface.c:1285 src/interface.c:1403
 msgid "Error writing file"
 msgstr ""
 
-#: src/interface.c:1254 src/interface.c:1690
+#: src/interface.c:1266 src/interface.c:1694
 msgid "Save all snapshots"
 msgstr ""
 
-#: src/interface.c:1347
+#: src/interface.c:1351
 msgid "Could not create the export filename."
 msgstr ""
 
-#: src/interface.c:1354
+#: src/interface.c:1358
 msgid "CSV format"
 msgstr ""
 
-#: src/interface.c:1358
+#: src/interface.c:1362
 msgid "Portable CSV (comma, decimal point)"
 msgstr ""
 
-#: src/interface.c:1362
+#: src/interface.c:1366
 msgid "Localized CSV (semicolon, decimal comma)"
 msgstr ""
 
-#: src/interface.c:1368
+#: src/interface.c:1372
 msgid "Export Trend as CSV"
 msgstr ""
 
-#: src/interface.c:1388
+#: src/interface.c:1392
 msgid "Invalid CSV format."
 msgstr ""
 
-#: src/interface.c:1424
+#: src/interface.c:1428
 #, c-format
 msgid "Error reading file: %s"
 msgstr ""
 
-#: src/interface.c:1449 src/interface.c:1454 src/interface.c:1679
+#: src/interface.c:1453 src/interface.c:1458 src/interface.c:1683
 msgid "Open"
 msgstr ""
 
-#: src/interface.c:1532
+#: src/interface.c:1536
 msgid "Saved watches (bph and lift angle)"
 msgstr ""
 
-#: src/interface.c:1535
+#: src/interface.c:1539
 msgid "Save the current bph and lift angle as a watch"
 msgstr ""
 
-#: src/interface.c:1538
+#: src/interface.c:1542
 msgid "Delete the selected watch"
 msgstr ""
 
-#: src/interface.c:1543
+#: src/interface.c:1547
 msgid "Beats per hour (bph)"
 msgstr ""
 
 #. TRANSLATORS: first entry of the beats-per-hour list: the program detects the beat rate by itself. Short.
 #. * The program reads the entry back as a number and treats any non-numeric text as "guess".
-#: src/interface.c:1553
+#: src/interface.c:1557
 msgid "guess"
 msgstr ""
 
-#: src/interface.c:1573 src/serializer.c:759
+#: src/interface.c:1577 src/serializer.c:762
 msgid "Lift angle (degrees)"
 msgstr ""
 
-#: src/interface.c:1630
+#: src/interface.c:1634
 msgid ""
 "Position of the watch.\n"
 "\n"
@@ -380,11 +380,11 @@ msgid ""
 "snapshot."
 msgstr ""
 
-#: src/interface.c:1644
+#: src/interface.c:1648
 msgid "Take Snapshot"
 msgstr ""
 
-#: src/interface.c:1646
+#: src/interface.c:1650
 msgid ""
 "Keep the current\n"
 "measurement in a\n"
@@ -393,19 +393,19 @@ msgid ""
 "Shortcut: Ctrl+Space"
 msgstr ""
 
-#: src/interface.c:1656
+#: src/interface.c:1660
 msgid "Current snapshot:"
 msgstr ""
 
-#: src/interface.c:1695
+#: src/interface.c:1699
 msgid "Export Trend as CSV…"
 msgstr ""
 
-#: src/interface.c:1703
+#: src/interface.c:1707
 msgid "Light algorithm"
 msgstr ""
 
-#: src/interface.c:1706
+#: src/interface.c:1710
 msgid ""
 "Reduces CPU load, \n"
 "for slow computers.\n"
@@ -423,11 +423,11 @@ msgid ""
 "restart your measurement."
 msgstr ""
 
-#: src/interface.c:1726
+#: src/interface.c:1730
 msgid "Audio settings…"
 msgstr ""
 
-#: src/interface.c:1733
+#: src/interface.c:1737
 msgid ""
 "Measures the error of\n"
 "your sound card clock,\n"
@@ -440,31 +440,31 @@ msgid ""
 "in the cal field."
 msgstr ""
 
-#: src/interface.c:1747
+#: src/interface.c:1751
 msgid "User manual"
 msgstr ""
 
-#: src/interface.c:1748
+#: src/interface.c:1752
 msgid "Open the user manual (PDF)."
 msgstr ""
 
-#: src/interface.c:1755
+#: src/interface.c:1759
 msgid "Close all snapshots"
 msgstr ""
 
-#: src/interface.c:1761
+#: src/interface.c:1765
 msgid "Quit"
 msgstr ""
 
-#: src/interface.c:1923
+#: src/interface.c:1930
 msgid "The saved input was not found; using the default input."
 msgstr ""
 
-#: src/interface.c:1925
+#: src/interface.c:1932
 msgid "The saved rate is not available; using the default rate."
 msgstr ""
 
-#: src/interface.c:1939
+#: src/interface.c:1946
 msgid "Error starting computation thread"
 msgstr ""
 
@@ -661,24 +661,41 @@ msgstr ""
 msgid "Set the watch position to also get statistics per position."
 msgstr ""
 
-#: src/output_panel.c:1814
+#: src/output_panel.c:1830
 #, c-format
 msgid "Rate (s/d), dashed: average %+.1f"
 msgstr ""
 
-#: src/output_panel.c:1830
+#: src/output_panel.c:1832 src/serializer.c:760
+msgid "Rate (s/day)"
+msgstr ""
+
+#: src/output_panel.c:1849
 #, c-format
 msgid "Amplitude (°), dashed: average %.1f"
 msgstr ""
 
-#: src/output_panel.c:1857
+#: src/output_panel.c:1851 src/serializer.c:761
+msgid "Amplitude (degrees)"
+msgstr ""
+
+#: src/output_panel.c:1879
 #, c-format
 msgid "Beat error (ms), dashed: average %.1f"
 msgstr ""
 
+#: src/output_panel.c:1881 src/serializer.c:761
+msgid "Beat error (ms)"
+msgstr ""
+
+#: src/output_panel.c:1938
+#, c-format
+msgid "Settling: %d s remaining"
+msgstr ""
+
 #. TRANSLATORS: keep cal (wait), cal (acq.), cal (done), cal (fail) in English, they are shown like that in the results bar.
 #. * Also keep the word "done" in English where it is mentioned as a status, and keep the markup tags.
-#: src/output_panel.c:1943
+#: src/output_panel.c:1996
 msgid ""
 "<span size='x-large' weight='bold'>Calibration in progress</span>\n"
 "\n"
@@ -712,51 +729,51 @@ msgid ""
 msgstr ""
 
 #. TRANSLATORS: paper strip button: erase the trace. Short, shown in a narrow button
-#: src/output_panel.c:2089
+#: src/output_panel.c:2146
 msgid "Clear"
 msgstr ""
 
 #. TRANSLATORS: paper strip button: center the trace. Short, shown in a narrow button
-#: src/output_panel.c:2097
+#: src/output_panel.c:2154
 msgid "Center"
 msgstr ""
 
 #. TRANSLATORS: paper strip setting: time between marks on the vertical (Y) axis. Short
-#: src/output_panel.c:2121
+#: src/output_panel.c:2178
 msgid "Y mark (s)"
 msgstr ""
 
-#: src/output_panel.c:2129
+#: src/output_panel.c:2186
 msgid "Time between marks on the vertical axis, in seconds."
 msgstr ""
 
 #. TRANSLATORS: paper strip setting: time span shown on the vertical (Y) axis. Short
-#: src/output_panel.c:2135
+#: src/output_panel.c:2192
 msgid "Y window (s)"
 msgstr ""
 
-#: src/output_panel.c:2141
+#: src/output_panel.c:2198
 msgid "Fixed time span shown vertically. It does not change automatically."
 msgstr ""
 
-#: src/output_panel.c:2158
+#: src/output_panel.c:2215
 msgid "Waveforms"
 msgstr ""
 
-#: src/output_panel.c:2162
+#: src/output_panel.c:2219
 msgid "Trend"
 msgstr ""
 
-#: src/output_panel.c:2166
+#: src/output_panel.c:2223
 msgid "Trend: rate, amplitude, and BE over time"
 msgstr ""
 
 #. TRANSLATORS: Trend page button: start the statistics over. Short, shown in a narrow button
-#: src/output_panel.c:2174
+#: src/output_panel.c:2231
 msgid "Reset"
 msgstr ""
 
-#: src/output_panel.c:2175
+#: src/output_panel.c:2232
 msgid ""
 "Start the statistics over.\n"
 "They also start over when bph, lift angle,\n"
@@ -764,111 +781,111 @@ msgid ""
 msgstr ""
 
 #. TRANSLATORS: Trend page: label of the rate range selector (Auto, +-10 s/d, +-50 s/d). Short
-#: src/output_panel.c:2182
+#: src/output_panel.c:2239
 msgid "Rate"
 msgstr ""
 
 #. TRANSLATORS: Trend page rate range: chosen automatically. Short, shown in a narrow combo box
-#: src/output_panel.c:2185
+#: src/output_panel.c:2242
 msgid "Auto"
 msgstr ""
 
 #. TRANSLATORS: Trend page rate range; translate the unit s/d as in the other Trend page texts
-#: src/output_panel.c:2187
+#: src/output_panel.c:2244
 msgid "±10 s/d"
 msgstr ""
 
 #. TRANSLATORS: Trend page rate range; translate the unit s/d as in the other Trend page texts
-#: src/output_panel.c:2189
+#: src/output_panel.c:2246
 msgid "±50 s/d"
 msgstr ""
 
 #. TRANSLATORS: Trend page: label of the time span selector (All, Last 1 h, ...). Short
-#: src/output_panel.c:2194
+#: src/output_panel.c:2251
 msgid "Show"
 msgstr ""
 
 #. TRANSLATORS: Trend page time span: everything since the start. Short, shown in a narrow combo box
-#: src/output_panel.c:2197
+#: src/output_panel.c:2254
 msgid "All"
 msgstr ""
 
-#: src/output_panel.c:2198
+#: src/output_panel.c:2255
 msgid "Last 1 h"
 msgstr ""
 
-#: src/output_panel.c:2199
+#: src/output_panel.c:2256
 msgid "Last 6 h"
 msgstr ""
 
-#: src/output_panel.c:2200
+#: src/output_panel.c:2257
 msgid "Last 24 h"
 msgstr ""
 
-#: src/output_panel.c:2206
+#: src/output_panel.c:2263
+msgid "Settling time (s)"
+msgstr ""
+
+#: src/output_panel.c:2267
+msgid "Seconds to wait after a position change; 0 disables settling."
+msgstr ""
+
+#: src/output_panel.c:2274
 msgid "Calibration instructions"
 msgstr ""
 
-#: src/output_panel.c:2212
+#: src/output_panel.c:2280
 msgid "Tic: averaged sound of the first beat"
 msgstr ""
 
-#: src/output_panel.c:2219
+#: src/output_panel.c:2287
 msgid "Toc: averaged sound of the second beat"
 msgstr ""
 
-#: src/output_panel.c:2226
+#: src/output_panel.c:2294
 msgid "Full period: tic and toc (highlighted)"
 msgstr ""
 
-#: src/serializer.c:757
+#: src/serializer.c:760
 msgid "Elapsed time (s)"
 msgstr ""
 
-#: src/serializer.c:757
+#: src/serializer.c:760
 msgid "Position (code)"
 msgstr ""
 
-#: src/serializer.c:757
-msgid "Rate (s/day)"
-msgstr ""
-
-#: src/serializer.c:758
-msgid "Amplitude (degrees)"
-msgstr ""
-
-#: src/serializer.c:758
-msgid "Beat error (ms)"
-msgstr ""
-
-#: src/serializer.c:758
+#: src/serializer.c:761
 msgid "Validity"
 msgstr ""
 
-#: src/serializer.c:759
+#: src/serializer.c:762
 msgid "Beat rate (bph)"
 msgstr ""
 
-#: src/serializer.c:759
+#: src/serializer.c:762
 msgid "Calibration (s/day)"
 msgstr ""
 
-#: src/serializer.c:760
+#: src/serializer.c:763
 msgid "Sample rate (Hz)"
 msgstr ""
 
-#: src/serializer.c:760
+#: src/serializer.c:763
 msgid "Algorithm"
 msgstr ""
 
-#: src/serializer.c:797
+#: src/serializer.c:802
+msgid "Settling"
+msgstr ""
+
+#: src/serializer.c:802
 msgid "Valid"
 msgstr ""
 
-#: src/serializer.c:803
+#: src/serializer.c:808
 msgid "Light"
 msgstr ""
 
-#: src/serializer.c:803
+#: src/serializer.c:808
 msgid "Full"
 msgstr ""

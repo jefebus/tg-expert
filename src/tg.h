@@ -278,6 +278,7 @@ void compute_results(struct snapshot *s);
 /* trend.c: long-term statistics of the live measurement */
 #define TREND_INTERVAL_S 2	// one reading every 2 s
 #define TREND_MAX_HOURS 100
+#define TREND_MAX_SETTLING_S 3600
 #define TREND_GUESS_CHANGE_S 60	// a guessed bph must differ this long to restart the trend
 #define TREND_MAX_SAMPLES (TREND_MAX_HOURS * 3600 / TREND_INTERVAL_S)
 
@@ -287,6 +288,7 @@ struct trend_sample {
 	float amp;	// deg, 0 = not available
 	float be;	// ms
 	signed char position;	// enum watch_position
+	unsigned char settling;
 };
 
 struct trend_stats {
@@ -300,6 +302,7 @@ struct trend {
 	int full;	// TREND_MAX_SAMPLES reached: recording stopped
 	int frozen;	// copy kept by a snapshot tab
 	gint64 start_us, last_us, end_us;	// monotonic time; end_us only if frozen
+	gint64 settling_until_us;
 	// settings the readings were taken with
 	int bph, cal, nominal_sr, is_light;
 	double la;
@@ -312,9 +315,10 @@ struct trend *trend_new(void);
 void trend_free(struct trend *t);
 struct trend *trend_clone(const struct trend *t);
 void trend_reset(struct trend *t);
+void trend_start_settling(struct trend *t, int seconds);
 void trend_update(struct trend *t, const struct snapshot *s, int position);
 int trend_set_samples(struct trend *t, const float *tm, const float *rate, const float *amp,
-	const float *be, const int *position, int count, double elapsed);
+	const float *be, const int *position, const int *settling, int count, double elapsed);
 double trend_elapsed(const struct trend *t);
 double trend_stats_mean(const struct trend_stats *s);
 double trend_stats_sd(const struct trend_stats *s);
@@ -344,6 +348,10 @@ struct output_panel {
 	int trace_centered;          // the live trace was centred since it appeared
 	GtkWidget *right_switcher;   // chooses "panels" (waveforms) or "trend" in right_stack
 	GtkWidget *trend_drawing_area;
+	GtkWidget *settling_spin;
+	GtkWidget *settling_status;
+	void (*settling_setting_changed)(void *, int);
+	void *settling_setting_data;
 	struct trend *trend;         // owned; NULL for snapshots loaded from a file
 	int trend_rate_range;        // s/d shown either side of 0, 0 = automatic
 	int trend_span_s;            // time shown, 0 = everything since the start
@@ -364,6 +372,9 @@ struct output_panel *init_output_panel(struct computer *comp, struct snapshot *s
 void op_set_paperstrip_settings(struct output_panel *op, double tick_seconds, double window_seconds);
 void op_set_paperstrip_settings_callback(struct output_panel *op,
 	void (*callback)(void *, double, double), void *data);
+void op_set_settling_setting(struct output_panel *op, int seconds,
+	void (*callback)(void *, int), void *data);
+void op_update_settling_status(struct output_panel *op);
 void redraw_op(struct output_panel *op);
 void op_set_snapshot(struct output_panel *op, struct snapshot *snst);
 void op_set_border(struct output_panel *op, int i);
@@ -421,6 +432,7 @@ struct main_window {
 	int cal; // 0.1 s/d
 	double paperstrip_tick_seconds;
 	double paperstrip_window_seconds;
+	int settling_seconds;
 	int csv_format;
 	int nominal_sr;
 	int restart_audio;
@@ -464,6 +476,7 @@ int audio_settings_is_open(struct main_window *w);
 	OP(audio_device, audio_device, int) \
 	OP(audio_api, audio_api, int) \
 	OP(csv_format, csv_format, int) \
+	OP(settling_seconds, settling_seconds, int) \
 	OP(audio_rate, nominal_sr, int) \
 	OP(paperstrip_tick_seconds, paperstrip_tick_seconds, double) \
 	OP(paperstrip_window_seconds, paperstrip_window_seconds, double)

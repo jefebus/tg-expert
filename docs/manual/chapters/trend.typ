@@ -26,6 +26,26 @@ different for a minute starts the recording over. For long recordings, set
 the beat rate by hand.
 Nothing is recorded during calibration.
 
+== Settling after a position change
+
+On the live Trend page, set #ui[Settling time (s)] (default 0, which disables
+it). The setting is saved between sessions and changes apply to
+the next countdown.
+
+Select the new position in the software *before* physically moving the
+watch. When changing from a named position to another position, including
+#ui[not set], the countdown begins immediately and runs even without a good
+signal. Returning to a previously used position starts it again. The first
+selection from #ui[not set] does not start a countdown. A position already
+selected when recording starts does not start one either. #ui[Reset] does
+not start or restart a countdown; an active one continues.
+
+Good-signal readings during the countdown are retained, shaded in the
+graphs, and marked #ui[Settling] in CSV exports. They are excluded from
+overall and per-position statistics, including positional error and graph
+averages. The *now* column still shows the latest reading. Snapshots save
+the settling markers; older application versions may ignore them.
+
 == Statistics since the start
 
 The table at the top shows, for rate (s/d), amplitude (°) and beat error
@@ -68,7 +88,7 @@ Choose #ui[Export Trend as CSV] in the command menu to save the Trend data
 from the active tab. Time values are elapsed seconds from the start of the
 recording, not clock times. The file includes position codes and the
 measurement settings. Only readings with a good signal are recorded, so
-omitted periods appear as gaps; every exported row is marked valid. Amplitude
+omitted periods appear as gaps; rows are marked valid or settling. Amplitude
 is empty when it was not available.
 
 Choose portable CSV (comma separator and decimal point) or, when the

@@ -1638,7 +1638,7 @@ static gboolean trend_draw_event(GtkWidget *widget, cairo_t *c, struct output_pa
 			st->max - st->min, trend_stats_sd(st)};
 		for(i = 0; i < 6; i++) {
 			// The amplitude is not always available
-			if(!st->n || (i == 0 && r == 1 && rows[r].now <= 0))
+			if((i != 0 && !st->n) || (i == 0 && r == 1 && rows[r].now <= 0))
 				snprintf(s, sizeof(s), "\xE2\x80\x94");
 			else if(i < 4 && rows[r].sign)
 				snprintf(s, sizeof(s), "%+.*f", rows[r].digits, values[i]);
@@ -1769,6 +1769,21 @@ static gboolean trend_draw_event(GtkWidget *widget, cairo_t *c, struct output_pa
 			break;
 		}
 	cairo_set_font_size(c, font * 0.8);
+	cairo_save(c);
+	cairo_rectangle(c, gx, rate_top, gw, be_bottom - rate_top);
+	cairo_clip(c);
+	set_color(c, COL_TOC, 0.14);
+	for(i = 0; i < t->count; i++) {
+		const struct trend_sample *sample = &t->samples[i];
+		if(!sample->settling || sample->t + TREND_INTERVAL_S / 2.0 < t0 ||
+				sample->t - TREND_INTERVAL_S / 2.0 > t1)
+			continue;
+		double x = gx + (sample->t - TREND_INTERVAL_S / 2.0 - t0) / (t1 - t0) * gw;
+		double sample_width = fmax(1, TREND_INTERVAL_S / (t1 - t0) * gw);
+		cairo_rectangle(c, x, rate_top, sample_width, be_bottom - rate_top);
+	}
+	cairo_fill(c);
+	cairo_restore(c);
 	for(double tm = ceil(t0 / step) * step; tm <= t1 + 1e-6; tm += step) {
 		double x = round(gx + (tm - t0) / (t1 - t0) * gw) + .5;
 		cairo_move_to(c, x, rate_top);
@@ -1811,7 +1826,10 @@ static gboolean trend_draw_event(GtkWidget *widget, cairo_t *c, struct output_pa
 	trend_draw_series(c, cols, n, rate_top, rate_bottom, -range, range, COL_RATE);
 	cairo_set_font_size(c, font * 0.9);
 	set_color(c, COL_RATE, 1);
-	snprintf(s, sizeof(s), _("Rate (s/d), dashed: average %+.1f"), mean);
+	if(t->rate.n)
+		snprintf(s, sizeof(s), _("Rate (s/d), dashed: average %+.1f"), mean);
+	else
+		snprintf(s, sizeof(s), "%s", _("Rate (s/day)"));
 	trend_text(c, gx, rate_top - font * 0.4, 0, s);
 
 	// Amplitude, 120 to 360 deg
@@ -1827,7 +1845,10 @@ static gboolean trend_draw_event(GtkWidget *widget, cairo_t *c, struct output_pa
 	trend_draw_series(c, cols, n, amp_top, amp_bottom, 120, 360, COL_AMP);
 	cairo_set_font_size(c, font * 0.9);
 	set_color(c, COL_AMP, 1);
-	snprintf(s, sizeof(s), _("Amplitude (\xC2\xB0), dashed: average %.1f"), amp_mean);
+	if(t->amp.n)
+		snprintf(s, sizeof(s), _("Amplitude (\xC2\xB0), dashed: average %.1f"), amp_mean);
+	else
+		snprintf(s, sizeof(s), "%s", _("Amplitude (degrees)"));
 	trend_text(c, gx, amp_top - font * 0.4, 0, s);
 
 	// Beat error: automatic range from zero to the smallest round value that holds the readings
@@ -1854,7 +1875,10 @@ static gboolean trend_draw_event(GtkWidget *widget, cairo_t *c, struct output_pa
 	trend_draw_series(c, cols, n, be_top, be_bottom, 0, be_range, COL_BE);
 	cairo_set_font_size(c, font * 0.9);
 	set_color(c, COL_BE, 1);
-	snprintf(s, sizeof(s), _("Beat error (ms), dashed: average %.1f"), be_mean);
+	if(t->be.n)
+		snprintf(s, sizeof(s), _("Beat error (ms), dashed: average %.1f"), be_mean);
+	else
+		snprintf(s, sizeof(s), "%s", _("Beat error (ms)"));
 	trend_text(c, gx, be_top - font * 0.4, 0, s);
 	free(cols);
 
@@ -1888,6 +1912,35 @@ static void handle_trend_reset(GtkButton *b, struct output_panel *op)
 	UNUSED(b);
 	trend_reset(op->trend);
 	gtk_widget_queue_draw(op->trend_drawing_area);
+}
+
+static void handle_settling_setting(GtkSpinButton *spin, struct output_panel *op)
+{
+	if(op->settling_setting_changed)
+		op->settling_setting_changed(op->settling_setting_data,
+			gtk_spin_button_get_value_as_int(spin));
+}
+
+void op_set_settling_setting(struct output_panel *op, int seconds,
+	void (*callback)(void *, int), void *data)
+{
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(op->settling_spin), seconds);
+	op->settling_setting_changed = callback;
+	op->settling_setting_data = data;
+}
+
+void op_update_settling_status(struct output_panel *op)
+{
+	if(!op || !op->settling_status || !op->trend) return;
+	gint64 remaining = op->trend->settling_until_us - g_get_monotonic_time();
+	char text[80];
+	if(remaining > 0)
+		snprintf(text, sizeof(text), _("Settling: %d s remaining"),
+			(int)((remaining + 999999) / 1000000));
+	else
+		text[0] = '\0';
+	if(strcmp(gtk_label_get_text(GTK_LABEL(op->settling_status)), text))
+		gtk_label_set_text(GTK_LABEL(op->settling_status), text);
 }
 
 static void handle_trend_rate_range(GtkComboBox *b, struct output_panel *op)
@@ -2050,6 +2103,10 @@ struct output_panel *init_output_panel(struct computer *comp, struct snapshot *s
 	op->trend = comp ? trend_new() : NULL;
 	op->trend_rate_range = 0;
 	op->trend_span_s = 0;
+	op->settling_spin = NULL;
+	op->settling_status = NULL;
+	op->settling_setting_changed = NULL;
+	op->settling_setting_data = NULL;
 
 	op->panel = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
 	gtk_container_set_border_width(GTK_CONTAINER(op->panel), border);
@@ -2202,6 +2259,17 @@ struct output_panel *init_output_panel(struct computer *comp, struct snapshot *s
 	gtk_box_pack_start(GTK_BOX(trend_box), span_combo, FALSE, FALSE, 0);
 	g_signal_connect(span_combo, "changed", G_CALLBACK(handle_trend_span), op);
 
+	if(comp) {
+		gtk_box_pack_start(GTK_BOX(trend_box), gtk_label_new(_("Settling time (s)")),
+			FALSE, FALSE, 0);
+		op->settling_spin = gtk_spin_button_new_with_range(0, TREND_MAX_SETTLING_S, 1);
+		gtk_widget_set_tooltip_text(op->settling_spin,
+			_("Seconds to wait after a position change; 0 disables settling."));
+		gtk_box_pack_start(GTK_BOX(trend_box), op->settling_spin, FALSE, FALSE, 0);
+		g_signal_connect(op->settling_spin, "value_changed", G_CALLBACK(handle_settling_setting), op);
+		op->settling_status = gtk_label_new("");
+		gtk_box_pack_start(GTK_BOX(trend_box), op->settling_status, FALSE, FALSE, 0);
+	}
 	// No title: the switcher does not offer it, calibration shows it by itself
 	GtkWidget *cal_info = titled_frame(make_calibration_instructions(), _("Calibration instructions"));
 	gtk_stack_add_named(GTK_STACK(op->right_stack), cal_info, "calibration");

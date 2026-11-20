@@ -20,6 +20,28 @@ Esas lecturas se omiten y el registro continúa. Solo una frecuencia de batido
 detectada que se mantenga distinta durante un minuto reinicia el registro.
 Para registros largos, ajuste la frecuencia de batido a mano.
 Durante la calibración no se registra nada.
+
+== Estabilización tras cambiar de posición
+
+En la página de tendencia en tiempo real, ajusta #ui[Tiempo de estabilización
+(s)] (0 por defecto, lo que la desactiva). El ajuste se guarda entre
+sesiones y los cambios se aplican a la siguiente cuenta atrás.
+
+Selecciona la nueva posición en el programa *antes* de mover físicamente el
+reloj. Al cambiar desde una posición definida a otra, incluida #ui[sin
+definir], la cuenta atrás empieza inmediatamente y continúa incluso sin buena
+señal. Volver a una posición usada anteriormente la inicia de nuevo. La
+primera selección desde #ui[sin definir] no inicia una cuenta atrás, ni
+tampoco una posición ya seleccionada al comenzar el registro. #ui[Reiniciar]
+no inicia ni reinicia la cuenta atrás; si hay una activa, continúa.
+
+Las lecturas con buena señal durante la cuenta atrás se conservan, se
+resaltan en las gráficas y se marcan como #ui[Estabilización] en el CSV. Se
+excluyen de las estadísticas generales y por posición, incluidos el error
+posicional y las medias de las gráficas. La columna *actual* sigue mostrando
+la última lectura. Las capturas guardan estas marcas; las versiones antiguas
+del programa pueden ignorarlas.
+
 == Estadísticas desde el inicio
 La tabla de la parte superior muestra, para la marcha (s/día), la amplitud (°)
 y el error de batido (ms):
@@ -57,7 +79,7 @@ los datos de tendencia de la pestaña activa. Los valores de tiempo son los
 segundos transcurridos desde el inicio del registro, no la hora del reloj. El
 archivo incluye los códigos de posición y los ajustes de medición. Solo se
 registran las lecturas con buena señal, por lo que los períodos omitidos
-aparecen como saltos; todas las filas exportadas se marcan como válidas. La
+aparecen como saltos; las filas se marcan como válidas o en estabilización. La
 amplitud queda vacía cuando no está disponible.
 
 En el diálogo para guardar, elige CSV portable (separador coma y punto

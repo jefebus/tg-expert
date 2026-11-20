@@ -621,6 +621,7 @@ static void recompute(struct main_window *w)
 
 static guint kick_computer(struct main_window *w)
 {
+	op_update_settling_status(w->active_panel);
 	w->computer_timeout++;
 	if(w->calibrate && w->computer_timeout < 10) {
 		return TRUE;
@@ -930,6 +931,10 @@ static void handle_position_change(GtkComboBox *b, struct main_window *w)
 	if(pos < POS_NONE || pos >= POS_COUNT) pos = POS_NONE;
 	if(!op) {
 		// Real-time tab: remember it for the next snapshot
+		if(pos != w->live_position && w->live_position != POS_NONE) {
+			trend_start_settling(w->active_panel->trend, w->settling_seconds);
+			op_update_settling_status(w->active_panel);
+		}
 		w->live_position = pos;
 		return;
 	}
@@ -1000,6 +1005,13 @@ static void handle_paperstrip_settings_changed(void *data, double tick_seconds,
 	struct main_window *w = data;
 	w->paperstrip_tick_seconds = tick_seconds;
 	w->paperstrip_window_seconds = window_seconds;
+	save_on_change(w);
+}
+
+static void handle_settling_setting_changed(void *data, int seconds)
+{
+	struct main_window *w = data;
+	w->settling_seconds = seconds;
 	save_on_change(w);
 }
 
@@ -1849,6 +1861,7 @@ static void start_interface(GApplication* app, void *p)
 	w->is_light = 0;
 	w->paperstrip_tick_seconds = 10.0;
 	w->paperstrip_window_seconds = 60.0;
+	w->settling_seconds = 0;
 	w->csv_format = CSV_FORMAT_PORTABLE;
 	w->nominal_sr = PA_SAMPLE_RATE;
 	w->audio_device = AUDIO_DEVICE_DEFAULT;
@@ -1868,6 +1881,8 @@ static void start_interface(GApplication* app, void *p)
 	w->live_position = POS_NONE;
 
 	load_config(w);
+	if(w->settling_seconds < 0 || w->settling_seconds > TREND_MAX_SETTLING_S)
+		w->settling_seconds = 0;
 	if(w->csv_format != CSV_FORMAT_PORTABLE && w->csv_format != CSV_FORMAT_LOCALIZED)
 		w->csv_format = CSV_FORMAT_PORTABLE;
 	if(!isfinite(w->paperstrip_tick_seconds) || w->paperstrip_tick_seconds < 0.01 ||
@@ -1943,6 +1958,8 @@ static void start_interface(GApplication* app, void *p)
 	op_set_paperstrip_settings(w->active_panel, w->paperstrip_tick_seconds,
 		w->paperstrip_window_seconds);
 	op_set_paperstrip_settings_callback(w->active_panel, handle_paperstrip_settings_changed, w);
+	op_set_settling_setting(w->active_panel, w->settling_seconds,
+		handle_settling_setting_changed, w);
 
 	init_main_window(w);
 	audio_settings_update(w);
