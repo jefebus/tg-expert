@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: tg-expert 0.9.0\n"
+"Project-Id-Version: tg-expert 0.10.0\n"
 "Report-Msgid-Bugs-To: https://github.com/jefebus/tg-expert/issues\n"
-"POT-Creation-Date: 2026-11-15 20:50+0100\n"
+"POT-Creation-Date: 2026-11-20 14:26+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -217,7 +217,7 @@ msgstr ""
 msgid "Stop calibration"
 msgstr ""
 
-#: src/interface.c:663 src/interface.c:1516
+#: src/interface.c:663 src/interface.c:1535
 msgid "Start calibration"
 msgstr ""
 
@@ -257,92 +257,92 @@ msgstr ""
 
 #. TRANSLATORS: default title of a snapshot tab, short (tab title)
 #. TRANSLATORS: tab titles, short. "Real time" is the live measurement tab, "Snapshot" a kept measurement
-#: src/interface.c:812 src/interface.c:923
+#: src/interface.c:812 src/interface.c:942
 msgid "Snapshot"
 msgstr ""
 
-#: src/interface.c:867
+#: src/interface.c:886
 #, c-format
 msgid "Could not open the manual (%s): %s"
 msgstr ""
 
-#: src/interface.c:867
+#: src/interface.c:886
 msgid "unknown error"
 msgstr ""
 
-#: src/interface.c:923
+#: src/interface.c:942
 msgid "Real time"
 msgstr ""
 
-#: src/interface.c:1014
+#: src/interface.c:1033
 msgid "All files"
 msgstr ""
 
-#: src/interface.c:1047
+#: src/interface.c:1066
 msgid "Error opening file\n"
 msgstr ""
 
-#: src/interface.c:1061 src/interface.c:1242
+#: src/interface.c:1080 src/interface.c:1261
 msgid "Cancel"
 msgstr ""
 
-#: src/interface.c:1063
+#: src/interface.c:1082
 msgid "Save"
 msgstr ""
 
-#: src/interface.c:1094
+#: src/interface.c:1113
 #, c-format
 msgid "File %s already exists. Do you want to replace it?"
 msgstr ""
 
-#: src/interface.c:1136 src/interface.c:1474
+#: src/interface.c:1155 src/interface.c:1493
 msgid "Save current display"
 msgstr ""
 
-#: src/interface.c:1141 src/interface.c:1188
+#: src/interface.c:1160 src/interface.c:1207
 msgid "Error writing file"
 msgstr ""
 
-#: src/interface.c:1169 src/interface.c:1480
+#: src/interface.c:1188 src/interface.c:1499
 msgid "Save all snapshots"
 msgstr ""
 
-#: src/interface.c:1214
+#: src/interface.c:1233
 #, c-format
 msgid "Error reading file: %s"
 msgstr ""
 
-#: src/interface.c:1239 src/interface.c:1244 src/interface.c:1469
+#: src/interface.c:1258 src/interface.c:1263 src/interface.c:1488
 msgid "Open"
 msgstr ""
 
-#: src/interface.c:1322
+#: src/interface.c:1341
 msgid "Saved watches (bph and lift angle)"
 msgstr ""
 
-#: src/interface.c:1325
+#: src/interface.c:1344
 msgid "Save the current bph and lift angle as a watch"
 msgstr ""
 
-#: src/interface.c:1328
+#: src/interface.c:1347
 msgid "Delete the selected watch"
 msgstr ""
 
-#: src/interface.c:1333
+#: src/interface.c:1352
 msgid "Beats per hour (bph)"
 msgstr ""
 
 #. TRANSLATORS: first entry of the beats-per-hour list: the program detects the beat rate by itself. Short.
 #. * The program reads the entry back as a number and treats any non-numeric text as "guess".
-#: src/interface.c:1343
+#: src/interface.c:1362
 msgid "guess"
 msgstr ""
 
-#: src/interface.c:1363
+#: src/interface.c:1382
 msgid "Lift angle (degrees)"
 msgstr ""
 
-#: src/interface.c:1420
+#: src/interface.c:1439
 msgid ""
 "Position of the watch.\n"
 "\n"
@@ -356,11 +356,11 @@ msgid ""
 "snapshot."
 msgstr ""
 
-#: src/interface.c:1434
+#: src/interface.c:1453
 msgid "Take Snapshot"
 msgstr ""
 
-#: src/interface.c:1436
+#: src/interface.c:1455
 msgid ""
 "Keep the current\n"
 "measurement in a\n"
@@ -369,15 +369,15 @@ msgid ""
 "Shortcut: Ctrl+Space"
 msgstr ""
 
-#: src/interface.c:1446
+#: src/interface.c:1465
 msgid "Current snapshot:"
 msgstr ""
 
-#: src/interface.c:1488
+#: src/interface.c:1507
 msgid "Light algorithm"
 msgstr ""
 
-#: src/interface.c:1491
+#: src/interface.c:1510
 msgid ""
 "Reduces CPU load, \n"
 "for slow computers.\n"
@@ -395,11 +395,11 @@ msgid ""
 "restart your measurement."
 msgstr ""
 
-#: src/interface.c:1511
+#: src/interface.c:1530
 msgid "Audio settings…"
 msgstr ""
 
-#: src/interface.c:1518
+#: src/interface.c:1537
 msgid ""
 "Measures the error of\n"
 "your sound card clock,\n"
@@ -412,50 +412,50 @@ msgid ""
 "in the cal field."
 msgstr ""
 
-#: src/interface.c:1532
+#: src/interface.c:1551
 msgid "User manual"
 msgstr ""
 
-#: src/interface.c:1533
+#: src/interface.c:1552
 msgid "Open the user manual (PDF)."
 msgstr ""
 
-#: src/interface.c:1540
+#: src/interface.c:1559
 msgid "Close all snapshots"
 msgstr ""
 
-#: src/interface.c:1546
+#: src/interface.c:1565
 msgid "Quit"
 msgstr ""
 
-#: src/interface.c:1704
+#: src/interface.c:1723
 msgid "The saved input was not found; using the default input."
 msgstr ""
 
-#: src/interface.c:1706
+#: src/interface.c:1725
 msgid "The saved rate is not available; using the default rate."
 msgstr ""
 
-#: src/interface.c:1720
+#: src/interface.c:1739
 msgid "Error starting computation thread"
 msgstr ""
 
 #. TRANSLATORS: status tooltip. Keep the leading "0:"
-#: src/output_panel.c:418
+#: src/output_panel.c:419
 msgid ""
 "0: no audio input. The four squares by the clock show analysis windows with "
 "a valid period."
 msgstr ""
 
 #. TRANSLATORS: status tooltip. Keep the leading "?:"
-#: src/output_panel.c:420
+#: src/output_panel.c:421
 msgid ""
 "?: audio is present, but no beat rate has been recognized yet. The four "
 "squares show analysis windows with a valid period."
 msgstr ""
 
 #. TRANSLATORS: status tooltip. Keep the leading "!:" and the column name BEAT, it is not translated
-#: src/output_panel.c:422
+#: src/output_panel.c:423
 msgid ""
 "!: no valid rhythm at the selected beat rate. A free estimate, when "
 "available, is marked with ~ in the BEAT column. The four squares show "
@@ -463,188 +463,194 @@ msgid ""
 msgstr ""
 
 #. TRANSLATORS: status tooltip
-#: src/output_panel.c:424
+#: src/output_panel.c:425
 msgid ""
 "Audio input and a valid beat period are detected. The four squares show "
 "analysis windows with a valid period."
 msgstr ""
 
 #. TRANSLATORS: legend of the paper strip, short, shown in a narrow row
-#: src/output_panel.c:1211
+#: src/output_panel.c:1219
 msgid "reference tick"
 msgstr ""
 
 #. TRANSLATORS: legend of the paper strip, short, shown in a narrow row. "cal" is the calibration value and stays as is
-#: src/output_panel.c:1213
+#: src/output_panel.c:1221
 msgid "current cal"
 msgstr ""
 
 #. TRANSLATORS: legend of the paper strip: the first sound of a watch beat (tic-toc). Short, shown in a narrow row
-#: src/output_panel.c:1216
+#: src/output_panel.c:1224
 msgid "tic"
 msgstr ""
 
 #. TRANSLATORS: legend of the paper strip: the second sound of a watch beat (tic-toc). Short, shown in a narrow row
-#: src/output_panel.c:1218
+#: src/output_panel.c:1226
 msgid "toc"
 msgstr ""
 
 #. TRANSLATORS: legend of the paper strip, short, shown in a narrow row
-#: src/output_panel.c:1220
+#: src/output_panel.c:1228
 msgid "amplitude"
 msgstr ""
 
 #. TRANSLATORS: legend of the paper strip: dashed guide line showing the rate. Short, shown in a narrow row
-#: src/output_panel.c:1222
+#: src/output_panel.c:1230
 msgid "rate guide"
 msgstr ""
 
 #. TRANSLATORS: title of the paper strip panel
-#: src/output_panel.c:1404
+#: src/output_panel.c:1412
 msgid "Paper strip: beat timing over time"
 msgstr ""
 
 #. TRANSLATORS: title of the paper strip panel while calibrating
-#: src/output_panel.c:1406
+#: src/output_panel.c:1414
 msgid "Paper strip: reference ticks"
 msgstr ""
 
-#: src/output_panel.c:1538
+#: src/output_panel.c:1572
 msgid "No long-term statistics"
 msgstr ""
 
-#: src/output_panel.c:1539
+#: src/output_panel.c:1573
 msgid "This snapshot was saved without them."
 msgstr ""
 
-#: src/output_panel.c:1544
+#: src/output_panel.c:1578
 msgid "Not recorded during calibration"
 msgstr ""
 
-#: src/output_panel.c:1546
+#: src/output_panel.c:1580
 msgid "No readings were recorded"
 msgstr ""
 
-#: src/output_panel.c:1548
+#: src/output_panel.c:1582
 msgid "Waiting for a steady signal"
 msgstr ""
 
-#: src/output_panel.c:1549
+#: src/output_panel.c:1583
 msgid "A reading is recorded every 2 s while the signal is good."
 msgstr ""
 
 #. TRANSLATORS: Trend page column head: the latest reading. Short, shown in a narrow column
-#: src/output_panel.c:1566
+#: src/output_panel.c:1600
 msgid "now"
 msgstr ""
 
 #. TRANSLATORS: Trend page column head: average. Short, shown in a narrow column
-#: src/output_panel.c:1568
+#: src/output_panel.c:1602
 msgid "avg"
 msgstr ""
 
 #. TRANSLATORS: Trend page column head: minimum. Short, shown in a narrow column
-#: src/output_panel.c:1570
+#: src/output_panel.c:1604
 msgid "min"
 msgstr ""
 
 #. TRANSLATORS: Trend page column head: maximum. Short, shown in a narrow column
-#: src/output_panel.c:1572
+#: src/output_panel.c:1606
 msgid "max"
 msgstr ""
 
 #. TRANSLATORS: Trend page column head: difference between maximum and minimum. Short, shown in a narrow column
-#: src/output_panel.c:1574
+#: src/output_panel.c:1608
 msgid "spread"
 msgstr ""
 
 #. TRANSLATORS: Trend page row: rate in seconds per day (s/d). Short, shown in a narrow column
-#: src/output_panel.c:1591
+#: src/output_panel.c:1625
 msgid "Rate s/d"
 msgstr ""
 
 #. TRANSLATORS: Trend page row: amplitude in degrees. Keep the degree sign. Short, shown in a narrow column
-#: src/output_panel.c:1593
+#: src/output_panel.c:1627
 msgid "Ampl. °"
 msgstr ""
 
 #. TRANSLATORS: Trend page row: beat error in milliseconds (ms). Short, shown in a narrow column
-#: src/output_panel.c:1595
+#: src/output_panel.c:1629
 msgid "Beat err. ms"
 msgstr ""
 
 #. TRANSLATORS: Trend page. %s is a duration such as 2:15:03, the number is a percentage
-#: src/output_panel.c:1625
+#: src/output_panel.c:1659
 #, c-format
 msgid "%s since the start, %.0f %% with signal (100 h limit reached)"
 msgstr ""
 
-#: src/output_panel.c:1626
+#: src/output_panel.c:1660
 #, c-format
 msgid "%s since the start, %.0f %% with signal"
 msgstr ""
 
 #. TRANSLATORS: Trend page: the settings used for the readings. "cal" is the calibration value and stays as is
-#: src/output_panel.c:1630
+#: src/output_panel.c:1664
 #, c-format
 msgid "%d bph, lift angle %.0f°, cal %+.1f s/d"
 msgstr ""
 
 #. TRANSLATORS: Trend page column head: time spent in this position (duration). Short, shown in a narrow column
-#: src/output_panel.c:1643
+#: src/output_panel.c:1677
 msgid "time"
 msgstr ""
 
 #. TRANSLATORS: Trend page column head: average rate in this position. Short, shown in a narrow column
-#: src/output_panel.c:1645
+#: src/output_panel.c:1679
 msgid "rate"
 msgstr ""
 
 #. TRANSLATORS: Trend page column head: average amplitude in this position. Short, shown in a narrow column
-#: src/output_panel.c:1647
+#: src/output_panel.c:1681
 msgid "ampl."
 msgstr ""
 
 #. TRANSLATORS: Trend page column head: beat error in this position. Short, shown in a narrow column
-#: src/output_panel.c:1649
+#: src/output_panel.c:1683
 msgid "BE"
 msgstr ""
 
 #. TRANSLATORS: Trend page column head over the list of watch positions. Short, shown in a narrow column
-#: src/output_panel.c:1653
+#: src/output_panel.c:1687
 msgid "Position"
 msgstr ""
 
 #. TRANSLATORS: Trend page: readings taken while no watch position was set. Short, shown in a narrow column
-#: src/output_panel.c:1665
+#: src/output_panel.c:1699
 msgid "not set"
 msgstr ""
 
-#: src/output_panel.c:1691
+#: src/output_panel.c:1725
 #, c-format
 msgid "Positional error (largest difference in rate): %.1f s/d"
 msgstr ""
 
-#: src/output_panel.c:1693
+#: src/output_panel.c:1727
 msgid "Measure more positions to see the positional error."
 msgstr ""
 
-#: src/output_panel.c:1699
+#: src/output_panel.c:1733
 msgid "Set the watch position to also get statistics per position."
 msgstr ""
 
-#: src/output_panel.c:1785
+#: src/output_panel.c:1814
 #, c-format
 msgid "Rate (s/d), dashed: average %+.1f"
 msgstr ""
 
-#: src/output_panel.c:1800
-msgid "Amplitude (°)"
+#: src/output_panel.c:1830
+#, c-format
+msgid "Amplitude (°), dashed: average %.1f"
+msgstr ""
+
+#: src/output_panel.c:1857
+#, c-format
+msgid "Beat error (ms), dashed: average %.1f"
 msgstr ""
 
 #. TRANSLATORS: keep cal (wait), cal (acq.), cal (done), cal (fail) in English, they are shown like that in the results bar.
 #. * Also keep the word "done" in English where it is mentioned as a status, and keep the markup tags.
-#: src/output_panel.c:1884
+#: src/output_panel.c:1943
 msgid ""
 "<span size='x-large' weight='bold'>Calibration in progress</span>\n"
 "\n"
@@ -678,51 +684,51 @@ msgid ""
 msgstr ""
 
 #. TRANSLATORS: paper strip button: erase the trace. Short, shown in a narrow button
-#: src/output_panel.c:2030
+#: src/output_panel.c:2089
 msgid "Clear"
 msgstr ""
 
 #. TRANSLATORS: paper strip button: center the trace. Short, shown in a narrow button
-#: src/output_panel.c:2038
+#: src/output_panel.c:2097
 msgid "Center"
 msgstr ""
 
 #. TRANSLATORS: paper strip setting: time between marks on the vertical (Y) axis. Short
-#: src/output_panel.c:2062
+#: src/output_panel.c:2121
 msgid "Y mark (s)"
 msgstr ""
 
-#: src/output_panel.c:2070
+#: src/output_panel.c:2129
 msgid "Time between marks on the vertical axis, in seconds."
 msgstr ""
 
 #. TRANSLATORS: paper strip setting: time span shown on the vertical (Y) axis. Short
-#: src/output_panel.c:2076
+#: src/output_panel.c:2135
 msgid "Y window (s)"
 msgstr ""
 
-#: src/output_panel.c:2082
+#: src/output_panel.c:2141
 msgid "Fixed time span shown vertically. It does not change automatically."
 msgstr ""
 
-#: src/output_panel.c:2099
+#: src/output_panel.c:2158
 msgid "Waveforms"
 msgstr ""
 
-#: src/output_panel.c:2103
+#: src/output_panel.c:2162
 msgid "Trend"
 msgstr ""
 
-#: src/output_panel.c:2107
-msgid "Trend: rate and amplitude since the start"
+#: src/output_panel.c:2166
+msgid "Trend: rate, amplitude, and BE over time"
 msgstr ""
 
 #. TRANSLATORS: Trend page button: start the statistics over. Short, shown in a narrow button
-#: src/output_panel.c:2115
+#: src/output_panel.c:2174
 msgid "Reset"
 msgstr ""
 
-#: src/output_panel.c:2116
+#: src/output_panel.c:2175
 msgid ""
 "Start the statistics over.\n"
 "They also start over when bph, lift angle,\n"
@@ -730,59 +736,59 @@ msgid ""
 msgstr ""
 
 #. TRANSLATORS: Trend page: label of the rate range selector (Auto, +-10 s/d, +-50 s/d). Short
-#: src/output_panel.c:2123
+#: src/output_panel.c:2182
 msgid "Rate"
 msgstr ""
 
 #. TRANSLATORS: Trend page rate range: chosen automatically. Short, shown in a narrow combo box
-#: src/output_panel.c:2126
+#: src/output_panel.c:2185
 msgid "Auto"
 msgstr ""
 
 #. TRANSLATORS: Trend page rate range; translate the unit s/d as in the other Trend page texts
-#: src/output_panel.c:2128
+#: src/output_panel.c:2187
 msgid "±10 s/d"
 msgstr ""
 
 #. TRANSLATORS: Trend page rate range; translate the unit s/d as in the other Trend page texts
-#: src/output_panel.c:2130
+#: src/output_panel.c:2189
 msgid "±50 s/d"
 msgstr ""
 
 #. TRANSLATORS: Trend page: label of the time span selector (All, Last 1 h, ...). Short
-#: src/output_panel.c:2135
+#: src/output_panel.c:2194
 msgid "Show"
 msgstr ""
 
 #. TRANSLATORS: Trend page time span: everything since the start. Short, shown in a narrow combo box
-#: src/output_panel.c:2138
+#: src/output_panel.c:2197
 msgid "All"
 msgstr ""
 
-#: src/output_panel.c:2139
+#: src/output_panel.c:2198
 msgid "Last 1 h"
 msgstr ""
 
-#: src/output_panel.c:2140
+#: src/output_panel.c:2199
 msgid "Last 6 h"
 msgstr ""
 
-#: src/output_panel.c:2141
+#: src/output_panel.c:2200
 msgid "Last 24 h"
 msgstr ""
 
-#: src/output_panel.c:2147
+#: src/output_panel.c:2206
 msgid "Calibration instructions"
 msgstr ""
 
-#: src/output_panel.c:2153
+#: src/output_panel.c:2212
 msgid "Tic: averaged sound of the first beat"
 msgstr ""
 
-#: src/output_panel.c:2160
+#: src/output_panel.c:2219
 msgid "Toc: averaged sound of the second beat"
 msgstr ""
 
-#: src/output_panel.c:2167
+#: src/output_panel.c:2226
 msgid "Full period: tic and toc (highlighted)"
 msgstr ""

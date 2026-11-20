@@ -52,9 +52,11 @@ positional error means the watch is well adjusted.
 
 == Graphs
 
-At the bottom, two graphs share a time axis: the rate, with a dashed line at
-its average, and the amplitude. A vertical line with the position code (DU,
-DD, ...) marks each change of position. The controls below the page set:
+At the bottom, three graphs share a time axis: rate, amplitude and beat error.
+Each has a dashed line for its average when that average is within the visible
+range. The beat error graph picks its vertical range automatically. A vertical
+line with the position code (DU, DD, ...) marks each change of position. The
+controls below the page set:
 
 / Rate: the vertical range of the rate graph: #ui[Auto], ±10 s/d or
   ±50 s/d.

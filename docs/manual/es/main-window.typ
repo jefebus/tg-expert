@@ -60,6 +60,10 @@ El diagrama de marcha tiene un ancho fijo. En la parte superior hay dos
 escalas que comparten las mismas líneas verticales de la cuadrícula: la
 amplitud en grados, y el tiempo dentro de la ventana en ms. Las etiquetas de
 tiempo de la izquierda son minutos y segundos.
+Los puntos que cruzan un margen vertical reaparecen en el margen opuesto.
+El intervalo de repetición sigue la escala actual en ms y el zoom. Cerca de
+un margen, un punto puede aparecer en ambos lados; Centrar sigue situando el
+batido más reciente en el centro.
 Las demás líneas, tal como figuran en la leyenda de la parte inferior:
 - *amplitud*: la línea rosa, que se lee en la escala de grados de la parte
   superior;

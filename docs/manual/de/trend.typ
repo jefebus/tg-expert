@@ -41,10 +41,12 @@ Bei zwei oder mehr Lagen zeigt die Seite den *Lagenfehler*: die größte
 Differenz zwischen den mittleren Gangabweichungen der Lagen. Ein kleiner
 Lagenfehler bedeutet, dass die Uhr gut reguliert ist.
 == Diagramme
-Unten teilen sich zwei Diagramme eine Zeitachse: die Gangabweichung, mit
-einer gestrichelten Linie beim Mittelwert, und die Amplitude. Eine senkrechte
-Linie mit dem Lagenkürzel (DU, DD, ...) markiert jeden Lagenwechsel. Die
-Bedienelemente unten auf der Seite legen fest:
+Unten teilen sich drei Diagramme eine Zeitachse: Gangabweichung, Amplitude
+und Abfallfehler. Jedes zeigt eine gestrichelte Linie für den Mittelwert,
+wenn dieser im sichtbaren Bereich liegt. Das Abfallfehler-Diagramm wählt
+seinen vertikalen Bereich automatisch. Eine senkrechte Linie mit dem
+Lagenkürzel (DU, DD, ...) markiert jeden Lagenwechsel. Die Bedienelemente
+unten auf der Seite legen fest:
 / Gangabweichung: den vertikalen Bereich des Gangabweichungs-Diagramms:
   #ui[Auto], #ui[±10 s/t] oder #ui[±50 s/t].
 / Zeige: den angezeigten Zeitraum: #ui[Alle], #ui[Letzte Std.],

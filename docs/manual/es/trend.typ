@@ -40,9 +40,11 @@ Con dos o más posiciones, la página muestra el *error posicional*: la mayor
 diferencia entre las marchas medias de las posiciones. Un error posicional
 pequeño indica que el reloj está bien ajustado.
 == Gráficas
-En la parte inferior, dos gráficas comparten el eje de tiempo: la marcha, con
-una línea discontinua en su media, y la amplitud. Una línea vertical con el
-código de posición (DU, DD, ...) marca cada cambio de posición. Los controles
+En la parte inferior, tres gráficas comparten el eje de tiempo: marcha,
+amplitud y error de batido. Cada una muestra una línea discontinua con su
+media cuando esta cabe en la escala visible. La gráfica de error de batido
+ajusta automáticamente su escala vertical. Una línea vertical con el código
+de posición (DU, DD, ...) marca cada cambio de posición. Los controles
 situados bajo la página establecen:
 / Marcha: el intervalo vertical de la gráfica de marcha: #ui[Auto], ±10 s/día
   o ±50 s/día.
