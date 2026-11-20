@@ -69,9 +69,18 @@ void trend_reset(struct trend *t)
 	if(!t) return;
 	struct trend_sample *samples = t->samples;
 	int capacity = t->capacity;
+	gint64 settling_until_us = t->settling_until_us;
 	memset(t, 0, sizeof(*t));
 	t->samples = samples;	// keep the buffer for the next recording
 	t->capacity = capacity;
+	t->settling_until_us = settling_until_us;
+}
+
+void trend_start_settling(struct trend *t, int seconds)
+{
+	if(t && !t->frozen)
+		t->settling_until_us = seconds > 0 ?
+			g_get_monotonic_time() + (gint64)seconds * 1000000 : 0;
 }
 
 static void stats_add(struct trend_stats *s, double v)
@@ -108,7 +117,7 @@ double trend_elapsed(const struct trend *t)
  * (bph, la, cal, nominal_sr, is_light, full) must already be set. Returns 1,
  * leaving t empty, if the data is not usable. */
 int trend_set_samples(struct trend *t, const float *tm, const float *rate, const float *amp,
-	const float *be, const int *position, int count, double elapsed)
+	const float *be, const int *position, const int *settling, int count, double elapsed)
 {
 	if(count < 0 || count > TREND_MAX_SAMPLES || !isfinite(elapsed) || elapsed < 0)
 		return 1;
@@ -120,7 +129,8 @@ int trend_set_samples(struct trend *t, const float *tm, const float *rate, const
 				!isfinite(rate[i]) || fabs(rate[i]) > 9999 ||
 				!isfinite(amp[i]) || amp[i] < 0 || amp[i] > 360 ||
 				!isfinite(be[i]) || be[i] < 0 || be[i] > 99.9 ||
-				position[i] < POS_NONE || position[i] >= POS_COUNT)
+				position[i] < POS_NONE || position[i] >= POS_COUNT ||
+				(settling && settling[i] != 0 && settling[i] != 1))
 			return 1;
 	}
 
@@ -146,6 +156,8 @@ int trend_set_samples(struct trend *t, const float *tm, const float *rate, const
 		x->amp = amp[i];
 		x->be = be[i];
 		x->position = position[i];
+		x->settling = settling ? settling[i] : 0;
+		if(x->settling) continue;
 		stats_add(&t->rate, x->rate);
 		stats_add(&t->be, x->be);
 		stats_add(&t->pos_rate[x->position], x->rate);
@@ -235,8 +247,10 @@ void trend_update(struct trend *t, const struct snapshot *s, int position)
 	x->amp = s->amp;	// 0 = not available
 	x->be = s->be;
 	x->position = position;
+	x->settling = now < t->settling_until_us;
 	t->last_us = now;
 
+	if(x->settling) return;
 	stats_add(&t->rate, s->rate);
 	stats_add(&t->be, s->be);
 	stats_add(&t->pos_rate[position], s->rate);

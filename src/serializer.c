@@ -380,6 +380,7 @@ static int serialize_trend(FILE *f, const struct trend *s)
 	TREND_ARRAY("amp", amp, float);
 	TREND_ARRAY("be", be, float);
 	TREND_ARRAY("position", position, int);
+	TREND_ARRAY("settling", settling, int);
 #undef TREND_ARRAY
 	return serialize_struct_end(f);
 }
@@ -394,8 +395,8 @@ static int scan_trend(FILE *f, struct trend **trend)
 	struct trend *t = trend_new();
 	if(!t) return 1;
 	float *tm = NULL, *rate = NULL, *amp = NULL, *be = NULL;
-	int *position = NULL;
-	uint64_t n_t = 0, n_rate = 0, n_amp = 0, n_be = 0, n_position = 0;
+	int *position = NULL, *settling = NULL;
+	uint64_t n_t = 0, n_rate = 0, n_amp = 0, n_be = 0, n_position = 0, n_settling = 0;
 	double elapsed = 0;
 	int ok = 1;
 	for(;;) {
@@ -412,6 +413,7 @@ static int scan_trend(FILE *f, struct trend **trend)
 		TREND_SCAN("amp", amp, n_amp, float);
 		TREND_SCAN("be", be, n_be, float);
 		TREND_SCAN("position", position, n_position, int);
+		TREND_SCAN("settling", settling, n_settling, int);
 #undef TREND_SCAN
 #define TREND_FIELD(A, TYPE)							\
 		if(!strcmp(#A, l)) {						\
@@ -433,20 +435,21 @@ static int scan_trend(FILE *f, struct trend **trend)
 	}
 	// All arrays must be there and have the same length
 	if(!tm || !rate || !amp || !be || !position ||
-			n_rate != n_t || n_amp != n_t || n_be != n_t || n_position != n_t)
+			n_rate != n_t || n_amp != n_t || n_be != n_t || n_position != n_t ||
+			(settling && n_settling != n_t))
 		ok = 0;
-	if(ok && trend_set_samples(t, tm, rate, amp, be, position, (int)n_t, elapsed))
+	if(ok && trend_set_samples(t, tm, rate, amp, be, position, settling, (int)n_t, elapsed))
 		ok = 0;
 	if(!ok) {
 		debug("serializer: unusable trend, ignored\n");
 		trend_free(t);
 		t = NULL;
 	}
-	free(tm); free(rate); free(amp); free(be); free(position);
+	free(tm); free(rate); free(amp); free(be); free(position); free(settling);
 	*trend = t;
 	return 0;
 error:
-	free(tm); free(rate); free(amp); free(be); free(position);
+	free(tm); free(rate); free(amp); free(be); free(position); free(settling);
 	trend_free(t);
 	return 1;
 }
@@ -796,7 +799,7 @@ int write_trend_csv(FILE *f, const struct trend *t, char separator, char decimal
 			return 1;
 		if(fputc(separator, f) == EOF ||
 				csv_write_number(f, x->be, decimal) ||
-				fputc(separator, f) == EOF || fputs(_("Valid"), f) == EOF ||
+				fputc(separator, f) == EOF || fputs(x->settling ? _("Settling") : _("Valid"), f) == EOF ||
 				fputc(separator, f) == EOF ||
 				fprintf(f, "%d", t->bph) < 0 || fputc(separator, f) == EOF ||
 				csv_write_number(f, t->la, decimal) || fputc(separator, f) == EOF ||

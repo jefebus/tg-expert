@@ -21,6 +21,28 @@ weiter. Nur eine geschätzte Schlagzahl, die eine Minute lang abweicht, startet
 die Aufzeichnung neu. Bei langen Aufzeichnungen sollte die Schlagzahl von
 Hand eingestellt werden.
 Während der Kalibrierung wird nichts aufgezeichnet.
+
+== Stabilisierung nach einem Lagenwechsel
+
+Stellen Sie auf der Live-Verlaufsseite die #ui[Stabilisierungszeit (s)] ein
+(standardmäßig 0, was sie deaktiviert). Die Einstellung bleibt
+zwischen Sitzungen erhalten; Änderungen gelten für den nächsten Countdown.
+
+Wählen Sie die neue Lage zuerst in der Software und bewegen Sie *danach* die
+Uhr. Beim Wechsel von einer eingestellten Lage zu einer anderen, auch zu
+#ui[ohne], beginnt der Countdown sofort und läuft auch ohne gutes Signal
+weiter. Die Rückkehr zu einer zuvor verwendeten Lage startet ihn erneut. Die
+erste Auswahl aus #ui[ohne] und eine bereits beim Aufzeichnungsbeginn
+eingestellte Lage starten keinen Countdown. #ui[Zurücksetzen] startet oder
+verlängert keinen Countdown; ein bereits laufender Countdown läuft weiter.
+
+Messwerte mit gutem Signal während des Countdowns bleiben erhalten, werden
+in den Diagrammen hinterlegt und im CSV als #ui[Stabilisierung] markiert.
+Sie werden aus der Gesamt- und Lagenstatistik einschließlich Lagenfehler und
+Diagramm-Mittelwerten ausgeschlossen. Die Spalte *aktuell* zeigt weiterhin
+den letzten Messwert. Aufnahmen speichern die Markierungen; ältere
+Programmversionen können sie ignorieren.
+
 == Statistik seit dem Start
 Die Tabelle oben zeigt für Gangabweichung (s/t), Amplitude (°) und
 Abfallfehler (ms):
@@ -59,7 +81,7 @@ Verlaufsdaten der aktiven Registerkarte zu speichern. Die Zeitwerte sind die
 verstrichenen Sekunden seit Beginn der Aufzeichnung, keine Uhrzeiten. Die
 Datei enthält Lagenkürzel und Messeinstellungen. Aufgezeichnet werden nur
 Messwerte mit gutem Signal, daher erscheinen ausgelassene Zeiträume als
-Lücken; jede exportierte Zeile ist als gültig markiert. Ist keine Amplitude
+Lücken; die Zeilen sind als gültig oder in Stabilisierung markiert. Ist keine Amplitude
 verfügbar, bleibt das Feld leer.
 
 Im Speicherdialog können Sie zwischen portablem CSV (Komma als Trennzeichen,
