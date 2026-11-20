@@ -62,6 +62,23 @@ controls below the page set:
   ±50 s/d.
 / Show: the time shown: #ui[All], or the last 1, 6 or 24 hours.
 
+== Exporting data
+
+Choose #ui[Export Trend as CSV] in the command menu to save the Trend data
+from the active tab. Time values are elapsed seconds from the start of the
+recording, not clock times. The file includes position codes and the
+measurement settings. Only readings with a good signal are recorded, so
+omitted periods appear as gaps; every exported row is marked valid. Amplitude
+is empty when it was not available.
+
+Choose portable CSV (comma separator and decimal point) or, when the
+interface is in Spanish or German, localized CSV (semicolon separator and
+decimal comma). The selected format is saved and reused for later exports,
+including after restarting the program. Column names and descriptive values
+follow the interface language; position codes remain the standard codes.
+Both formats use UTF-8 with a byte order mark so Excel recognizes accented
+characters.
+
 == Measuring a power reserve
 
 1. Wind the watch fully and set the position.

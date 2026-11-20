@@ -370,6 +370,11 @@ void op_set_border(struct output_panel *op, int i);
 void op_destroy(struct output_panel *op);
 
 /* interface.c */
+enum csv_format {
+	CSV_FORMAT_PORTABLE,
+	CSV_FORMAT_LOCALIZED
+};
+
 struct main_window {
 	GtkApplication *app;
 
@@ -397,6 +402,7 @@ struct main_window {
 	GtkWidget *light_item;
 	GtkWidget *save_item;
 	GtkWidget *save_all_item;
+	GtkWidget *export_item;
 	GtkWidget *close_all_item;
 	struct output_panel *active_panel;
 
@@ -415,6 +421,7 @@ struct main_window {
 	int cal; // 0.1 s/d
 	double paperstrip_tick_seconds;
 	double paperstrip_window_seconds;
+	int csv_format;
 	int nominal_sr;
 	int restart_audio;
 	int pending_audio_device;
@@ -456,6 +463,7 @@ int audio_settings_is_open(struct main_window *w);
 	OP(light_algorithm, is_light, int) \
 	OP(audio_device, audio_device, int) \
 	OP(audio_api, audio_api, int) \
+	OP(csv_format, csv_format, int) \
 	OP(audio_rate, nominal_sr, int) \
 	OP(paperstrip_tick_seconds, paperstrip_tick_seconds, double) \
 	OP(paperstrip_window_seconds, paperstrip_window_seconds, double)
@@ -483,4 +491,5 @@ void delete_watch(struct main_window *w, const char *name);
 /* serializer.c */
 /* trends[i] is the long-term trend of snapshot i, NULL if it has none */
 int write_file(FILE *f, struct snapshot **s, char **names, struct trend **trends, uint64_t cnt);
+int write_trend_csv(FILE *f, const struct trend *t, char separator, char decimal);
 int read_file(FILE *f, struct snapshot ***s, char ***names, struct trend ***trends, uint64_t *cnt);
