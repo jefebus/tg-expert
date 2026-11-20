@@ -44,7 +44,8 @@ the calibration, typically better than 0.5 s/d.
 5. When it shows *done*, choose #ui[Stop calibration] in the menu to return to
   normal measurement.
 
-Calibration takes about 15 minutes (900 ticks). Repeat it once to confirm
+With default algorithm settings, calibration takes about 15 minutes (900 ticks).
+Other algorithm settings can change the duration. Repeat it once to confirm
 the result. Two runs should agree within a few tenths of a second per day.
 
 #shot("calibration.png", [Calibration in progress, at 5 %. The paperstrip

@@ -28,8 +28,26 @@ From left to right:
 / Current snapshot: the name of the selected snapshot tab, which can be
   edited.
 / Menu: #ui[Open], #ui[Save current display], #ui[Save all snapshots],
-  #ui[Light algorithm], #ui[Audio settings…], #ui[Start calibration],
+  #ui[Audio settings…], #ui[Algorithm configuration…], #ui[Start calibration],
   #ui[User manual], #ui[Close all snapshots] and #ui[Quit].
+
+== Algorithm configuration
+
+The command menu opens #ui[Algorithm configuration…]. The #ui[Basic] tab
+selects #ui[Light algorithm], which processes half the audio samples, uses
+shorter analysis windows and skips noise suppression.
+
+The #ui[Advanced] and #ui[Expert] tabs group other settings by topic. Changing
+them can produce incorrect measurements. The noise suppression settings marked #ui[Full only] have no
+effect in Light mode. Calibration settings apply during calibration.
+Parameters that differ from their defaults are highlighted; hover over a
+parameter to see its default value.
+Both #ui[Apply] and #ui[Save] apply changes immediately and save them in the
+INI file; Apply keeps the dialog open, while Save closes it. Changing settings
+restarts the measurement and clears the live Trend; save a snapshot first if
+you want to keep it. #ui[Reset to defaults] resets the dialog values, including
+Light, but does not apply them until Apply or Save. #ui[Cancel] discards only
+unapplied edits, not changes already applied.
 
 == The results table
 

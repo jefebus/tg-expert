@@ -1,4 +1,5 @@
 src/algo.c
+src/algorithm_settings.c
 src/audio.c
 src/audio_settings.c
 src/computer.c

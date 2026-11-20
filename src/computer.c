@@ -119,7 +119,7 @@ static void compute_update(struct computer *c)
 	c->actv->candidate_bph = 0;
 	int i;
 	for(i=0; i<NSTEPS && p[i].ready; i++);
-	for(i--; i>=0 && p[i].sigma > p[i].period / 10000; i--);
+	for(i--; i>=0 && p[i].sigma > p[i].period * algorithm_parameters[ALG_PERIOD_SIGMA]; i--);
 	if(i>=0) {
 		if(c->actv->pb) pb_destroy_clone(c->actv->pb);
 		c->actv->pb = pb_clone(&p[i]);
@@ -196,7 +196,7 @@ void compute_results(struct snapshot *s)
 		s->rate = (7200/(s->guessed_bph * s->pb->period / s->sample_rate) - 1)*24*3600;
 		s->be = fabs(s->pb->be) * 1000 / s->sample_rate;
 		s->amp = s->la * s->pb->amp; // 0 = not available
-		if(s->amp < 135 || s->amp > 360)
+		if(s->amp < algorithm_parameters[ALG_AMP_MIN] || s->amp > 360)
 			s->amp = 0;
 	} else
 		s->guessed_bph = s->bph ? s->bph : DEFAULT_BPH;
@@ -265,8 +265,17 @@ static void *computing_thread(void *void_computer)
 	return NULL;
 }
 
+void computer_join(struct computer *c)
+{
+	if(!c->thread_joined) {
+		pthread_join(c->thread, NULL);
+		c->thread_joined = 1;
+	}
+}
+
 void computer_destroy(struct computer *c)
 {
+	computer_join(c);
 	int i;
 	for(i=0; i<NSTEPS; i++)
 		pb_destroy(&c->pdata->buffers[i]);
@@ -279,7 +288,6 @@ void computer_destroy(struct computer *c)
 		snapshot_destroy(c->curr);
 	pthread_mutex_destroy(&c->mutex);
 	pthread_cond_destroy(&c->cond);
-	pthread_join(c->thread, NULL);
 	free(c);
 }
 
@@ -372,6 +380,7 @@ struct computer *start_computer(int nominal_sr, int bph, double la, int cal, int
 	c->recompute = 0;
 	c->calibrate = 0;
 	c->clear_trace = 0;
+	c->thread_joined = 0;
 
 	if(pthread_mutex_init(&c->mutex, NULL)) goto thread_init_error;
 	mutex_initialized = 1;

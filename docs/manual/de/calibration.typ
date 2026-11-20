@@ -42,7 +42,8 @@ bestimmt die Genauigkeit der Kalibrierung, typischerweise besser als 0.5 s/t.
     erneut starten.
 5. Sobald *done* angezeigt wird, im Menü #ui[Kalibrierung beenden] wählen, um
   zur normalen Messung zurückzukehren.
-Die Kalibrierung dauert etwa 15 Minuten (900 Ticks). Wiederholen Sie sie
+Mit den Standard-Algorithmuseinstellungen dauert die Kalibrierung etwa
+15 Minuten (900 Ticks); andere Einstellungen können die Dauer ändern. Wiederholen Sie sie
 einmal, um das Ergebnis zu bestätigen. Zwei Durchläufe sollten auf wenige
 Zehntelsekunden pro Tag übereinstimmen.
 #shot("calibration.png", [Kalibrierung läuft, bei 5 %. Das Gangdiagramm zeigt

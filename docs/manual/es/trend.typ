@@ -82,6 +82,13 @@ registran las lecturas con buena señal, por lo que los períodos omitidos
 aparecen como saltos; las filas se marcan como válidas o en estabilización. La
 amplitud queda vacía cuando no está disponible.
 
+El algoritmo aparece como #ui[Ligero (personalizado)] o #ui[Completo
+(personalizado)] si algún parámetro de medición utilizado en ese modo difiere
+del predeterminado. No cuentan los parámetros de calibración ni los de
+supresión de ruido en modo ligero. Las capturas conservan esta información;
+las capturas antiguas que no la contienen se exportan como #ui[Ligero] o
+#ui[Completo].
+
 En el diálogo para guardar, elige CSV portable (separador coma y punto
 decimal) o, si la interfaz está en español o alemán, CSV localizado
 (separador punto y coma y coma decimal). La opción elegida se guarda y se
@@ -99,4 +106,4 @@ los caracteres acentuados.
   muestra cómo la sigue la marcha.
 4. Haga una captura y guárdela. Los datos de tendencia se guardan con ella.
 
-#note[*Antes de cambiar ajustes:* haz una captura y guárdala si necesitas conservar el registro actual. Cambiar bph, ángulo de alzamiento, cal, entrada de audio, frecuencia de muestreo o algoritmo ligero reinicia la tendencia. Para registros largos, introduce los bph conocidos en lugar de depender de la detección automática.]
+#note[*Antes de cambiar ajustes:* haz una captura y guárdala si necesitas conservar el registro actual. Cambiar bph, ángulo de alzamiento, cal, entrada de audio, frecuencia de muestreo o ajustes del algoritmo reinicia la tendencia. Para registros largos, introduce los bph conocidos en lugar de depender de la detección automática.]

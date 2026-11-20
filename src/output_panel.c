@@ -949,9 +949,14 @@ static gboolean paperstrip_draw_event(GtkWidget *widget, cairo_t *c, struct outp
 
 	// Width of the strip in ms (a beat in normal mode, a second in calibration, divided by the zoom)
 	const double window_ms = snst->calibrate ? 1000. / zoom_factor : 3600000. / (safe_bph * zoom_factor);
-	// Amplitude scale: linear, 110 deg at the left edge, 360 deg at the right edge,
-	// so that each of the PAPERSTRIP_DIVISIONS divisions is 25 deg
-	const double amp_min = 110.0, amp_max = 360.0;
+	double amp_min = 110.0;
+	if(snst->amp > 0 && snst->amp < amp_min) amp_min = 80.0;
+	for(int j = 0; snst->amps && j < snst->amps_count; j++)
+		if(snst->amps[j] > 0 && snst->la * snst->amps[j] < 110) {
+			amp_min = 80.0;
+			break;
+		}
+	const double amp_max = 360.0;
 #define AMP_X(a)   (left_margin + ((a) - amp_min) / (amp_max - amp_min) * (strip_width - 1))
 	// The beat position runs from right to left, so that a fast watch (positive
 	// rate) leans to the right with the newest beats at the bottom
@@ -1832,17 +1837,23 @@ static gboolean trend_draw_event(GtkWidget *widget, cairo_t *c, struct output_pa
 		snprintf(s, sizeof(s), "%s", _("Rate (s/day)"));
 	trend_text(c, gx, rate_top - font * 0.4, 0, s);
 
-	// Amplitude, 120 to 360 deg
+	// Expand the amplitude scale for readings below the usual 120 degrees.
 	cairo_set_font_size(c, font * 0.8);
 	cairo_set_line_width(c, 1);
-	for(int v = 120; v <= 360; v += 60) {
+	int amp_floor = 120;
+	for(i = 0; i < t->count; i++)
+		if(t->samples[i].amp > 0 && t->samples[i].amp < 120) {
+			amp_floor = 60;
+			break;
+		}
+	for(int v = amp_floor; v <= 360; v += 60) {
 		snprintf(s, sizeof(s), "%d", v);
-		trend_hline(c, gx, gw, amp_bottom - (v - 120) / 240.0 * (amp_bottom - amp_top), 0, s);
+		trend_hline(c, gx, gw, amp_bottom - (v - amp_floor) / (double)(360 - amp_floor) * (amp_bottom - amp_top), 0, s);
 	}
 	n = trend_columns(t, t0, t1, gx, gw, TREND_SERIES_AMPLITUDE, cols, max_cols);
 	double amp_mean = trend_stats_mean(&t->amp);
-	trend_draw_average(c, gx, gw, amp_top, amp_bottom, 120, 360, &t->amp, COL_AMP);
-	trend_draw_series(c, cols, n, amp_top, amp_bottom, 120, 360, COL_AMP);
+	trend_draw_average(c, gx, gw, amp_top, amp_bottom, amp_floor, 360, &t->amp, COL_AMP);
+	trend_draw_series(c, cols, n, amp_top, amp_bottom, amp_floor, 360, COL_AMP);
 	cairo_set_font_size(c, font * 0.9);
 	set_color(c, COL_AMP, 1);
 	if(t->amp.n)
@@ -1996,7 +2007,7 @@ static GtkWidget *make_calibration_instructions(void)
 		_("<span size='x-large' weight='bold'>Calibration in progress</span>\n"
 		"\n"
 		"Calibration measures how fast your sound card clock really runs, so that "
-		"rates are not skewed by the computer. It takes about 15 minutes (900 ticks).\n"
+		"rates are not skewed by the computer. With default settings it takes about 15 minutes (900 ticks).\n"
 		"\n"
 		"<b>1. Use a quartz reference</b>\n"
 		"Place a quartz watch or clock that ticks once per second (an analog one with "

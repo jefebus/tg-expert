@@ -40,7 +40,8 @@ de la calibración, normalmente mejor que 0.5 s/día.
     empiece de nuevo.
 5. Cuando aparezca *done*, elija #ui[Detener calibración] en el menú para
   volver a la medición normal.
-La calibración dura unos 15 minutos (900 tics). Repítala una vez para
+Con los ajustes predeterminados del algoritmo, la calibración dura unos
+15 minutos (900 tics); otros ajustes pueden cambiar la duración. Repítala una vez para
 confirmar el resultado. Dos mediciones deberían coincidir con una diferencia
 de unas décimas de segundo por día.
 #shot("calibration.png", [Calibración en curso, al 5 %. El diagrama de marcha

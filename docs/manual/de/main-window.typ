@@ -26,9 +26,32 @@ Von links nach rechts:
 / Aktuelle Aufnahme: der Name des gewählten Aufnahme-Reiters, der bearbeitet
   werden kann.
 / Menü: #ui[Öffnen], #ui[Aktuelle Anzeige speichern],
-  #ui[Alle Aufnahmen speichern], #ui[Leichter Algorithmus],
-  #ui[Audioeinstellungen…], #ui[Kalibrierung starten], #ui[Benutzerhandbuch],
+  #ui[Alle Aufnahmen speichern],
+  #ui[Audioeinstellungen…], #ui[Algorithmuskonfiguration…], #ui[Kalibrierung starten], #ui[Benutzerhandbuch],
   #ui[Alle Aufnahmen schließen] und #ui[Beenden].
+
+== Algorithmuskonfiguration
+
+Das Menü öffnet die #ui[Algorithmuskonfiguration…]. Auf dem Reiter
+#ui[Grundlegend] wird der #ui[Leichter Algorithmus] gewählt. Er verarbeitet
+die Hälfte der Audiosamples, verwendet kürzere Analysefenster und lässt die
+Rauschunterdrückung aus.
+
+Die Reiter #ui[Fortgeschritten] und #ui[Experte] gruppieren weitere
+Einstellungen nach Thema. Änderungen können zu falschen Messungen führen. Die mit #ui[nur vollständig]
+markierten Einstellungen zur Rauschunterdrückung wirken nicht im leichten
+Modus. Kalibrierungseinstellungen gelten bei der Kalibrierung.
+Parameter, die vom Standard abweichen, werden hervorgehoben. Halten Sie den
+Mauszeiger über einen Parameter, um seinen Standardwert zu sehen.
+
+Sowohl #ui[Anwenden] als auch #ui[Speichern] übernehmen Änderungen sofort
+und speichern sie in der INI-Datei. Anwenden lässt den Dialog offen, Speichern
+schließt ihn. Änderungen starten die Messung neu und löschen den Live-Verlauf;
+speichern Sie vorher eine Aufnahme, wenn Sie ihn behalten möchten.
+#ui[Standardwerte wiederherstellen] setzt die Dialogwerte einschließlich des
+leichten Modus zurück, übernimmt sie aber erst mit Anwenden oder Speichern.
+#ui[Abbrechen] verwirft nur noch nicht übernommene Änderungen.
+
 == Die Ergebnistabelle
 Die Tabelle oben in jedem Reiter zeigt:
 / RATE: die Gangabweichung in s/d, korrigiert um den Wert cal.

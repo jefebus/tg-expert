@@ -11,7 +11,7 @@
   [cal], [−100.0 bis +100.0 s/t],
   [Abtastraten], [22.05, 32, 44.1 und 48 kHz, sofern das Gerät sie unterstützt],
   [Aufzeichnung des Verlaufs], [ein Messwert alle 2 s, bis zu 100 Stunden],
-  [Kalibrierung], [etwa 15 Minuten (900 Ticks einer 1-Hz-Quarzreferenz)],
+  [Kalibrierung], [standardmäßig etwa 15 Minuten (900 Ticks einer 1-Hz-Quarzreferenz)],
 )
 = Glossar
 / Abfallfehler: die positive zeitliche Asymmetrie zwischen den wechselnden Halbperioden Tick-zu-Tack und Tack-zu-Tick, in ms.

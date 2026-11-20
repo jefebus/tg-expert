@@ -11,7 +11,7 @@
   [cal], [de −100.0 a +100.0 s/d],
   [Frecuencias de muestreo], [22.05, 32, 44.1 y 48 kHz, si el dispositivo las admite],
   [Registro de tendencia], [una lectura cada 2 s, hasta 100 horas],
-  [Calibración], [unos 15 minutos (900 tics de una referencia de cuarzo de 1 Hz)],
+  [Calibración], [unos 15 minutos por defecto (900 tics de una referencia de cuarzo de 1 Hz)],
 )
 = Glosario
 / Amplitud: el recorrido del volante desde su posición de reposo, en grados.

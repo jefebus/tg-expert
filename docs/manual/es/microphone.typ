@@ -39,5 +39,5 @@ perturban la medición.
 - No toque la mesa ni los cables durante la medición.
 - Una almohadilla blanda bajo el soporte aísla el reloj de las vibraciones de
   la mesa.
-- El #ui[Algoritmo ligero] (en el menú) omite el supresor de ruido. Déjelo
+- El #ui[Algoritmo ligero] (en #ui[Configuración del algoritmo…], #ui[Básico]) omite el supresor de ruido. Déjelo
   desactivado salvo que el ordenador sea demasiado lento.

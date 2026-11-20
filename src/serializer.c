@@ -367,6 +367,7 @@ static int serialize_trend(FILE *f, const struct trend *s)
 	SERIALIZE(int,cal);
 	SERIALIZE(int,nominal_sr);
 	SERIALIZE(int,is_light);
+	SERIALIZE(int,algorithm_custom);
 	SERIALIZE(int,full);
 	if(make_label(f, "elapsed")) return 1;
 	if(serialize_double(f, trend_elapsed(s))) return 1;
@@ -425,6 +426,7 @@ static int scan_trend(FILE *f, struct trend **trend)
 		TREND_FIELD(cal, int);
 		TREND_FIELD(nominal_sr, int);
 		TREND_FIELD(is_light, int);
+		TREND_FIELD(algorithm_custom, int);
 		TREND_FIELD(full, int);
 #undef TREND_FIELD
 		if(!strcmp("elapsed", l)) {
@@ -805,7 +807,9 @@ int write_trend_csv(FILE *f, const struct trend *t, char separator, char decimal
 				csv_write_number(f, t->la, decimal) || fputc(separator, f) == EOF ||
 				csv_write_number(f, t->cal / 10.0, decimal) || fputc(separator, f) == EOF ||
 				fprintf(f, "%d", t->nominal_sr) < 0 || fputc(separator, f) == EOF ||
-				fprintf(f, "%s\r\n", t->is_light ? _("Light") : _("Full")) < 0)
+				fprintf(f, "%s\r\n", t->algorithm_custom ?
+					(t->is_light ? _("Light (custom)") : _("Full (custom)")) :
+					(t->is_light ? _("Light") : _("Full"))) < 0)
 			return 1;
 	}
 	return ferror(f) ? 1 : 0;

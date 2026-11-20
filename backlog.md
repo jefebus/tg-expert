@@ -24,7 +24,7 @@ State values: Pending, Done, or Released in vx.x.x.
 | 19 | TG-18 | File seeking, looping, and accelerated analysis | 5 | 5 | 1.00 | Seek with analysis reset and warm-up, repeat intervals, and process faster than real time. | Pending |
 | 20 | TG-19 | Independent quality per measurement | 5 | 5 | 1.00 | Separate validity and diagnostic reasons for rate, BE, and amplitude; avoid unvalidated confidence percentages. | Pending |
 | 21 | TG-20 | Configuration epochs without destructive clearing | 5 | 5 | 1.00 | Preserve the session when settings change and start a labeled configuration segment. | Pending |
-| 22 | TG-26 | Algorithm configuration dialog | 3 | 3 | 1.00 | Expose algorithm parameters in a configuration dialog and provide defaults. | Pending |
+| 22 | TG-26 | Algorithm configuration dialog | 3 | 3 | 1.00 | Expose algorithm parameters in a configuration dialog and provide defaults. | Done |
 | 23 | TG-21 | Beat-aligned acoustic waterfall | 4 | 5 | 0.80 | One row per event, tick/tock separation, selectable alignment, and envelope intensity. | Pending |
 | 24 | TG-22 | Extended power-reserve test | 3 | 4 | 0.75 | Configurable duration, winding/start marker, and distinction between a possible stop and signal loss. | Pending |
 | 25 | TG-25 | Positional polar/radar view | 2 | 3 | 0.67 | Optional summary with numeric values and clearly defined scales. | Pending |

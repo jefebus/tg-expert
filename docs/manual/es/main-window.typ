@@ -26,9 +26,30 @@ De izquierda a derecha:
 / Captura actual: el nombre de la pestaña de captura seleccionada, que puede
   editarse.
 / Menú: #ui[Abrir], #ui[Guardar la pantalla actual], #ui[Guardar todas las
-  capturas], #ui[Algoritmo ligero], #ui[Ajustes de audio…], #ui[Iniciar
+  capturas], #ui[Ajustes de audio…], #ui[Configuración
+  del algoritmo…], #ui[Iniciar
   calibración], #ui[Manual de usuario], #ui[Cerrar todas las capturas] y
   #ui[Salir].
+
+== Configuración del algoritmo
+
+El menú abre #ui[Configuración del algoritmo…]. En la pestaña #ui[Básico] se
+selecciona el #ui[Algoritmo ligero], que procesa la mitad de las muestras de
+audio, usa ventanas de análisis más cortas y omite la supresión de ruido.
+
+Las pestañas #ui[Avanzado] y #ui[Experto] agrupan los demás ajustes por tema.
+Cambiarlos puede producir mediciones incorrectas. Los ajustes de supresión de ruido marcados #ui[solo completo] no
+afectan al modo ligero. Los ajustes de calibración se usan durante la
+calibración. Los parámetros distintos de sus valores predeterminados aparecen
+resaltados; sitúe el cursor sobre un parámetro para ver su valor predeterminado.
+Tanto #ui[Aplicar] como #ui[Guardar] aplican los cambios
+inmediatamente y los guardan en el archivo INI; Aplicar mantiene abierto el
+diálogo y Guardar lo cierra. Cambiar los ajustes reinicia la medición y borra
+la tendencia en tiempo real; guarda antes una captura si quieres conservarla.
+#ui[Restablecer valores predeterminados] reinicia los valores del diálogo,
+incluido el modo ligero, pero no los aplica hasta pulsar Aplicar o Guardar.
+#ui[Cancelar] descarta solo los cambios aún no aplicados.
+
 == La tabla de resultados
 La tabla situada en la parte superior de cada pestaña muestra:
 / RATE: la marcha en s/d, corregida con el valor cal.

@@ -56,7 +56,7 @@ of s/d).*
 - Improve the signal first: move the microphone into contact with the case,
   reduce room noise, and adjust the gain. See @microphone.
 - Check the waveform panels. Sharp, separate clicks mean a good signal.
-- Turn off the #ui[Light algorithm] if it is on.
+- Turn off the #ui[Light algorithm] in #ui[Algorithm configuration…] if it is on.
 - Don't touch the watch or the desk during the measurement.
 - Some instability is the watch itself. A worn or dirty movement varies from
   beat to beat. The Trend page's σ shows how much.

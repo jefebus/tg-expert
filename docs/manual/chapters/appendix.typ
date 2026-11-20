@@ -13,7 +13,7 @@
   [cal], [−100.0 to +100.0 s/d],
   [Sample rates], [22.05, 32, 44.1 and 48 kHz, if the device supports them],
   [Trend recording], [one reading every 2 s, up to 100 hours],
-  [Calibration], [about 15 minutes (900 ticks of a 1 Hz quartz reference)],
+  [Calibration], [about 15 minutes by default (900 ticks of a 1 Hz quartz reference)],
 )
 
 = Glossary

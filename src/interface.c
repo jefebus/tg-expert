@@ -380,7 +380,7 @@ static void handle_cal_change(GtkSpinButton *b, struct main_window *w)
  * computer_terminated(). Used by the audio settings dialog. */
 void request_audio_restart(struct main_window *w, int api, int device, int rate)
 {
-	if(!w->controls_active || w->calibrate || w->restart_audio) return;
+	if(!w->controls_active || w->calibrate || w->restart_audio || w->restart_algorithm) return;
 	w->pending_audio_api = api;
 	w->pending_audio_device = device;
 	w->pending_audio_rate = rate;
@@ -442,6 +442,7 @@ static void on_shutdown(GApplication *app, void *p)
 
 static void recompute(struct main_window *w);
 static void computer_callback(void *w);
+guint refresh(struct main_window *w);
 
 static void remove_runtime_timers(struct main_window *w)
 {
@@ -493,6 +494,12 @@ static guint computer_terminated(struct main_window *w)
 		gtk_widget_destroy(w->window);
 	} else {
 		debug("Restarting computer");
+
+		int algorithm_changed = w->restart_algorithm;
+		if(algorithm_changed) {
+			computer_join(w->computer);
+			algorithm_settings_load(w);
+		}
 
 		if(w->restart_audio) {
 			int requested_device = w->pending_audio_device;
@@ -554,6 +561,11 @@ static guint computer_terminated(struct main_window *w)
 			w->computer->callback = computer_callback;
 			w->computer->callback_data = w;
 
+			if(algorithm_changed) {
+				trend_reset(w->active_panel->trend);
+				refresh(w);
+			}
+			w->restart_algorithm = 0;
 			recompute(w);
 			update_sensitivity(w);
 		}
@@ -674,7 +686,7 @@ static void update_export_item(struct main_window *w)
 static void update_sensitivity(struct main_window *w)
 {
 	int live = w->controls_active;
-	int settings = live && !w->calibrate;
+	int settings = live && !w->calibrate && !w->restart_algorithm;
 
 	watch_update_buttons(w);
 	gtk_widget_set_sensitive(w->bph_combo_box, settings);
@@ -684,13 +696,13 @@ static void update_sensitivity(struct main_window *w)
 	audio_settings_update(w);
 
 	// Always allow stopping a running calibration, whichever tab is shown
-	gtk_widget_set_sensitive(w->cal_button, live || w->calibrate);
+	gtk_widget_set_sensitive(w->cal_button, (live || w->calibrate) && !w->restart_algorithm);
 	gtk_menu_item_set_label(GTK_MENU_ITEM(w->cal_button),
 			w->calibrate ? _("Stop calibration") : _("Start calibration"));
 
 	// Other menu entries are locked while calibrating (Quit stays available)
 	gtk_widget_set_sensitive(w->open_item, !w->calibrate);
-	gtk_widget_set_sensitive(w->light_item, !w->calibrate);
+	gtk_widget_set_sensitive(w->algorithm_item, !w->calibrate && !w->restart_audio && !w->restart_algorithm);
 	gtk_widget_set_sensitive(w->save_item, menu_item_wanted(w->save_item) && !w->calibrate);
 	gtk_widget_set_sensitive(w->save_all_item, menu_item_wanted(w->save_all_item) && !w->calibrate);
 	if(w->export_item)
@@ -707,13 +719,15 @@ static void handle_calibrate(GtkMenuItem *b, struct main_window *w)
 	recompute(w);
 }
 
-static void handle_light(GtkCheckMenuItem *b, struct main_window *w)
+void request_algorithm_restart(struct main_window *w, int light)
 {
-	int button_state = gtk_check_menu_item_get_active(b) == TRUE;
-	if(button_state != w->is_light) {
-		w->is_light = button_state;
-		recompute(w);
-	}
+	w->is_light = light;
+	w->restart_algorithm = 1;
+	update_sensitivity(w);
+	lock_computer(w->computer);
+	if(w->computer->recompute >= 0)
+		kill_computer(w);
+	unlock_computer(w->computer);
 }
 
 static void controls_active(struct main_window *w, int active)
@@ -1703,33 +1717,14 @@ static void init_main_window(struct main_window *w)
 
 	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), gtk_separator_menu_item_new());
 
-	// ... Light checkbox
-	GtkWidget *light_checkbox = gtk_check_menu_item_new_with_label(_("Light algorithm"));
-	w->light_item = light_checkbox;
-	gtk_widget_set_tooltip_text(light_checkbox,
-		_("Reduces CPU load, \n"
-		"for slow computers.\n"
-		"\n"
-		"It processes half of\n"
-		"the audio samples, \n"
-		"uses shorter analysis\n"
-		"windows and skips the\n"
-		"noise suppressor.\n"
-		"Results update faster,\n"
-		"but they are less stable\n"
-		"and more sensitive to \n"
-		"background noise.\n"
-		"Toggling this setting will\n"
-		"restart your measurement.")
-		);
-	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), light_checkbox);
-	g_signal_connect(light_checkbox, "toggled", G_CALLBACK(handle_light), w);
-	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(light_checkbox), w->is_light);
-
 	// ... Audio settings: audio system, input device and rate
 	GtkWidget *audio_settings_item = gtk_menu_item_new_with_label(_("Audio settings…"));
 	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), audio_settings_item);
 	g_signal_connect_swapped(audio_settings_item, "activate", G_CALLBACK(audio_settings_open), w);
+
+	w->algorithm_item = gtk_menu_item_new_with_label(_("Algorithm configuration…"));
+	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), w->algorithm_item);
+	g_signal_connect_swapped(w->algorithm_item, "activate", G_CALLBACK(algorithm_settings_open), w);
 
 	// ... Start / Stop calibration (label switches with the state)
 	w->cal_button = gtk_menu_item_new_with_label(_("Start calibration"));
@@ -1740,7 +1735,8 @@ static void init_main_window(struct main_window *w)
 		"ticking once per second\n"
 		"as reference.\n"
 		"\n"
-		"Takes about 15 minutes.\n"
+		"Takes about 15 minutes\n"
+		"with default settings.\n"
 		"The result is stored\n"
 		"in the cal field.")
 		);
@@ -1866,6 +1862,7 @@ static void start_interface(GApplication* app, void *p)
 	w->nominal_sr = PA_SAMPLE_RATE;
 	w->audio_device = AUDIO_DEVICE_DEFAULT;
 	w->restart_audio = 0;
+	w->restart_algorithm = 0;
 	w->pending_audio_device = AUDIO_DEVICE_DEFAULT;
 	w->pending_audio_rate = PA_SAMPLE_RATE;
 	w->audio_api = AUDIO_API_DEFAULT;
@@ -1881,6 +1878,7 @@ static void start_interface(GApplication* app, void *p)
 	w->live_position = POS_NONE;
 
 	load_config(w);
+	algorithm_settings_load(w);
 	if(w->settling_seconds < 0 || w->settling_seconds > TREND_MAX_SETTLING_S)
 		w->settling_seconds = 0;
 	if(w->csv_format != CSV_FORMAT_PORTABLE && w->csv_format != CSV_FORMAT_LOCALIZED)
@@ -2006,9 +2004,8 @@ static void handle_open(GApplication* app, GFile **files, int cnt, char *hint, v
 	}
 }
 
-/* Folder with the translations for the user's languages, or NULL. It is
- * looked for in LOCALEDIR and in locale/ under the system data folders
- * (on Windows, the share folder of the installation). */
+/* Folder with translations for the user's languages, or NULL. Debug builds
+ * prefer po/locale, followed by LOCALEDIR and the system data folders. */
 static gchar *find_locale_dir(void)
 {
 	const gchar * const *langs = g_get_language_names();
@@ -2017,10 +2014,10 @@ static gchar *find_locale_dir(void)
 	while(data_dirs[n]) n++;
 	gchar **dirs = g_new0(gchar *, n + 3);
 	int k = 0;
-	dirs[k++] = g_strdup(LOCALEDIR);
 #ifdef DEBUG
 	dirs[k++] = g_strdup("po/locale");	// built by make in the source tree
 #endif
+	dirs[k++] = g_strdup(LOCALEDIR);
 	for(int i = 0; i < n; i++)
 		dirs[k++] = g_build_filename(data_dirs[i], "locale", NULL);
 	gchar *found = NULL;

@@ -52,10 +52,6 @@
 #define MANUAL_FILE_NAME "tg-expert-manual.pdf"
 #define MANUAL_URL "https://github.com/jefebus/tg-expert/releases/latest"
 
-#define FILTER_CUTOFF 3000
-
-#define CAL_DATA_SIZE 900
-
 #define FIRST_STEP 1
 #define FIRST_STEP_LIGHT 0
 
@@ -104,6 +100,17 @@
 #define UNUSED(X) (void)(X)
 
 /* algo.c */
+enum algorithm_parameter {
+	ALG_FILTER, ALG_NOISE_WINDOW, ALG_NOISE_SEGMENT, ALG_NOISE_THRESHOLD,
+	ALG_TAPER, ALG_LOBES, ALG_GUESS_SEARCH, ALG_HARMONIC, ALG_DOUBLE_TRIGGER,
+	ALG_PERIOD_REFINE, ALG_BE_SEARCH, ALG_TIC_SMOOTH, ALG_EVENT_SEARCH,
+	ALG_TRIM, ALG_AMP_SMOOTH, ALG_AMP_INITIAL, ALG_AMP_NOISE, ALG_AMP_LIMIT,
+	ALG_AMP_STEP, ALG_AMP_MIN, ALG_AMP_DIFFERENCE, ALG_PERIOD_LIMIT,
+	ALG_PERIOD_SIGMA, ALG_CAL_COUNT, ALG_CAL_EDGE, ALG_CAL_INTERVAL,
+	ALG_CAL_PRECISION, ALG_CAL_LOCK_LOW, ALG_CAL_LOCK_HIGH, ALG_COUNT
+};
+extern double algorithm_parameters[ALG_COUNT];
+
 struct processing_buffers {
 	int sample_rate;
 	int sample_count;
@@ -248,6 +255,7 @@ enum watch_position {
 
 struct computer {
 	pthread_t thread;
+	int thread_joined;
 	pthread_mutex_t mutex;
 	pthread_cond_t cond;
 
@@ -269,6 +277,7 @@ struct computer {
 
 struct snapshot *snapshot_clone(struct snapshot *s);
 void snapshot_destroy(struct snapshot *s);
+void computer_join(struct computer *c);
 void computer_destroy(struct computer *c);
 struct computer *start_computer(int nominal_sr, int bph, double la, int cal, int light);
 void lock_computer(struct computer *c);
@@ -304,7 +313,7 @@ struct trend {
 	gint64 start_us, last_us, end_us;	// monotonic time; end_us only if frozen
 	gint64 settling_until_us;
 	// settings the readings were taken with
-	int bph, cal, nominal_sr, is_light;
+	int bph, cal, nominal_sr, is_light, algorithm_custom;
 	double la;
 	gint64 guess_mismatch_us;	// since when the guessed bph differs from bph, 0 if it does not
 	struct trend_stats rate, amp, be;
@@ -410,7 +419,7 @@ struct main_window {
 	GtkWidget *cal_button; // "Start calibration" / "Stop calibration" menu item
 	GtkWidget *notebook;
 	GtkWidget *open_item;
-	GtkWidget *light_item;
+	GtkWidget *algorithm_item;
 	GtkWidget *save_item;
 	GtkWidget *save_all_item;
 	GtkWidget *export_item;
@@ -436,6 +445,7 @@ struct main_window {
 	int csv_format;
 	int nominal_sr;
 	int restart_audio;
+	int restart_algorithm;
 	int pending_audio_device;
 	int pending_audio_rate;
 	int pending_audio_api;
@@ -450,6 +460,11 @@ struct main_window {
 	guint kick_timeout;
 	guint save_timeout;
 };
+
+void algorithm_settings_load(struct main_window *w);
+void algorithm_settings_open(struct main_window *w);
+int algorithm_settings_custom(int light);
+void request_algorithm_restart(struct main_window *w, int light);
 
 extern int preset_bph[];
 
