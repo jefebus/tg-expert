@@ -11,6 +11,7 @@ tg_expert_SOURCES = src/algo.c \
 		   src/audio_settings.c \
 		   src/computer.c \
 		   src/config.c \
+		   src/correlations.c \
 		   src/interface.c \
 		   src/output_panel.c \
 		   src/serializer.c \

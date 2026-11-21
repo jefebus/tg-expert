@@ -4,7 +4,7 @@
 #shot("main-window.png", [Das Hauptfenster bei der Messung einer Uhr mit 28800 bph.])
 Das Fenster besteht aus einer oberen Leiste, einer Reiterzeile, der
 Ergebnistabelle, links dem Gangdiagramm und rechts den Signalform-Anzeigen
-oder der Seite Verlauf.
+oder den Seiten Verlauf und Korrelationen.
 == Die obere Leiste
 Von links nach rechts:
 / Uhr: eine Liste gespeicherter Uhren. Die Auswahl einer Uhr setzt deren bph
@@ -120,4 +120,4 @@ trennen, wechselt die Anzeige automatisch zu "Nur Gang": Abfallfehler und
 Amplitude sind nicht verfügbar. Bis Tick und Tack wieder erkannt werden,
 werden keine neuen Signalformen, Papierstreifenereignisse oder Verlaufswerte
 erzeugt. Der bisherige Verlauf bleibt sichtbar.
-Die Seite #ui[Verlauf] wird in @trend beschrieben.
+Die Seiten #ui[Verlauf] und #ui[Korrelationen] werden in @trend beschrieben.

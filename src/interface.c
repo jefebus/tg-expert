@@ -844,6 +844,13 @@ static const char *position_labels[POS_COUNT] = {
 	N_("Crown right (CR)")
 };
 
+const char *watch_position_label(int pos)
+{
+	if(pos < POS_NONE || pos >= POS_COUNT)
+		pos = POS_NONE;
+	return _(position_labels[pos]);
+}
+
 /* Tab title: "<name or Snapshot>" plus " (<position>)" when a position is set */
 static void update_tab_label(GtkWidget *panel)
 {

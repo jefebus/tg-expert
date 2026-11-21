@@ -4,7 +4,7 @@
 #shot("main-window.png", [La ventana principal midiendo un reloj de 28800 bph.])
 La ventana tiene una barra superior, una fila de pestañas, la tabla de
 resultados, el diagrama de marcha a la izquierda y, a la derecha, los paneles
-de forma de onda o la página de tendencia.
+de forma de onda, tendencia o correlaciones.
 == La barra superior
 De izquierda a derecha:
 / Reloj: una lista de relojes guardados. Al seleccionar uno se establecen sus
@@ -121,4 +121,4 @@ la pantalla cambia automáticamente a "Solo marcha": el error de batido y la
 amplitud aparecen como no disponibles, y no se añaden formas de onda, eventos
 al registro ni lecturas de tendencia hasta que se detecten de nuevo el tic y
 el toc. El historial anterior sigue visible.
-La página #ui[Tendencia] se describe en @trend.
+Las páginas #ui[Tendencia] y #ui[Correlaciones] se describen en @trend.

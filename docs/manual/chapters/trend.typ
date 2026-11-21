@@ -82,6 +82,30 @@ controls below the page set:
   ±50 s/d.
 / Show: the time shown: #ui[All], or the last 1, 6 or 24 hours.
 
+== Correlations
+
+The #ui[Correlations] page uses the same recorded readings. Its three scatter
+plots show amplitude → rate, beat error → rate and beat error → amplitude.
+Points are not joined, and a relationship does not establish a cause. The
+position selector shows all positions as separate series or one position at
+a time. Colours and symbols remain consistent across the plots. #ui[(not set)]
+is an unknown position, not an additional physical position.
+
+The #ui[Show] time selector and the axis ranges are shared with Trend,
+independently of the position filter. Values outside those ranges are shown
+at the edge. Hover over a point for the elapsed time, recorded position and
+available values. A reading without amplitude can still appear in the beat
+error → rate plot; zero rate and zero beat error are valid. Readings marked
+as settling are excluded, although they still contribute to Trend's axis
+ranges. Older files without settling markers cannot identify such readings.
+Rate-only readings are not recorded in Trend.
+
+Each reading retains the position selected when it was recorded. The history
+does not store the start of the detector's audio window, so readings whose
+window crosses a position change cannot be identified or excluded reliably.
+Older files without recorded positions are shown as #ui[(not set)]; files
+without Trend history cannot supply correlation points.
+
 == Exporting data
 
 Choose #ui[Export Trend as CSV] in the command menu to save the Trend data

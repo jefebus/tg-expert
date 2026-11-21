@@ -1352,3 +1352,43 @@ msgstr ""
 #: src/serializer.c:812
 msgid "Full"
 msgstr ""
+
+msgid "Correlations"
+msgstr ""
+
+msgid "Amplitude → rate"
+msgstr ""
+
+msgid "B.E. → rate"
+msgstr ""
+
+msgid "B.E. → amplitude"
+msgstr ""
+
+msgid "Within one position, shows how rate changes with amplitude. Isochronism curve."
+msgstr ""
+
+msgid "Shows whether beat error and rate change together."
+msgstr ""
+
+msgid "Shows whether beat error remains stable or changes at certain amplitudes."
+msgstr ""
+
+msgid "Amplitude (°)"
+msgstr ""
+
+msgid "Rate (s/d)"
+msgstr ""
+
+msgid "No valid points for this graph in the selected time range"
+msgstr ""
+
+msgid "No points for the selected position"
+msgstr ""
+
+msgid "Unavailable"
+msgstr ""
+
+#, c-format
+msgid "Elapsed: %s\nPosition: %s\nRate: %s\nAmplitude: %s\nBeat error: %s"
+msgstr ""

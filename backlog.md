@@ -14,7 +14,7 @@ State values: Pending, Done, or Released in vx.x.x.
 | 9 | TG-09 | Inspectable lift-time detection | 5 | 3 | 1.67 | Show start, end, threshold, duration, and separate tick/tock estimates; flag ambiguous starts. | Pending |
 | 10 | TG-10 | Position segments and per-interval statistics | 5 | 3 | 1.67 | Preserve each visit to a position; select intervals and exclude samples reversibly. | Pending |
 | 11 | TG-11 | Guided positional test | 5 | 3 | 1.67 | Configurable sequence with manual confirmation, settling, timed acquisition, and summary. | Pending |
-| 12 | TG-12 | Rate vs. amplitude graph | 3 | 2 | 1.50 | Scatter plot colored by position or time and filterable by interval. | Pending |
+| 12 | TG-12 | Rate vs. amplitude graph | 3 | 2 | 1.50 | Scatter plot colored by position or time and filterable by interval. | Done |
 | 13 | TG-13 | Waveform comparison | 3 | 2 | 1.50 | Overlay tick/tock, freeze, share scales, and measure intervals with cursors. | Pending |
 | 14 | TG-14 | Autosave and recovery | 4 | 3 | 1.33 | Incremental persistence, recovery after failure, and explicit clean shutdown. | Pending |
 | 15 | TG-15 | Before/after comparison | 4 | 3 | 1.33 | Compare sessions with equivalent scales, configuration, and positional summaries. | Pending |

@@ -1516,6 +1516,46 @@ msgstr "Ligero"
 msgid "Full"
 msgstr "Completo"
 
+msgid "Correlations"
+msgstr "Correlaciones"
+
+msgid "Amplitude → rate"
+msgstr "Amplitud → marcha"
+
+msgid "B.E. → rate"
+msgstr "B.E. → marcha"
+
+msgid "B.E. → amplitude"
+msgstr "B.E. → amplitud"
+
+msgid "Within one position, shows how rate changes with amplitude. Isochronism curve."
+msgstr "Dentro de una misma posición, muestra cómo varía la marcha al cambiar la amplitud. Curva de isocronismo."
+
+msgid "Shows whether beat error and rate change together."
+msgstr "Muestra si el error de batido y la marcha cambian juntos."
+
+msgid "Shows whether beat error remains stable or changes at certain amplitudes."
+msgstr "Muestra si el error de batido permanece estable o cambia en ciertos rangos de amplitud."
+
+msgid "Amplitude (°)"
+msgstr "Amplitud (°)"
+
+msgid "Rate (s/d)"
+msgstr "Marcha (s/d)"
+
+msgid "No valid points for this graph in the selected time range"
+msgstr "No hay puntos válidos para esta gráfica en el intervalo seleccionado"
+
+msgid "No points for the selected position"
+msgstr "No hay puntos para la posición seleccionada"
+
+msgid "Unavailable"
+msgstr "No disponible"
+
+#, c-format
+msgid "Elapsed: %s\nPosition: %s\nRate: %s\nAmplitude: %s\nBeat error: %s"
+msgstr "Tiempo transcurrido: %s\nPosición: %s\nMarcha: %s\nAmplitud: %s\nError de batido: %s"
+
 #~ msgid "Subharmonic strength (%)"
 #~ msgstr "Intensidad subarmónica (%)"
 

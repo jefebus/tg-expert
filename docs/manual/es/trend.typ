@@ -72,6 +72,33 @@ situados bajo la página establecen:
   o ±50 s/día.
 / Mostrar: el tiempo mostrado: #ui[Todo], o la última 1, 6 o 24 horas.
 
+== Correlaciones
+
+La página #ui[Correlaciones] usa las mismas lecturas registradas. Sus tres
+diagramas de dispersión muestran amplitud → marcha, error de batido → marcha
+y error de batido → amplitud. Los puntos no se unen y una relación no
+demuestra causalidad. El selector muestra todas las posiciones como series
+separadas o una sola posición. Los colores y símbolos son iguales en las tres
+gráficas. #ui[(sin definir)] indica una posición desconocida, no otra posición
+física.
+
+El selector #ui[Mostrar] y los rangos de los ejes se comparten con Tendencia,
+independientemente del filtro de posición. Los valores fuera de esos rangos
+se muestran en el borde. Al pasar sobre un punto se muestran el tiempo
+transcurrido, la posición registrada y los valores disponibles. Una lectura
+sin amplitud puede aparecer en error de batido → marcha; cero es válido para
+la marcha y el error de batido. Se excluyen las lecturas marcadas como en
+estabilización, aunque siguen influyendo en los rangos de Tendencia. Los
+archivos antiguos sin marcas de estabilización no permiten identificarlas.
+Las lecturas de solo marcha no se registran en Tendencia.
+
+Cada lectura conserva la posición seleccionada al registrarla. El historial
+no guarda el inicio de la ventana de audio del detector, por lo que no se
+pueden identificar ni excluir de forma fiable las ventanas que cruzan un
+cambio de posición. Los archivos antiguos sin posiciones registradas se
+muestran como #ui[(sin definir)]; los que no tienen historial de Tendencia
+no pueden proporcionar puntos.
+
 == Exportar datos
 
 Elige #ui[Exportar tendencia como CSV] en el menú de comandos para guardar

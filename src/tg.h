@@ -322,6 +322,12 @@ struct trend_stats {
 	double sum, sumsq, min, max;
 };
 
+struct trend_plot_ranges {
+	double rate_min, rate_max;
+	double amp_min, amp_max;
+	double be_min, be_max;
+};
+
 struct trend {
 	struct trend_sample *samples;
 	int count, capacity;
@@ -348,6 +354,8 @@ int trend_set_samples(struct trend *t, const float *tm, const float *rate, const
 double trend_elapsed(const struct trend *t);
 double trend_stats_mean(const struct trend_stats *s);
 double trend_stats_sd(const struct trend_stats *s);
+void trend_get_plot_ranges(const struct trend *t, double t0, double t1,
+	double fixed_rate, struct trend_plot_ranges *ranges);
 
 /* output_panel.c */
 struct output_panel {
@@ -374,6 +382,10 @@ struct output_panel {
 	int trace_centered;          // the live trace was centred since it appeared
 	GtkWidget *right_switcher;   // chooses "panels" (waveforms) or "trend" in right_stack
 	GtkWidget *trend_drawing_area;
+	GtkWidget *trend_span_combo;
+	GtkWidget *correlation_span_combo;
+	GtkWidget *correlation_areas[3];
+	int correlation_position;   // -1 = all positions
 	GtkWidget *settling_spin;
 	GtkWidget *settling_status;
 	GtkWidget *detection_status_label;
@@ -497,6 +509,11 @@ void print_debug(char *format,...);
 void error(char *format,...);
 void request_audio_restart(struct main_window *w, int api, int device, int rate);
 const char *watch_position_code(int pos);
+const char *watch_position_label(int pos);
+GtkWidget *correlations_create_page(struct output_panel *op);
+void correlations_queue_draw(struct output_panel *op);
+GtkWidget *op_create_trend_span_combo(struct output_panel *op);
+void format_duration(char *s, size_t n, double seconds);
 
 /* audio_settings.c */
 void audio_settings_open(struct main_window *w);

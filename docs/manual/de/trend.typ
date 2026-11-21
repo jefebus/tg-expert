@@ -74,6 +74,33 @@ unten auf der Seite legen fest:
 / Zeige: den angezeigten Zeitraum: #ui[Alle], #ui[Letzte Std.],
   #ui[Letzte 6 Std.] oder #ui[Letzte 24 Std.].
 
+== Korrelationen
+
+Die Seite #ui[Korrelationen] verwendet dieselben aufgezeichneten Messwerte.
+Die drei Streudiagramme zeigen Amplitude → Gangabweichung, Abfallfehler →
+Gangabweichung und Abfallfehler → Amplitude. Die Punkte werden nicht
+verbunden; ein Zusammenhang beweist keine Ursache. Der Lagenfilter zeigt alle
+Lagen als getrennte Reihen oder eine einzelne Lage. Farben und Symbole sind
+in allen Diagrammen gleich. #ui[(nicht gesetzt)] bezeichnet eine unbekannte,
+keine weitere physische Lage.
+
+Der Zeitraum #ui[Zeige] und die Achsenbereiche werden unabhängig vom
+Lagenfilter mit Verlauf geteilt. Werte außerhalb dieser Bereiche erscheinen
+am Rand. Ein Hinweis beim Überfahren eines Punkts zeigt die vergangene Zeit,
+aufgezeichnete Lage und verfügbaren Werte. Ein Messwert ohne Amplitude kann
+im Diagramm Abfallfehler → Gangabweichung erscheinen; null ist für beide
+Werte gültig. Als Stabilisierung markierte Messwerte werden ausgeschlossen,
+beeinflussen aber weiterhin die Achsenbereiche von Verlauf. In alten Dateien
+ohne solche Markierungen lassen sie sich nicht identifizieren. Werte mit nur
+Gangabweichung werden nicht im Verlauf aufgezeichnet.
+
+Jeder Messwert behält die bei der Aufzeichnung gewählte Lage. Der Verlauf
+speichert nicht den Beginn des Audiofensters des Detektors; Fenster über
+einen Lagenwechsel lassen sich daher nicht zuverlässig erkennen oder
+ausschließen. Alte Dateien ohne aufgezeichnete Lagen werden als
+#ui[(nicht gesetzt)] dargestellt; Dateien ohne Verlauf enthalten keine
+Korrelationspunkte.
+
 == Daten exportieren
 
 Wählen Sie im Befehlsmenü #ui[Verlauf als CSV exportieren], um die

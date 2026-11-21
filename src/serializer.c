@@ -435,9 +435,10 @@ static int scan_trend(FILE *f, struct trend **trend)
 		}
 		if(eat_object(f)) goto error;
 	}
-	// All arrays must be there and have the same length
-	if(!tm || !rate || !amp || !be || !position ||
-			n_rate != n_t || n_amp != n_t || n_be != n_t || n_position != n_t ||
+	// Older histories may omit amplitudes, positions and settling markers.
+	if(!tm || !rate || !be ||
+			n_rate != n_t || n_be != n_t || (amp && n_amp != n_t) ||
+			(position && n_position != n_t) ||
 			(settling && n_settling != n_t))
 		ok = 0;
 	if(ok && trend_set_samples(t, tm, rate, amp, be, position, settling, (int)n_t, elapsed))

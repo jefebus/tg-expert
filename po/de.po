@@ -1525,6 +1525,46 @@ msgstr "Leicht"
 msgid "Full"
 msgstr "Vollständig"
 
+msgid "Correlations"
+msgstr "Korrelationen"
+
+msgid "Amplitude → rate"
+msgstr "Amplitude → Gangabweichung"
+
+msgid "B.E. → rate"
+msgstr "Abfallfehler → Gangabweichung"
+
+msgid "B.E. → amplitude"
+msgstr "Abfallfehler → Amplitude"
+
+msgid "Within one position, shows how rate changes with amplitude. Isochronism curve."
+msgstr "Zeigt innerhalb einer Lage, wie sich die Gangabweichung mit der Amplitude ändert. Isochronismuskurve."
+
+msgid "Shows whether beat error and rate change together."
+msgstr "Zeigt, ob sich Abfallfehler und Gangabweichung gemeinsam ändern."
+
+msgid "Shows whether beat error remains stable or changes at certain amplitudes."
+msgstr "Zeigt, ob der Abfallfehler stabil bleibt oder sich in bestimmten Amplitudenbereichen ändert."
+
+msgid "Amplitude (°)"
+msgstr "Amplitude (°)"
+
+msgid "Rate (s/d)"
+msgstr "Gangabweichung (s/Tag)"
+
+msgid "No valid points for this graph in the selected time range"
+msgstr "Keine gültigen Punkte für dieses Diagramm im gewählten Zeitraum"
+
+msgid "No points for the selected position"
+msgstr "Keine Punkte für die gewählte Lage"
+
+msgid "Unavailable"
+msgstr "Nicht verfügbar"
+
+#, c-format
+msgid "Elapsed: %s\nPosition: %s\nRate: %s\nAmplitude: %s\nBeat error: %s"
+msgstr "Vergangene Zeit: %s\nLage: %s\nGangabweichung: %s\nAmplitude: %s\nAbfallfehler: %s"
+
 #~ msgid "Subharmonic strength (%)"
 #~ msgstr "Subharmonische Stärke (%)"
 

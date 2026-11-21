@@ -1530,7 +1530,7 @@ static void handle_right(GtkButton *b, struct output_panel *op)
 
 /* ---- Trend page: long-term statistics recorded by trend.c ---- */
 
-static void format_duration(char *s, size_t n, double seconds)
+void format_duration(char *s, size_t n, double seconds)
 {
 	long t = seconds > 0 ? (long)seconds : 0;
 	if(t >= 3600)
@@ -1917,19 +1917,9 @@ static gboolean trend_draw_event(GtkWidget *widget, cairo_t *c, struct output_pa
 
 	// Rate: fixed range or the smallest round one that holds the readings shown
 	int n = trend_columns(t, t0, t1, gx, gw, TREND_SERIES_RATE, cols, max_cols);
-	double range = op->trend_rate_range;
-	if(range <= 0) {
-		double m = 0;
-		for(i = 0; i < n; i++)
-			m = fmax(m, fmax(fabs(cols[i].min), fabs(cols[i].max)));
-		static const double ranges[] = {2, 5, 10, 20, 50, 100, 200, 500, 1000, 0};
-		range = 1000;
-		for(i = 0; ranges[i]; i++)
-			if(m <= ranges[i]) {
-				range = ranges[i];
-				break;
-			}
-	}
+	struct trend_plot_ranges ranges;
+	trend_get_plot_ranges(t, t0, t1, op->trend_rate_range, &ranges);
+	double range = ranges.rate_max;
 	cairo_set_line_width(c, 1);
 	for(int k = -2; k <= 2; k++) {
 		double v = range * k / 2;
@@ -1950,12 +1940,7 @@ static gboolean trend_draw_event(GtkWidget *widget, cairo_t *c, struct output_pa
 	// Expand the amplitude scale for readings below the usual 120 degrees.
 	cairo_set_font_size(c, font * 0.8);
 	cairo_set_line_width(c, 1);
-	int amp_floor = 120;
-	for(i = 0; i < t->count; i++)
-		if(t->samples[i].amp > 0 && t->samples[i].amp < 120) {
-			amp_floor = 60;
-			break;
-		}
+	int amp_floor = (int)ranges.amp_min;
 	for(int v = amp_floor; v <= 360; v += 60) {
 		snprintf(s, sizeof(s), "%d", v);
 		trend_hline(c, gx, gw, amp_bottom - (v - amp_floor) / (double)(360 - amp_floor) * (amp_bottom - amp_top), 0, s);
@@ -1974,16 +1959,7 @@ static gboolean trend_draw_event(GtkWidget *widget, cairo_t *c, struct output_pa
 
 	// Beat error: automatic range from zero to the smallest round value that holds the readings
 	n = trend_columns(t, t0, t1, gx, gw, TREND_SERIES_BEAT_ERROR, cols, max_cols);
-	double be_range = 100;
-	double max_be = 0;
-	for(i = 0; i < n; i++)
-		max_be = fmax(max_be, cols[i].max);
-	static const double be_ranges[] = {1, 2, 5, 10, 20, 50, 100, 0};
-	for(i = 0; be_ranges[i]; i++)
-		if(max_be <= be_ranges[i]) {
-			be_range = be_ranges[i];
-			break;
-		}
+	double be_range = ranges.be_max;
 	cairo_set_font_size(c, font * 0.8);
 	cairo_set_line_width(c, 1);
 	for(int k = 0; k <= 4; k++) {
@@ -2033,6 +2009,7 @@ static void handle_trend_reset(GtkButton *b, struct output_panel *op)
 	UNUSED(b);
 	trend_reset(op->trend);
 	gtk_widget_queue_draw(op->trend_drawing_area);
+	correlations_queue_draw(op);
 }
 
 static void handle_settling_setting(GtkSpinButton *spin, struct output_panel *op)
@@ -2069,13 +2046,35 @@ static void handle_trend_rate_range(GtkComboBox *b, struct output_panel *op)
 	const gchar *id = gtk_combo_box_get_active_id(b);
 	op->trend_rate_range = id ? atoi(id) : 0;
 	gtk_widget_queue_draw(op->trend_drawing_area);
+	correlations_queue_draw(op);
 }
 
 static void handle_trend_span(GtkComboBox *b, struct output_panel *op)
 {
 	const gchar *id = gtk_combo_box_get_active_id(b);
 	op->trend_span_s = id ? atoi(id) : 0;
+	if(op->trend_span_combo && g_strcmp0(gtk_combo_box_get_active_id(
+			GTK_COMBO_BOX(op->trend_span_combo)), id))
+		gtk_combo_box_set_active_id(GTK_COMBO_BOX(op->trend_span_combo), id);
+	if(op->correlation_span_combo && g_strcmp0(gtk_combo_box_get_active_id(
+			GTK_COMBO_BOX(op->correlation_span_combo)), id))
+		gtk_combo_box_set_active_id(GTK_COMBO_BOX(op->correlation_span_combo), id);
 	gtk_widget_queue_draw(op->trend_drawing_area);
+	correlations_queue_draw(op);
+}
+
+GtkWidget *op_create_trend_span_combo(struct output_panel *op)
+{
+	GtkWidget *combo = gtk_combo_box_text_new();
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(combo), "0", _("All"));
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(combo), "3600", _("Last 1 h"));
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(combo), "21600", _("Last 6 h"));
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(combo), "86400", _("Last 24 h"));
+	char id[16];
+	snprintf(id, sizeof(id), "%d", op->trend_span_s);
+	gtk_combo_box_set_active_id(GTK_COMBO_BOX(combo), id);
+	g_signal_connect(combo, "changed", G_CALLBACK(handle_trend_span), op);
+	return combo;
 }
 
 /* Wrap a panel in a frame with a small title on top */
@@ -2170,6 +2169,7 @@ void op_set_snapshot(struct output_panel *op, struct snapshot *snst)
 	gtk_widget_set_sensitive(op->paperstrip_tick_spin, !snst->calibrate);
 	gtk_widget_set_sensitive(op->paperstrip_window_spin, !snst->calibrate);
 	update_right_side(op);
+	correlations_queue_draw(op);
 }
 
 void op_set_paperstrip_settings(struct output_panel *op, double tick_seconds, double window_seconds)
@@ -2225,6 +2225,10 @@ struct output_panel *init_output_panel(struct computer *comp, struct snapshot *s
 	op->trend = comp ? trend_new() : NULL;
 	op->trend_rate_range = 0;
 	op->trend_span_s = 0;
+	op->trend_span_combo = NULL;
+	op->correlation_span_combo = NULL;
+	memset(op->correlation_areas, 0, sizeof(op->correlation_areas));
+	op->correlation_position = -1;
 	op->settling_spin = NULL;
 	op->settling_status = NULL;
 	op->detection_status_label = NULL;
@@ -2374,15 +2378,8 @@ struct output_panel *init_output_panel(struct computer *comp, struct snapshot *s
 	g_signal_connect(range_combo, "changed", G_CALLBACK(handle_trend_rate_range), op);
 	/* TRANSLATORS: Trend page: label of the time span selector (All, Last 1 h, ...). Short */
 	gtk_box_pack_start(GTK_BOX(trend_box), gtk_label_new(_("Show")), FALSE, FALSE, 0);
-	GtkWidget *span_combo = gtk_combo_box_text_new();
-	/* TRANSLATORS: Trend page time span: everything since the start. Short, shown in a narrow combo box */
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(span_combo), "0", _("All"));
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(span_combo), "3600", _("Last 1 h"));
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(span_combo), "21600", _("Last 6 h"));
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(span_combo), "86400", _("Last 24 h"));
-	gtk_combo_box_set_active_id(GTK_COMBO_BOX(span_combo), "0");
-	gtk_box_pack_start(GTK_BOX(trend_box), span_combo, FALSE, FALSE, 0);
-	g_signal_connect(span_combo, "changed", G_CALLBACK(handle_trend_span), op);
+	op->trend_span_combo = op_create_trend_span_combo(op);
+	gtk_box_pack_start(GTK_BOX(trend_box), op->trend_span_combo, FALSE, FALSE, 0);
 
 	if(comp) {
 		gtk_box_pack_start(GTK_BOX(trend_box), gtk_label_new(_("Settling time (s)")),
@@ -2395,6 +2392,9 @@ struct output_panel *init_output_panel(struct computer *comp, struct snapshot *s
 		op->settling_status = gtk_label_new("");
 		gtk_box_pack_start(GTK_BOX(trend_box), op->settling_status, FALSE, FALSE, 0);
 	}
+	GtkWidget *correlations_page = correlations_create_page(op);
+	gtk_stack_add_titled(GTK_STACK(op->right_stack), correlations_page,
+		"correlations", _("Correlations"));
 	// No title: the switcher does not offer it, calibration shows it by itself
 	GtkWidget *cal_info = titled_frame(make_calibration_instructions(), _("Calibration instructions"));
 	gtk_stack_add_named(GTK_STACK(op->right_stack), cal_info, "calibration");
@@ -2437,6 +2437,7 @@ struct output_panel *init_output_panel(struct computer *comp, struct snapshot *s
 	// GtkStack only switches to visible children
 	gtk_widget_show_all(vbox3);
 	gtk_widget_show_all(trend_page);
+	gtk_widget_show_all(correlations_page);
 	gtk_widget_show_all(cal_info);
 	update_right_side(op);
 	update_detection_status(op);

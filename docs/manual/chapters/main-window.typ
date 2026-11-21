@@ -5,7 +5,7 @@
 #shot("main-window.png", [The main window while measuring a 28800 bph watch.])
 
 The window has a top bar, a row of tabs, the results table, the paperstrip on
-the left and, on the right, the waveform panels or the Trend page.
+the left and, on the right, the waveform, Trend or Correlations page.
 
 == The top bar
 
@@ -135,4 +135,4 @@ unavailable, and no new waveform, paperstrip events, or Trend readings are
 produced until tic and toc can be detected again. Earlier trace and Trend
 history remain visible.
 
-The #ui[Trend] page is described in @trend.
+The #ui[Trend] and #ui[Correlations] pages are described in @trend.
