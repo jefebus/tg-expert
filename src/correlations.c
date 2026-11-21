@@ -213,6 +213,66 @@ static void draw_message(cairo_t *cr, int width, int height, const char *message
 	g_object_unref(layout);
 }
 
+static int axis_subdivisions(double major_step, int decimals)
+{
+	long units = lround(major_step * (decimals == 2 ? 100 : 10));
+	int best = 0, best_zeros = -1;
+	for(int divisions = 5; divisions <= 10; divisions++) {
+		if(units % divisions)
+			continue;
+		long step = units / divisions;
+		if(step <= 0)
+			continue;
+		int zeros = 0;
+		while(step % 10 == 0) {
+			zeros++;
+			step /= 10;
+		}
+		if(zeros > best_zeros) {
+			best = divisions;
+			best_zeros = zeros;
+		}
+	}
+	g_return_val_if_fail(best != 0, 0);
+	return best;
+}
+
+static void draw_axis_grid(cairo_t *cr, const struct correlation_plot *plot,
+	enum correlation_kind kind)
+{
+	int xdiv = axis_subdivisions((plot->xmax - plot->xmin) / 2,
+		kind == CORRELATION_AMP_RATE ? 1 : 2);
+	int ydiv = axis_subdivisions((plot->ymax - plot->ymin) / 4, 1);
+	if(!xdiv || !ydiv)
+		return;
+	cairo_save(cr);
+	cairo_set_line_width(cr, 1);
+	cairo_set_source_rgba(cr, 1, 1, 1, .22);
+	cairo_move_to(cr, plot->left + plot->width / 2, plot->top);
+	cairo_line_to(cr, plot->left + plot->width / 2, plot->top + plot->height);
+	cairo_stroke(cr);
+
+	static const double dashes[] = {3, 3};
+	cairo_set_dash(cr, dashes, 2, 0);
+	cairo_set_source_rgba(cr, 1, 1, 1, .16);
+	for(int i = 1; i < 2 * xdiv; i++) {
+		if(i % xdiv == 0)
+			continue;
+		double x = plot->left + plot->width * i / (2 * xdiv);
+		cairo_move_to(cr, x, plot->top);
+		cairo_line_to(cr, x, plot->top + plot->height);
+	}
+	for(int i = 1; i < 4 * ydiv; i++) {
+		if(i % ydiv == 0)
+			continue;
+		double y = plot->top + plot->height * i / (4 * ydiv);
+		cairo_move_to(cr, plot->left, y);
+		cairo_line_to(cr, plot->left + plot->width, y);
+	}
+	cairo_stroke(cr);
+	cairo_restore(cr);
+}
+
 static enum correlation_kind widget_kind(GtkWidget *widget)
 {
 	return (enum correlation_kind)(GPOINTER_TO_INT(
@@ -275,6 +335,7 @@ static gboolean correlation_draw(GtkWidget *widget, cairo_t *cr, struct output_p
 	cairo_set_source_rgba(cr, 1, 1, 1, .22);
 	cairo_rectangle(cr, plot.left, plot.top, plot.width, plot.height);
 	cairo_stroke(cr);
+	draw_axis_grid(cr, &plot, kind);
 	cairo_set_source_rgb(cr, 1, 1, 1);
 	draw_text(cr, plot.left, plot.top - 13, 0,
 		kind == CORRELATION_BE_AMP ? _("Amplitude (°)") : _("Rate (s/d)"));
