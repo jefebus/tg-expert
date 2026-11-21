@@ -50,5 +50,5 @@ the measurement.
 - Work in a quiet room. Switch off fans, speakers and noisy devices nearby.
 - Don't touch the desk or the cables while measuring.
 - A soft pad under the holder isolates the watch from desk vibrations.
-- The #ui[Light algorithm] (in the menu) skips the noise suppressor. Leave
+- The #ui[Light algorithm] (under #ui[Algorithm configuration…], #ui[Basic]) skips the noise suppressor. Leave
   it off unless the computer is too slow.

@@ -26,9 +26,15 @@ De izquierda a derecha:
 / Captura actual: el nombre de la pestaña de captura seleccionada, que puede
   editarse.
 / Menú: #ui[Abrir], #ui[Guardar la pantalla actual], #ui[Guardar todas las
-  capturas], #ui[Algoritmo ligero], #ui[Ajustes de audio…], #ui[Iniciar
+  capturas], #ui[Ajustes de audio…], #ui[Configuración
+  del algoritmo…], #ui[Iniciar
   calibración], #ui[Manual de usuario], #ui[Cerrar todas las capturas] y
   #ui[Salir].
+
+El proceso de detección y el diálogo #ui[Configuración del algoritmo…] se
+describen en @algorithm; la referencia completa de parámetros está en
+@algorithm-configuration.
+
 == La tabla de resultados
 La tabla situada en la parte superior de cada pestaña muestra:
 / RATE: la marcha en s/d, corregida con el valor cal.
@@ -95,8 +101,24 @@ los batidos:
 los clics separados del escape.])
 Los paneles de tic y toc tienen una escala en ms en la parte inferior y una
 escala de amplitud en grados en la parte superior. La línea vertical azul
-marca la amplitud medida a partir de la forma de onda.
+marca la amplitud medida a partir de la forma de onda. La vista se amplía
+hacia la izquierda cuando es necesario para incluir la amplitud mínima
+configurada; las ventanas resaltadas del
+panel de período completo se amplían igual. Esto solo cambia la presentación,
+no la detección de amplitud.
 Una forma de onda limpia, con clics nítidos y separados, indica una buena
 señal. Una forma de onda plana o borrosa indica que el micrófono no capta bien
 el reloj.
+La línea de estado bajo las formas de onda conserva su espacio cuando está
+vacía. Pase el cursor sobre un mensaje truncado para ver el texto completo.
+Cuando se detecta el batido pero no se puede medir la amplitud, el estado bajo
+las formas de onda indica "Amplitud no disponible". La marcha y el error de
+batido siguen disponibles; el error de batido no se ajusta con los tiempos de
+los impulsos de elevación. La versión de depuración también muestra el motivo
+del rechazo de la amplitud.
+Si se encuentra un período estable pero no se pueden separar el tic y el toc,
+la pantalla cambia automáticamente a "Solo marcha": el error de batido y la
+amplitud aparecen como no disponibles, y no se añaden formas de onda, eventos
+al registro ni lecturas de tendencia hasta que se detecten de nuevo el tic y
+el toc. El historial anterior sigue visible.
 La página #ui[Tendencia] se describe en @trend.

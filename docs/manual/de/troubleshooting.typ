@@ -47,7 +47,7 @@ Gangabweichung ist absurd (Hunderte von s/t).*
   @microphone.
 - Die Signalform-Anzeigen prüfen. Scharfe, getrennte Klicks bedeuten ein gutes
   Signal.
-- Die Option #ui[Leichter Algorithmus] ausschalten, falls sie eingeschaltet ist.
+- Die Option #ui[Leichter Algorithmus] unter #ui[Algorithmuskonfiguration…] ausschalten, falls sie eingeschaltet ist.
 - Die Uhr und den Tisch während der Messung nicht berühren.
 - Etwas Instabilität liegt an der Uhr selbst. Ein verschlissenes oder
   verschmutztes Werk schwankt von Schlag zu Schlag. Das σ auf der Seite

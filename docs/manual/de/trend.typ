@@ -84,6 +84,13 @@ Messwerte mit gutem Signal, daher erscheinen ausgelassene Zeiträume als
 Lücken; die Zeilen sind als gültig oder in Stabilisierung markiert. Ist keine Amplitude
 verfügbar, bleibt das Feld leer.
 
+Der Algorithmus wird als #ui[Leicht (angepasst)] oder #ui[Vollständig
+(angepasst)] gekennzeichnet, wenn ein in diesem Modus verwendeter
+Messparameter vom Standard abweicht. Kalibrierungsparameter zählen nicht,
+ebenso wenig Rauschunterdrückungsparameter im leichten Modus. Aufnahmen
+bewahren diese Information; ältere Aufnahmen ohne sie werden als #ui[Leicht]
+oder #ui[Vollständig] exportiert.
+
 Im Speicherdialog können Sie zwischen portablem CSV (Komma als Trennzeichen,
 Dezimalpunkt) und lokalisiertem CSV (Semikolon als Trennzeichen,
 Dezimalkomma) wählen. Das lokalisierte Format wird nur angezeigt, wenn die
@@ -102,4 +109,4 @@ Sonderzeichen erkennt.
   Gangabweichungs-Diagramm zeigt, wie die Gangabweichung ihr folgt.
 4. Eine Aufnahme machen und speichern. Die Daten des Verlaufs werden mit
   gespeichert.
-#note[*Vor dem Ändern von Einstellungen:* Erstellen und speichern Sie eine Aufnahme, wenn die aktuelle Verlaufsaufzeichnung erhalten bleiben soll. Änderungen an bph, Hebungswinkel, cal, Audioeingang, Abtastrate oder Leichter Algorithmus setzen die Verlaufsdaten zurück. Für lange Aufzeichnungen die bekannte Schlagzahl eingeben, anstatt sich auf die automatische Erkennung zu verlassen.]
+#note[*Vor dem Ändern von Einstellungen:* Erstellen und speichern Sie eine Aufnahme, wenn die aktuelle Verlaufsaufzeichnung erhalten bleiben soll. Änderungen an bph, Hebungswinkel, cal, Audioeingang, Abtastrate oder Algorithmuseinstellungen setzen die Verlaufsdaten zurück. Für lange Aufzeichnungen die bekannte Schlagzahl eingeben, anstatt sich auf die automatische Erkennung zu verlassen.]

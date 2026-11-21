@@ -367,6 +367,7 @@ static int serialize_trend(FILE *f, const struct trend *s)
 	SERIALIZE(int,cal);
 	SERIALIZE(int,nominal_sr);
 	SERIALIZE(int,is_light);
+	SERIALIZE(int,algorithm_custom);
 	SERIALIZE(int,full);
 	if(make_label(f, "elapsed")) return 1;
 	if(serialize_double(f, trend_elapsed(s))) return 1;
@@ -425,6 +426,7 @@ static int scan_trend(FILE *f, struct trend **trend)
 		TREND_FIELD(cal, int);
 		TREND_FIELD(nominal_sr, int);
 		TREND_FIELD(is_light, int);
+		TREND_FIELD(algorithm_custom, int);
 		TREND_FIELD(full, int);
 #undef TREND_FIELD
 		if(!strcmp("elapsed", l)) {
@@ -476,6 +478,7 @@ static int serialize_snapshot(FILE *f, struct snapshot *s, char *name, const str
 	SERIALIZE(double,pb->tic_pulse);
 	SERIALIZE(double,pb->toc_pulse);
 	SERIALIZE(int,is_old);
+	SERIALIZE(int,rate_only);
 	SERIALIZE(uint64_t,timestamp);
 	SERIALIZE(int,nominal_sr);
 	SERIALIZE(int,bph);
@@ -594,6 +597,7 @@ static int scan_snapshot(FILE *f, struct snapshot **s, char **name, struct trend
 		SCAN(double,pb->tic_pulse);
 		SCAN(double,pb->toc_pulse);
 		SCAN(int,is_old);
+		SCAN(int,rate_only);
 		SCAN(uint64_t,timestamp);
 		SCAN(int,nominal_sr);
 		SCAN(int,bph);
@@ -631,6 +635,9 @@ static int scan_snapshot(FILE *f, struct snapshot **s, char **name, struct trend
 	debug("serializer: checking events\n");
 	if((*s)->events_count && (*s)->events_wp >= (*s)->events_count) goto error;
 	if((*s)->signal > NSTEPS) (*s)->signal = NSTEPS;
+	if((*s)->rate_only != 0 && (*s)->rate_only != 1) goto error;
+	if((*s)->rate_only && !(*s)->is_old)
+		(*s)->detection_status = DETECTION_STATUS_RATE_ONLY;
 	if((*s)->audio_status < AUDIO_STATUS_UNAVAILABLE ||
 		(*s)->audio_status > AUDIO_STATUS_OK) goto error;
 	if((*s)->candidate_bph && ((*s)->candidate_bph < MIN_BPH ||
@@ -805,7 +812,9 @@ int write_trend_csv(FILE *f, const struct trend *t, char separator, char decimal
 				csv_write_number(f, t->la, decimal) || fputc(separator, f) == EOF ||
 				csv_write_number(f, t->cal / 10.0, decimal) || fputc(separator, f) == EOF ||
 				fprintf(f, "%d", t->nominal_sr) < 0 || fputc(separator, f) == EOF ||
-				fprintf(f, "%s\r\n", t->is_light ? _("Light") : _("Full")) < 0)
+				fprintf(f, "%s\r\n", t->algorithm_custom ?
+					(t->is_light ? _("Light (custom)") : _("Full (custom)")) :
+					(t->is_light ? _("Light") : _("Full"))) < 0)
 			return 1;
 	}
 	return ferror(f) ? 1 : 0;

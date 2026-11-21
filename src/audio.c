@@ -610,19 +610,24 @@ int analyze_pa_data(struct processing_data *pd, int bph, double la, uint64_t eve
 	fill_buffers(p, pd->is_light);
 
 	int i;
-	for(i = 0; i < NSTEPS; i++)
+	for(i = 0; i < NSTEPS; i++) {
 		p[i].candidate_period = 0;
+		p[i].ready = 0;
+		p[i].period_ready = 0;
+	}
 	debug("\nSTART OF COMPUTATION CYCLE\n\n");
+	int last_ready = -1;
 	for(i=0; i<NSTEPS; i++) {
 		p[i].last_tic = pd->last_tic;
 		p[i].events_from = events_from;
 		process(&p[i], bph, la, pd->is_light);
-		if( !p[i].ready ) break;
+		if(!p[i].period_ready) break;
+		if(p[i].ready) last_ready = i;
 		debug("step %d : %f +- %f\n",i,p[i].period/p[i].sample_rate,p[i].sigma/p[i].sample_rate);
 	}
-	if(i) {
-		pd->last_tic = p[i-1].last_tic;
-		debug("%f +- %f\n",p[i-1].period/p[i-1].sample_rate,p[i-1].sigma/p[i-1].sample_rate);
+	if(last_ready >= 0) {
+		pd->last_tic = p[last_ready].last_tic;
+		debug("%f +- %f\n",p[last_ready].period/p[last_ready].sample_rate,p[last_ready].sigma/p[last_ready].sample_rate);
 	} else
 		debug("---\n");
 	return i;
@@ -634,13 +639,17 @@ int analyze_pa_data_cal(struct processing_data *pd, struct calibration_data *cd)
 	fill_buffers(p, pd->is_light);
 
 	int i,j;
+	int failed_signal = NSTEPS-1;
 	debug("\nSTART OF CALIBRATION CYCLE\n\n");
 	for(j=0; p[j].sample_count < 2*p[j].sample_rate; j++);
-	for(i=0; i+j<NSTEPS-1; i++)
-		if(test_cal(&p[i+j]))
-			return i ? i+j : 0;
+	for(i=0; i+j<NSTEPS-1; i++) {
+		if(test_cal(&p[i+j])) {
+			failed_signal = i ? i+j : 0;
+			break;
+		}
+	}
 	if(process_cal(&p[NSTEPS-1], cd))
-		return NSTEPS-1;
+		return failed_signal;
 	return NSTEPS;
 }
 

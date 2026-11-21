@@ -155,6 +155,20 @@ static double amplitude_to_time(double lift_angle, double amp)
 	return asin(lift_angle / (2 * amp)) / M_PI;
 }
 
+static int waveform_negative_span(struct snapshot *s)
+{
+	double rate = s->sample_rate > 0 ? s->sample_rate : s->nominal_sr;
+	double period = s->pb && rate > 0 ? s->pb->period / rate :
+		s->guessed_bph > 0 ? 7200. / s->guessed_bph : 0;
+	double min_amp = algorithm_parameters[ALG_AMP_MIN];
+	double required = 0;
+	if(period > 0 && min_amp > 0 && s->la > 0 && s->la <= 2 * min_amp)
+		required = 1000 * period * amplitude_to_time(s->la, min_amp);
+	if(!isfinite(required) || required <= NEGATIVE_SPAN)
+		return NEGATIVE_SPAN;
+	return (int)ceil(required);
+}
+
 static double draw_watch_icon(cairo_t *c, int signal, int happy, int light)
 {
 	happy = !!happy;
@@ -199,6 +213,86 @@ static enum audio_input_status get_input_status(struct snapshot *snst)
 	if(snst->pb && !snst->is_old)
 		return AUDIO_STATUS_OK;
 	return snst->bph ? AUDIO_STATUS_BPH_UNCONFIRMED : AUDIO_STATUS_BPH_UNKNOWN;
+}
+
+static const char *detection_status_message(enum detection_status status)
+{
+	switch(status) {
+	case DETECTION_STATUS_OK:
+		return NULL;
+#ifdef DEBUG
+	case DETECTION_STATUS_NO_WAVEFORM:
+		return _("No watch detected: no valid beat period found.");
+	case DETECTION_STATUS_PERIOD_TOO_LONG:
+		return _("No watch detected: the detected period is too long.");
+	case DETECTION_STATUS_NO_BEAT:
+		return _("No watch detected: tic and toc could not be separated.");
+	case DETECTION_STATUS_UNSTABLE:
+		return _("No watch detected: the beat period is too unstable.");
+	case DETECTION_STATUS_RATE_ONLY:
+		return _("Rate only: tic and toc could not be separated; beat error and amplitude are unavailable.");
+	case DETECTION_STATUS_AMPLITUDE_NOT_FOUND:
+		return _("Amplitude unavailable: lift pulses could not be measured.");
+	case DETECTION_STATUS_AMPLITUDE_TOO_LOW:
+		return _("Amplitude unavailable: the measured amplitude is too low.");
+	case DETECTION_STATUS_AMPLITUDE_TOO_HIGH:
+		return _("Amplitude unavailable: the measured amplitude is too high.");
+	case DETECTION_STATUS_AMPLITUDE_INCONSISTENT:
+		return _("Amplitude unavailable: tic and toc amplitudes differ too much.");
+#else
+	case DETECTION_STATUS_NO_WAVEFORM:
+	case DETECTION_STATUS_PERIOD_TOO_LONG:
+	case DETECTION_STATUS_NO_BEAT:
+	case DETECTION_STATUS_UNSTABLE:
+		return _("No watch detected.");
+	case DETECTION_STATUS_RATE_ONLY:
+		return _("Rate only: beat error and amplitude unavailable.");
+	case DETECTION_STATUS_AMPLITUDE_NOT_FOUND:
+	case DETECTION_STATUS_AMPLITUDE_TOO_LOW:
+	case DETECTION_STATUS_AMPLITUDE_TOO_HIGH:
+	case DETECTION_STATUS_AMPLITUDE_INCONSISTENT:
+		return _("Amplitude unavailable.");
+#endif
+	}
+	g_warning("Unknown detection status: %d", status);
+	return _("No watch detected.");
+}
+
+static void update_detection_status(struct output_panel *op)
+{
+	if(!op->detection_status_label || !op->snst)
+		return;
+
+	enum detection_status status = op->snst->detection_status;
+#ifndef DEBUG
+	switch(status) {
+	case DETECTION_STATUS_NO_WAVEFORM:
+	case DETECTION_STATUS_PERIOD_TOO_LONG:
+	case DETECTION_STATUS_NO_BEAT:
+	case DETECTION_STATUS_UNSTABLE:
+		status = DETECTION_STATUS_NO_WAVEFORM;
+		break;
+	case DETECTION_STATUS_AMPLITUDE_NOT_FOUND:
+	case DETECTION_STATUS_AMPLITUDE_TOO_LOW:
+	case DETECTION_STATUS_AMPLITUDE_TOO_HIGH:
+	case DETECTION_STATUS_AMPLITUDE_INCONSISTENT:
+		status = DETECTION_STATUS_AMPLITUDE_NOT_FOUND;
+		break;
+	default:
+		break;
+	}
+#endif
+	gint64 now = g_get_monotonic_time();
+	if(status == op->shown_detection_status ||
+			(op->detection_status_until && now < op->detection_status_until))
+		return;
+
+	op->shown_detection_status = status;
+	op->detection_status_until = status == DETECTION_STATUS_OK ? 0 : now + 2000000;
+	const char *message = detection_status_message(status);
+	/* An empty label has no height; a space keeps the status line in place. */
+	gtk_label_set_text(GTK_LABEL(op->detection_status_label), message ? message : " ");
+	gtk_widget_set_tooltip_text(op->detection_status_label, message);
 }
 
 static void update_audio_presence(struct output_panel *op)
@@ -304,15 +398,20 @@ static void draw_results_table(cairo_t *c, double x0, double width, double heigh
 		int rate = round(snst->rate);
 		snprintf(num[0], sizeof(num[0]), "%s%d", rate > 0 ? "+" : rate < 0 ? "-" : "", abs(rate));
 		unit[0] = "s/d";
-		if(snst->amp > 0) {
+		if(!snst->rate_only && snst->amp > 0) {
 			snprintf(num[1], sizeof(num[1]), "%.0f", snst->amp);
 			unit[1] = "\xC2\xB0";
 		} else {
 			strcpy(num[1], "---");
 			unit[1] = "";
 		}
-		snprintf(num[2], sizeof(num[2]), "%.1f", snst->be);
-		unit[2] = "ms";
+		if(snst->rate_only) {
+			strcpy(num[2], "---");
+			unit[2] = "";
+		} else {
+			snprintf(num[2], sizeof(num[2]), "%.1f", snst->be);
+			unit[2] = "ms";
+		}
 	} else {
 		for(i = 0; i < 3; i++) {
 			strcpy(num[i], "---");
@@ -533,22 +632,34 @@ static void expose_waveform(
 	if(font < 12)
 		font = 12;
 	int i;
+	struct snapshot *snst = op->snst;
+	struct processing_buffers *p = snst->rate_only ? NULL : snst->pb;
+	int negative_span = waveform_negative_span(snst);
+	int total_span = negative_span + POSITIVE_SPAN;
+	static const int steps[] = {5, 10, 20, 25, 50, 100, 200, 500};
+	int step = 0;
+	while(step < (int)G_N_ELEMENTS(steps) - 1 &&
+			steps[step] * (double)width / total_span < 40)
+		step++;
+	int major = steps[step];
+	int minor = major / 5;
 
 	cairo_set_font_size(c,font);
 
-	// Time axis (bottom half, white): solid every 5 ms, dotted every ms
-	for(i = 1-NEGATIVE_SPAN; i < POSITIVE_SPAN; i++) {
-		int x = (NEGATIVE_SPAN + i) * width / (POSITIVE_SPAN + NEGATIVE_SPAN);
+	// Time axis (bottom half, white)
+	for(i = -(negative_span / minor) * minor; i < POSITIVE_SPAN; i += minor) {
+		if(i <= -negative_span) continue;
+		int x = (negative_span + i) * width / total_span;
 		cairo_move_to(c, x + .5, height / 2 + .5);
 		cairo_line_to(c, x + .5, height - .5);
-		set_axis_style(c, COL_AXIS, !(i%5));
+		set_axis_style(c, COL_AXIS, !(i%major));
 		cairo_stroke(c);
 	}
 	set_dotted(c, 0);
 	cairo_set_source(c,white);
-	for(i = 1-NEGATIVE_SPAN; i < POSITIVE_SPAN; i++) {
-		if(!(i%5)) {
-			int x = (NEGATIVE_SPAN + i) * width / (POSITIVE_SPAN + NEGATIVE_SPAN);
+	for(i = -(negative_span / major) * major; i < POSITIVE_SPAN; i += major) {
+		if(i > -negative_span) {
+			int x = (negative_span + i) * width / total_span;
 			char s[10];
 			sprintf(s,"%d",i);
 			cairo_move_to(c,x+font/4,height-font/2);
@@ -562,8 +673,6 @@ static void expose_waveform(
 	cairo_move_to(c,width - extents.x_advance - font/4,height-font/2);
 	cairo_show_text(c,"ms");
 
-	struct snapshot *snst = op->snst;
-	struct processing_buffers *p = snst->pb;
 	int old = snst->is_old;
 	double period = p ? p->period / snst->sample_rate : 7200. / snst->guessed_bph;
 
@@ -571,8 +680,8 @@ static void expose_waveform(
 	for(i = 10; i < 360; i+=10) {
 		if(2*i < snst->la) continue;
 		double t = period*amplitude_to_time(snst->la,i);
-		if(t > .001 * NEGATIVE_SPAN) continue;
-		int x = round(width * (NEGATIVE_SPAN - 1000*t) / (NEGATIVE_SPAN + POSITIVE_SPAN));
+		if(t > .001 * negative_span) continue;
+		int x = round(width * (negative_span - 1000*t) / total_span);
 		cairo_move_to(c, x+.5, .5);
 		cairo_line_to(c, x+.5, height / 2 + .5);
 		set_axis_style(c, COL_AMP, !(i % 50));
@@ -584,8 +693,8 @@ static void expose_waveform(
 	set_color(c, COL_AMP, 1);
 	for(i = 50; i < 360; i+=50) {
 		double t = period*amplitude_to_time(snst->la,i);
-		if(t > .001 * NEGATIVE_SPAN) continue;
-		int x = round(width * (NEGATIVE_SPAN - 1000*t) / (NEGATIVE_SPAN + POSITIVE_SPAN));
+		if(t > .001 * negative_span) continue;
+		int x = round(width * (negative_span - 1000*t) / total_span);
 		if(x > last_x) {
 			char s[10];
 
@@ -605,7 +714,7 @@ static void expose_waveform(
 		double span = 0.001 * snst->sample_rate;
 		int offset = get_offset(p);
 
-		double a = offset - span * NEGATIVE_SPAN;
+		double a = offset - span * negative_span;
 		double b = offset + span * POSITIVE_SPAN;
 
 		draw_graph(a,b,c,p,da);
@@ -617,7 +726,7 @@ static void expose_waveform(
 		// Detected pulse position: reference colour
 		double pulse = get_pulse(p);
 		if(pulse > 0) {
-			int x = round((NEGATIVE_SPAN - pulse / span) * width / (POSITIVE_SPAN + NEGATIVE_SPAN));
+			int x = round((negative_span - pulse / span) * width / total_span);
 			cairo_move_to(c, x, 1);
 			cairo_line_to(c, x, height - 1);
 			set_signal_color(c, COL_RATE, old);
@@ -731,25 +840,26 @@ static gboolean period_draw_event(GtkWidget *widget, cairo_t *c, struct output_p
 	int height = temp.height;
 
 	struct snapshot *snst = op->snst;
-	struct processing_buffers *p = snst->pb;
+	struct processing_buffers *p = snst->rate_only ? NULL : snst->pb;
 	int old = snst->is_old;
 
 	double toc,a=0,b=0;
+	int negative_span = waveform_negative_span(snst);
 
 	if(p) {
 		toc = p->tic < p->toc ? p->toc : p->toc + p->period;
 		a = ((double)p->tic + toc)/2 - p->period/2;
 		b = ((double)p->tic + toc)/2 + p->period/2;
 
-		cairo_move_to(c, (p->tic - a - NEGATIVE_SPAN*.001*snst->sample_rate) * width/p->period, 0);
-		cairo_line_to(c, (p->tic - a - NEGATIVE_SPAN*.001*snst->sample_rate) * width/p->period, height);
+		cairo_move_to(c, (p->tic - a - negative_span*.001*snst->sample_rate) * width/p->period, 0);
+		cairo_line_to(c, (p->tic - a - negative_span*.001*snst->sample_rate) * width/p->period, height);
 		cairo_line_to(c, (p->tic - a + POSITIVE_SPAN*.001*snst->sample_rate) * width/p->period, height);
 		cairo_line_to(c, (p->tic - a + POSITIVE_SPAN*.001*snst->sample_rate) * width/p->period, 0);
 		set_color(c, COL_TIC, ALPHA_BAND); // tic window: grey tint
 		cairo_fill(c);
 
-		cairo_move_to(c, (toc - a - NEGATIVE_SPAN*.001*snst->sample_rate) * width/p->period, 0);
-		cairo_line_to(c, (toc - a - NEGATIVE_SPAN*.001*snst->sample_rate) * width/p->period, height);
+		cairo_move_to(c, (toc - a - negative_span*.001*snst->sample_rate) * width/p->period, 0);
+		cairo_line_to(c, (toc - a - negative_span*.001*snst->sample_rate) * width/p->period, height);
 		cairo_line_to(c, (toc - a + POSITIVE_SPAN*.001*snst->sample_rate) * width/p->period, height);
 		cairo_line_to(c, (toc - a + POSITIVE_SPAN*.001*snst->sample_rate) * width/p->period, 0);
 		set_color(c, COL_TOC, ALPHA_BAND); // toc window: gold tint
@@ -949,9 +1059,14 @@ static gboolean paperstrip_draw_event(GtkWidget *widget, cairo_t *c, struct outp
 
 	// Width of the strip in ms (a beat in normal mode, a second in calibration, divided by the zoom)
 	const double window_ms = snst->calibrate ? 1000. / zoom_factor : 3600000. / (safe_bph * zoom_factor);
-	// Amplitude scale: linear, 110 deg at the left edge, 360 deg at the right edge,
-	// so that each of the PAPERSTRIP_DIVISIONS divisions is 25 deg
-	const double amp_min = 110.0, amp_max = 360.0;
+	double amp_min = 110.0;
+	if(snst->amp > 0 && snst->amp < amp_min) amp_min = 80.0;
+	for(int j = 0; snst->amps && j < snst->amps_count; j++)
+		if(snst->amps[j] > 0 && snst->la * snst->amps[j] < 110) {
+			amp_min = 80.0;
+			break;
+		}
+	const double amp_max = 360.0;
 #define AMP_X(a)   (left_margin + ((a) - amp_min) / (amp_max - amp_min) * (strip_width - 1))
 	// The beat position runs from right to left, so that a fast watch (positive
 	// rate) leans to the right with the newest beats at the bottom
@@ -1832,17 +1947,23 @@ static gboolean trend_draw_event(GtkWidget *widget, cairo_t *c, struct output_pa
 		snprintf(s, sizeof(s), "%s", _("Rate (s/day)"));
 	trend_text(c, gx, rate_top - font * 0.4, 0, s);
 
-	// Amplitude, 120 to 360 deg
+	// Expand the amplitude scale for readings below the usual 120 degrees.
 	cairo_set_font_size(c, font * 0.8);
 	cairo_set_line_width(c, 1);
-	for(int v = 120; v <= 360; v += 60) {
+	int amp_floor = 120;
+	for(i = 0; i < t->count; i++)
+		if(t->samples[i].amp > 0 && t->samples[i].amp < 120) {
+			amp_floor = 60;
+			break;
+		}
+	for(int v = amp_floor; v <= 360; v += 60) {
 		snprintf(s, sizeof(s), "%d", v);
-		trend_hline(c, gx, gw, amp_bottom - (v - 120) / 240.0 * (amp_bottom - amp_top), 0, s);
+		trend_hline(c, gx, gw, amp_bottom - (v - amp_floor) / (double)(360 - amp_floor) * (amp_bottom - amp_top), 0, s);
 	}
 	n = trend_columns(t, t0, t1, gx, gw, TREND_SERIES_AMPLITUDE, cols, max_cols);
 	double amp_mean = trend_stats_mean(&t->amp);
-	trend_draw_average(c, gx, gw, amp_top, amp_bottom, 120, 360, &t->amp, COL_AMP);
-	trend_draw_series(c, cols, n, amp_top, amp_bottom, 120, 360, COL_AMP);
+	trend_draw_average(c, gx, gw, amp_top, amp_bottom, amp_floor, 360, &t->amp, COL_AMP);
+	trend_draw_series(c, cols, n, amp_top, amp_bottom, amp_floor, 360, COL_AMP);
 	cairo_set_font_size(c, font * 0.9);
 	set_color(c, COL_AMP, 1);
 	if(t->amp.n)
@@ -1996,7 +2117,7 @@ static GtkWidget *make_calibration_instructions(void)
 		_("<span size='x-large' weight='bold'>Calibration in progress</span>\n"
 		"\n"
 		"Calibration measures how fast your sound card clock really runs, so that "
-		"rates are not skewed by the computer. It takes about 15 minutes (900 ticks).\n"
+		"rates are not skewed by the computer. With default settings it takes about 15 minutes (900 ticks).\n"
 		"\n"
 		"<b>1. Use a quartz reference</b>\n"
 		"Place a quartz watch or clock that ticks once per second (an analog one with "
@@ -2044,6 +2165,7 @@ void op_set_snapshot(struct output_panel *op, struct snapshot *snst)
 	op->snst = snst;
 	if(op->snst && op->snst->trace_zoom <= 0)
 		op->snst->trace_zoom = 1.0;
+	update_detection_status(op);
 	gtk_widget_set_sensitive(op->clear_button, !snst->calibrate);
 	gtk_widget_set_sensitive(op->paperstrip_tick_spin, !snst->calibrate);
 	gtk_widget_set_sensitive(op->paperstrip_window_spin, !snst->calibrate);
@@ -2105,6 +2227,9 @@ struct output_panel *init_output_panel(struct computer *comp, struct snapshot *s
 	op->trend_span_s = 0;
 	op->settling_spin = NULL;
 	op->settling_status = NULL;
+	op->detection_status_label = NULL;
+	op->shown_detection_status = DETECTION_STATUS_OK;
+	op->detection_status_until = 0;
 	op->settling_setting_changed = NULL;
 	op->settling_setting_data = NULL;
 
@@ -2295,6 +2420,12 @@ struct output_panel *init_output_panel(struct computer *comp, struct snapshot *s
 	g_signal_connect (op->period_drawing_area, "draw", G_CALLBACK(period_draw_event), op);
 	gtk_widget_set_events(op->period_drawing_area, GDK_EXPOSURE_MASK);
 
+	op->detection_status_label = gtk_label_new(" ");
+	gtk_label_set_xalign(GTK_LABEL(op->detection_status_label), 0);
+	gtk_label_set_single_line_mode(GTK_LABEL(op->detection_status_label), TRUE);
+	gtk_label_set_ellipsize(GTK_LABEL(op->detection_status_label), PANGO_ELLIPSIZE_END);
+	gtk_box_pack_start(GTK_BOX(vbox3), op->detection_status_label, FALSE, FALSE, 0);
+
 #ifdef DEBUG
 	op->debug_drawing_area = gtk_drawing_area_new();
 	gtk_box_pack_start(GTK_BOX(vbox3), titled_frame(op->debug_drawing_area,
@@ -2308,6 +2439,7 @@ struct output_panel *init_output_panel(struct computer *comp, struct snapshot *s
 	gtk_widget_show_all(trend_page);
 	gtk_widget_show_all(cal_info);
 	update_right_side(op);
+	update_detection_status(op);
 
 	return op;
 }

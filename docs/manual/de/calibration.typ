@@ -42,7 +42,8 @@ bestimmt die Genauigkeit der Kalibrierung, typischerweise besser als 0.5 s/t.
     erneut starten.
 5. Sobald *done* angezeigt wird, im Menü #ui[Kalibrierung beenden] wählen, um
   zur normalen Messung zurückzukehren.
-Die Kalibrierung dauert etwa 15 Minuten (900 Ticks). Wiederholen Sie sie
+Mit den Standard-Algorithmuseinstellungen dauert die Kalibrierung etwa
+15 Minuten (900 Ticks); andere Einstellungen können die Dauer ändern. Wiederholen Sie sie
 einmal, um das Ergebnis zu bestätigen. Zwei Durchläufe sollten auf wenige
 Zehntelsekunden pro Tag übereinstimmen.
 #shot("calibration.png", [Kalibrierung läuft, bei 5 %. Das Gangdiagramm zeigt
@@ -58,3 +59,62 @@ gespeichert und bei jedem Start verwendet. Kalibrieren Sie erneut:
   Gewohnheit.
 Der Wert cal lässt sich auch im Feld #ui[cal] eingeben, wenn er von einer
 früheren Kalibrierung bekannt ist.
+
+== Experteneinstellungen für die Kalibrierung <calibration-parameters>
+
+Normalerweise müssen Sie diese Werte nicht ändern. Falls Sie ihre Wirkung
+verstehen und eine Änderung nötig ist, beenden Sie zuerst die Kalibrierung
+und öffnen die #ui[Algorithmuskonfiguration…]. Auf dem Reiter #ui[Kalibrierung]
+gibt #ui[Kalibrierungseinstellungen bearbeiten (Experte)] die sechs Felder frei.
+Ausschalten sperrt sie, ohne Änderungen zu verwerfen oder zu übernehmen.
+Anwenden und Speichern funktionieren wie in @algorithm-configuration:
+Die Analyse startet neu, und die INI speichert nur Abweichungen vom Standard.
+Lassen Sie die Bearbeitung aktiviert, wenn auch diese Felder zurückgesetzt
+werden sollen.
+
+Die Einstellungen gehören zur Quarzreferenz, nicht zum später gemessenen
+Uhrwerk. Die Referenz tickt weiterhin einmal pro Sekunde; das Programm fasst
+die Geräusche in einer einsekündigen Signalform zusammen und verfolgt ihre
+zeitliche Drift zur Berechnung der Korrektur. Prüfen Sie zuerst Aufstellung
+und Ruhe nach der Anleitung oben, bevor Sie die Erkennung verändern.
+
+#table(
+  columns: (2.8fr, 1.2fr, 0.65fr, 0.95fr),
+  [Parameter], [INI-Schlüssel], [Standard], [Bereich],
+  [Anzahl der Beobachtungen], [`cal_count`], [900], [300–3600],
+  [Kalibrierungsflankenschwelle (%)], [`cal_edge`], [5], [3–10],
+  [Mindestabstand der Beobachtungen (s)], [`cal_interval`], [0.9], [0.5–2],
+  [Akzeptanzgenauigkeit der Anpassung (s/Tag)], [`cal_precision`], [0.1], [0.1–0.5],
+  [Untere Position in der gefalteten Sekunde (%)], [`cal_lock_low`], [40], [35–45],
+  [Obere Position in der gefalteten Sekunde (%)], [`cal_lock_high`], [60], [55–65],
+)
+
+/ Anzahl der Beobachtungen:
+  So viele gültige Beobachtungen werden vor der Anpassung gesammelt.
+  Es ist keine Dauer in Sekunden: Eine höhere Anzahl erfordert meist,
+  die Referenz länger ungestört liegen zu lassen.
+/ Kalibrierungsflankenschwelle:
+  Hilft, den Beginn des Referenzimpulses zu finden. Zum umgebenden
+  Hintergrundmaximum wird dieser Anteil des Abstands zum gefalteten
+  Impulsmaximum addiert. Die Schwelle ist weder eine absolute
+  Mikrofonlautstärke noch eine Position innerhalb der Sekunde.
+/ Mindestabstand der Beobachtungen:
+  Verhindert die Annahme zu dicht aufeinanderfolgender Beobachtungen.
+  Seit der vorigen muss mehr als diese Zeit vergangen sein. Das garantiert
+  keinen entsprechenden Aktualisierungstakt: Fehlende Impulse oder ein
+  längerer Abstand verlängern das Sammeln.
+/ Akzeptanzgenauigkeit der Anpassung:
+  So viel Unsicherheit darf die Kalibrierung zur Annahme haben.
+  Der berechnete Wert muss darunter liegen, in s/Tag. Erhöhen erlaubt
+  eine weniger genaue Anpassung, verbessert aber weder die Referenz
+  noch bestimmt es die später gespeicherte Korrektur.
+/ Untere Position in der gefalteten Sekunde:
+  Beginnt den Bereich, in dem das Referenzmaximum liegen darf; die
+  gewählte steigende Flanke muss nach dieser Position kommen. Die üblichen
+  40% bedeuten 400 ms innerhalb der einsekündigen Signalform, keinen
+  Beobachtungsabstand.
+/ Obere Position in der gefalteten Sekunde:
+  Schließt den erlaubten Bereich für das Referenzmaximum. Die
+  voreingestellten 60% entsprechen 600 ms innerhalb der einsekündigen
+  Signalform. Zusammen mit der unteren Grenze beschreibt dies die
+  erwartete Lage des Maximums, keine zusätzliche Flankenschwelle.

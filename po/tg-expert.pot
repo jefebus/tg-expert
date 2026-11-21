@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tg-expert 0.10.0\n"
 "Report-Msgid-Bugs-To: https://github.com/jefebus/tg-expert/issues\n"
-"POT-Creation-Date: 2026-11-20 15:38+0100\n"
+"POT-Creation-Date: 2026-11-20 21:14+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -16,6 +16,438 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+
+#: src/algorithm_settings.c:22
+msgid "Audio and envelope cutoff (Hz)"
+msgstr ""
+
+#: src/algorithm_settings.c:23
+msgid "Noise energy window (ms)"
+msgstr ""
+
+#: src/algorithm_settings.c:24
+msgid "Noise reference segment length (ms)"
+msgstr ""
+
+#: src/algorithm_settings.c:25
+msgid "Noise rejection threshold (× reference)"
+msgstr ""
+
+#: src/algorithm_settings.c:26
+msgid "FFT edge taper (ms)"
+msgstr ""
+
+#: src/algorithm_settings.c:27
+msgid "Maximum peak lobes"
+msgstr ""
+
+#: src/algorithm_settings.c:28
+msgid "Period search half-width (± ms)"
+msgstr ""
+
+#: src/algorithm_settings.c:29
+msgid "Minimum shorter-period peak (%)"
+msgstr ""
+
+#: src/algorithm_settings.c:30
+msgid "Double-trigger check threshold (%)"
+msgstr ""
+
+#: src/algorithm_settings.c:31
+msgid "Period refinement half-width (± ms)"
+msgstr ""
+
+#: src/algorithm_settings.c:32
+msgid "Opposite-beat search half-width (± ms)"
+msgstr ""
+
+#: src/algorithm_settings.c:33
+msgid "Tic/toc alignment smoothing (ms)"
+msgstr ""
+
+#: src/algorithm_settings.c:34
+msgid "Trace event search half-width (± ms)"
+msgstr ""
+
+#: src/algorithm_settings.c:35
+msgid "High samples discarded per phase bin (%)"
+msgstr ""
+
+#: src/algorithm_settings.c:36
+msgid "Lift-pulse smoothing (ms)"
+msgstr ""
+
+#: src/algorithm_settings.c:38
+#, no-c-format
+msgid "Starting lift-pulse threshold (% of peak)"
+msgstr ""
+
+#: src/algorithm_settings.c:39
+msgid "Lift-pulse background multiplier (×)"
+msgstr ""
+
+#: src/algorithm_settings.c:41
+#, no-c-format
+msgid "Lift-pulse threshold ceiling (% of peak)"
+msgstr ""
+
+#: src/algorithm_settings.c:42
+msgid "Amplitude threshold multiplier"
+msgstr ""
+
+#: src/algorithm_settings.c:43
+msgid "Minimum accepted balance amplitude (°)"
+msgstr ""
+
+#: src/algorithm_settings.c:44
+msgid "Maximum tic/toc amplitude difference (°)"
+msgstr ""
+
+#: src/algorithm_settings.c:45
+msgid "Maximum period multiplier"
+msgstr ""
+
+#: src/algorithm_settings.c:46
+msgid "Period instability fraction"
+msgstr ""
+
+#: src/algorithm_settings.c:47
+msgid "Observation count"
+msgstr ""
+
+#: src/algorithm_settings.c:48
+msgid "Calibration edge threshold (%)"
+msgstr ""
+
+#: src/algorithm_settings.c:49
+msgid "Minimum observation interval (s)"
+msgstr ""
+
+#: src/algorithm_settings.c:50
+msgid "Fit acceptance precision (s/day)"
+msgstr ""
+
+#: src/algorithm_settings.c:51
+msgid "Lower position in folded second (%)"
+msgstr ""
+
+#: src/algorithm_settings.c:52
+msgid "Upper position in folded second (%)"
+msgstr ""
+
+#: src/algorithm_settings.c:84
+msgid "Number of accepted reference-pulse observations used for the calibration fit."
+msgstr ""
+
+#: src/algorithm_settings.c:85
+msgid "Rising-edge threshold as a percentage of the difference between the background and the folded pulse peak."
+msgstr ""
+
+#: src/algorithm_settings.c:86
+msgid "Minimum time in seconds between accepted calibration observations."
+msgstr ""
+
+#: src/algorithm_settings.c:87
+msgid "Accepts the calibration fit only when its estimated uncertainty is below this value in seconds per day."
+msgstr ""
+
+#: src/algorithm_settings.c:88
+msgid "Lower position within the folded second for the reference pulse peak and rising edge."
+msgstr ""
+
+#: src/algorithm_settings.c:89
+msgid "Upper position within the folded second for the reference pulse peak."
+msgstr ""
+
+#: src/algorithm_settings.c:252
+msgid "Not used in Light mode"
+msgstr ""
+
+#: src/algorithm_settings.c:252
+msgid "Full mode only"
+msgstr ""
+
+#: src/algorithm_settings.c:363
+msgid "Edit calibration settings (Expert)"
+msgstr ""
+
+#: src/algorithm_settings.c:66
+msgid ""
+"Sets the cutoff for both the raw-audio high-pass and the tick-envelope low-"
+"pass. Raising it rejects more low-frequency vibration but preserves finer "
+"detail in the envelope."
+msgstr ""
+
+#: src/algorithm_settings.c:67
+msgid ""
+"Mutes audio where the windowed energy exceeds this multiple of the reference "
+"level. Higher values mute less; use a higher value if strong, genuine ticks "
+"are being removed. Full mode only."
+msgstr ""
+
+#: src/algorithm_settings.c:68
+msgid ""
+"Sets how much audio is combined into each local energy measurement. A longer "
+"window spreads the influence of a short impact over more time. Full mode "
+"only."
+msgstr ""
+
+#: src/algorithm_settings.c:69
+msgid ""
+"Takes the highest local energy in each segment, then uses the median of "
+"those peaks as the reference. Longer segments mean fewer reference "
+"measurements per analysis block. Full mode only."
+msgstr ""
+
+#: src/algorithm_settings.c:70
+msgid ""
+"With manual BPH, searches this far on either side of the expected tic-to-tic "
+"interval. Widen it if a clock gains or loses enough to put the true period "
+"outside the window. This setting also affects automatic BPH checks."
+msgstr ""
+
+#: src/algorithm_settings.c:71
+msgid ""
+"After finding the initial period, searches this far around each predicted "
+"correlation peak. Widen only if the correct peak falls outside the window; a "
+"wider search can pick a neighboring peak."
+msgstr ""
+
+#: src/algorithm_settings.c:72
+msgid ""
+"A shorter candidate period must exceed this percentage of the original "
+"correlation peak to be accepted. Higher values make Auto less willing to "
+"choose the shorter period."
+msgstr ""
+
+#: src/algorithm_settings.c:73
+msgid ""
+"Compares the correlation near 1.5 times the candidate period with the peak "
+"at the candidate period. A value below this threshold triggers a check for a "
+"doubled period. Raising the threshold makes that check more likely."
+msgstr ""
+
+#: src/algorithm_settings.c:74
+msgid ""
+"Looks for the opposite beat near halfway through the measured cycle. Widen "
+"it if tic and toc are genuinely uneven; a steady gain or loss is not a "
+"reason to widen it."
+msgstr ""
+
+#: src/algorithm_settings.c:75
+msgid ""
+"Smooths the combined tic/toc envelope before choosing its timing reference. "
+"More smoothing reduces fine detail but can shift the point used for "
+"alignment."
+msgstr ""
+
+#: src/algorithm_settings.c:76
+msgid ""
+"When combining repeated cycles into one waveform, discards the highest "
+"values at each phase position before averaging. Higher values reject more "
+"isolated spikes, but unusual loud beats contribute less to the result."
+msgstr ""
+
+#: src/algorithm_settings.c:77
+msgid ""
+"Searches this far around each predicted tick for a trace dot. A wider window "
+"may recover missing dots or pick another peak from the same tick. It does "
+"not widen the initial rate search."
+msgstr ""
+
+#: src/algorithm_settings.c:78
+msgid ""
+"Smooths the waveform before looking for lift pulses. More smoothing can "
+"reduce ripples but can also merge nearby acoustic features."
+msgstr ""
+
+#: src/algorithm_settings.c:79
+msgid ""
+"Sets the starting signal threshold relative to the strongest point in the "
+"smoothed waveform. The background-based threshold takes precedence if it is "
+"higher."
+msgstr ""
+
+#: src/algorithm_settings.c:80
+msgid ""
+"Sets a threshold from the estimated background level. Raising it makes weak "
+"features less likely to be accepted as lift pulses."
+msgstr ""
+
+#: src/algorithm_settings.c:81
+msgid ""
+"Stops the search when the trial signal threshold reaches this percentage of "
+"the waveform peak. Raising it allows the detector to try higher thresholds; "
+"it does not raise the maximum balance amplitude."
+msgstr ""
+
+#: src/algorithm_settings.c:82
+msgid ""
+"Rejects a result if either the tic or toc amplitude estimate does not exceed "
+"this value. Lowering it can admit a weaker swing, but it does not improve "
+"pulse detection."
+msgstr ""
+
+#: src/algorithm_settings.c:83
+msgid ""
+"Accepts a pulse pair only if the two inferred amplitudes differ by less than "
+"this value. Raising it permits more disagreement; it does not make the "
+"estimates more accurate."
+msgstr ""
+
+#: src/algorithm_settings.c:140
+#, c-format
+msgid "Invalid algorithm setting: %s. Using its default."
+msgstr ""
+
+#: src/algorithm_settings.c:146
+msgid ""
+"Algorithm window settings are incompatible with supported sample rates. "
+"Using defaults for the affected windows."
+msgstr ""
+
+#: src/algorithm_settings.c:167
+msgid "Algorithm window settings are incompatible with supported sample rates."
+msgstr ""
+
+#: src/algorithm_settings.c:200
+#, c-format
+msgid "Could not save algorithm settings: %s"
+msgstr ""
+
+#: src/algorithm_settings.c:256
+msgid "Signal conditioning"
+msgstr ""
+
+#: src/algorithm_settings.c:256
+msgid "Noise suppression"
+msgstr ""
+
+#: src/algorithm_settings.c:256
+msgid "Period detection"
+msgstr ""
+
+#: src/algorithm_settings.c:257
+msgid "Automatic BPH"
+msgstr ""
+
+#: src/algorithm_settings.c:257
+msgid "Beat separation"
+msgstr ""
+
+#: src/algorithm_settings.c:257
+msgid "Waveform folding"
+msgstr ""
+
+#: src/algorithm_settings.c:258
+msgid "Trace tracking"
+msgstr ""
+
+#: src/algorithm_settings.c:258
+msgid "Amplitude detection"
+msgstr ""
+
+#: src/algorithm_settings.c:258
+msgid "Calibration service details"
+msgstr ""
+
+#: src/algorithm_settings.c:260
+msgid "Algorithm configuration"
+msgstr ""
+
+#: src/algorithm_settings.c:262 src/interface.c:1199 src/interface.c:1470
+msgid "Cancel"
+msgstr ""
+
+#: src/algorithm_settings.c:262
+msgid "Reset to defaults"
+msgstr ""
+
+#: src/algorithm_settings.c:263
+msgid "Apply"
+msgstr ""
+
+#: src/algorithm_settings.c:264 src/interface.c:1201
+msgid "Save"
+msgstr ""
+
+#: src/algorithm_settings.c:267
+msgid ""
+"Warning: changing Advanced or Expert parameters can produce incorrect "
+"measurements. Applying changes restarts the measurement and clears the live "
+"Trend."
+msgstr ""
+
+#: src/algorithm_settings.c:272
+msgid "Highlighted parameters differ from their defaults."
+msgstr ""
+
+#: src/algorithm_settings.c:280
+msgid "Light algorithm"
+msgstr ""
+
+#: src/algorithm_settings.c:285
+msgid "Default: Full"
+msgstr ""
+
+#: src/algorithm_settings.c:289
+msgid ""
+"Light reduces CPU load by processing half the audio samples, using shorter "
+"analysis windows and skipping noise suppression. Results update faster but "
+"are less stable and more sensitive to noise."
+msgstr ""
+
+#: src/algorithm_settings.c:293
+msgid "Basic"
+msgstr ""
+
+#: src/algorithm_settings.c:305
+msgid "Calibration"
+msgstr ""
+
+#: src/algorithm_settings.c:305
+msgid "Advanced"
+msgstr ""
+
+#: src/algorithm_settings.c:307
+msgid "Show Expert settings"
+msgstr ""
+
+#: src/algorithm_settings.c:317
+msgid ""
+"These settings identify acoustic lift pulses and check whether the resulting "
+"balance amplitude is plausible. A plausible number does not prove that the "
+"correct pulse was found. Leave this group at defaults when measuring rate "
+"only."
+msgstr ""
+
+#: src/algorithm_settings.c:320
+msgid ""
+"These settings can also affect lift-time-corrected beat error and trace "
+"timestamps."
+msgstr ""
+
+#: src/algorithm_settings.c:324
+msgid ""
+"When Light mode is applied, these settings are inactive; their values are "
+"retained."
+msgstr ""
+
+#: src/algorithm_settings.c:355
+#, c-format
+msgid ""
+"%s\n"
+"Default: %.*f"
+msgstr ""
+
+#: src/algorithm_settings.c:361
+msgid "Help"
+msgstr ""
+
+#: src/algorithm_settings.c:362
+#, c-format
+msgid "Help for %s"
+msgstr ""
 
 #: src/audio.c:148
 msgid "Failed to setup audio mutex"
@@ -94,7 +526,7 @@ msgstr ""
 msgid "Audio settings"
 msgstr ""
 
-#: src/audio_settings.c:296 src/interface.c:468
+#: src/audio_settings.c:296 src/interface.c:469
 msgid "_Close"
 msgstr ""
 
@@ -129,7 +561,7 @@ msgstr ""
 msgid "Click to change the audio settings."
 msgstr ""
 
-#: src/computer.c:385
+#: src/computer.c:394
 msgid "Unable to initialize computing thread"
 msgstr ""
 
@@ -183,190 +615,182 @@ msgid ""
 "The current bph and lift angle are kept."
 msgstr ""
 
-#: src/interface.c:463
+#: src/interface.c:464
 msgid "No audio input could be opened."
 msgstr ""
 
-#: src/interface.c:465
+#: src/interface.c:466
 msgid ""
 "Choose an audio system and input device in the audio settings, or check the "
 "system's microphone settings."
 msgstr ""
 
-#: src/interface.c:469
+#: src/interface.c:470
 msgid "_Audio settings…"
 msgstr ""
 
-#: src/interface.c:520
+#: src/interface.c:527
 msgid "Could not open this input. It may be in use or disabled."
 msgstr ""
 
-#: src/interface.c:529
+#: src/interface.c:536
 msgid "The chosen input could not be opened; using the default input."
 msgstr ""
 
-#: src/interface.c:531
+#: src/interface.c:538
 msgid "The chosen rate is not available; using the default rate."
 msgstr ""
 
-#: src/interface.c:548
+#: src/interface.c:555
 msgid "Failed to restart computation thread"
 msgstr ""
 
-#: src/interface.c:689
+#: src/interface.c:701
 msgid "Stop calibration"
 msgstr ""
 
-#: src/interface.c:689 src/interface.c:1735
+#: src/interface.c:701 src/interface.c:1730
 msgid "Start calibration"
 msgstr ""
 
-#: src/interface.c:818
+#: src/interface.c:832
 msgid "(not set)"
 msgstr ""
 
 #. TRANSLATORS: watch position. Translate the words, keep the code (DU) unchanged
-#: src/interface.c:820
+#: src/interface.c:834
 msgid "Dial up (DU)"
 msgstr ""
 
 #. TRANSLATORS: watch position. Translate the words, keep the code (DD) unchanged
-#: src/interface.c:822
+#: src/interface.c:836
 msgid "Dial down (DD)"
 msgstr ""
 
 #. TRANSLATORS: watch position. Translate the words, keep the code (CU) unchanged
-#: src/interface.c:824
+#: src/interface.c:838
 msgid "Crown up (CU)"
 msgstr ""
 
 #. TRANSLATORS: watch position. Translate the words, keep the code (CD) unchanged
-#: src/interface.c:826
+#: src/interface.c:840
 msgid "Crown down (CD)"
 msgstr ""
 
 #. TRANSLATORS: watch position. Translate the words, keep the code (CL) unchanged
-#: src/interface.c:828
+#: src/interface.c:842
 msgid "Crown left (CL)"
 msgstr ""
 
 #. TRANSLATORS: watch position. Translate the words, keep the code (CR) unchanged
-#: src/interface.c:830
+#: src/interface.c:844
 msgid "Crown right (CR)"
 msgstr ""
 
 #. TRANSLATORS: default title of a snapshot tab, short (tab title)
 #. TRANSLATORS: tab titles, short. "Real time" is the live measurement tab, "Snapshot" a kept measurement
-#: src/interface.c:842 src/interface.c:976
+#: src/interface.c:856 src/interface.c:990
 msgid "Snapshot"
 msgstr ""
 
-#: src/interface.c:916
+#: src/interface.c:930
 #, c-format
 msgid "Could not open the manual (%s): %s"
 msgstr ""
 
-#: src/interface.c:916
+#: src/interface.c:930
 msgid "unknown error"
 msgstr ""
 
-#: src/interface.c:976
+#: src/interface.c:990
 msgid "Real time"
 msgstr ""
 
-#: src/interface.c:1077
+#: src/interface.c:1091
 msgid "All files"
 msgstr ""
 
-#: src/interface.c:1110 src/interface.c:1124 src/interface.c:1133
+#: src/interface.c:1124 src/interface.c:1138 src/interface.c:1147
 msgid "Error opening file\n"
 msgstr ""
 
-#: src/interface.c:1157
+#: src/interface.c:1171
 #, c-format
 msgid "File %s already exists. Do you want to replace it?"
 msgstr ""
 
-#: src/interface.c:1185 src/interface.c:1456
-msgid "Cancel"
-msgstr ""
-
-#: src/interface.c:1187
-msgid "Save"
-msgstr ""
-
-#: src/interface.c:1233 src/interface.c:1688
+#: src/interface.c:1247 src/interface.c:1702
 msgid "Save current display"
 msgstr ""
 
-#: src/interface.c:1238 src/interface.c:1285 src/interface.c:1403
+#: src/interface.c:1252 src/interface.c:1299 src/interface.c:1417
 msgid "Error writing file"
 msgstr ""
 
-#: src/interface.c:1266 src/interface.c:1694
+#: src/interface.c:1280 src/interface.c:1708
 msgid "Save all snapshots"
 msgstr ""
 
-#: src/interface.c:1351
+#: src/interface.c:1365
 msgid "Could not create the export filename."
 msgstr ""
 
-#: src/interface.c:1358
+#: src/interface.c:1372
 msgid "CSV format"
 msgstr ""
 
-#: src/interface.c:1362
+#: src/interface.c:1376
 msgid "Portable CSV (comma, decimal point)"
 msgstr ""
 
-#: src/interface.c:1366
+#: src/interface.c:1380
 msgid "Localized CSV (semicolon, decimal comma)"
 msgstr ""
 
-#: src/interface.c:1372
+#: src/interface.c:1386
 msgid "Export Trend as CSV"
 msgstr ""
 
-#: src/interface.c:1392
+#: src/interface.c:1406
 msgid "Invalid CSV format."
 msgstr ""
 
-#: src/interface.c:1428
+#: src/interface.c:1442
 #, c-format
 msgid "Error reading file: %s"
 msgstr ""
 
-#: src/interface.c:1453 src/interface.c:1458 src/interface.c:1683
+#: src/interface.c:1467 src/interface.c:1472 src/interface.c:1697
 msgid "Open"
 msgstr ""
 
-#: src/interface.c:1536
+#: src/interface.c:1550
 msgid "Saved watches (bph and lift angle)"
 msgstr ""
 
-#: src/interface.c:1539
+#: src/interface.c:1553
 msgid "Save the current bph and lift angle as a watch"
 msgstr ""
 
-#: src/interface.c:1542
+#: src/interface.c:1556
 msgid "Delete the selected watch"
 msgstr ""
 
-#: src/interface.c:1547
+#: src/interface.c:1561
 msgid "Beats per hour (bph)"
 msgstr ""
 
 #. TRANSLATORS: first entry of the beats-per-hour list: the program detects the beat rate by itself. Short.
 #. * The program reads the entry back as a number and treats any non-numeric text as "guess".
-#: src/interface.c:1557
+#: src/interface.c:1571
 msgid "guess"
 msgstr ""
 
-#: src/interface.c:1577 src/serializer.c:762
+#: src/interface.c:1591 src/serializer.c:764
 msgid "Lift angle (degrees)"
 msgstr ""
 
-#: src/interface.c:1634
+#: src/interface.c:1648
 msgid ""
 "Position of the watch.\n"
 "\n"
@@ -380,11 +804,11 @@ msgid ""
 "snapshot."
 msgstr ""
 
-#: src/interface.c:1648
+#: src/interface.c:1662
 msgid "Take Snapshot"
 msgstr ""
 
-#: src/interface.c:1650
+#: src/interface.c:1664
 msgid ""
 "Keep the current\n"
 "measurement in a\n"
@@ -393,41 +817,23 @@ msgid ""
 "Shortcut: Ctrl+Space"
 msgstr ""
 
-#: src/interface.c:1660
+#: src/interface.c:1674
 msgid "Current snapshot:"
 msgstr ""
 
-#: src/interface.c:1699
+#: src/interface.c:1713
 msgid "Export Trend as CSV…"
 msgstr ""
 
-#: src/interface.c:1707
-msgid "Light algorithm"
-msgstr ""
-
-#: src/interface.c:1710
-msgid ""
-"Reduces CPU load, \n"
-"for slow computers.\n"
-"\n"
-"It processes half of\n"
-"the audio samples, \n"
-"uses shorter analysis\n"
-"windows and skips the\n"
-"noise suppressor.\n"
-"Results update faster,\n"
-"but they are less stable\n"
-"and more sensitive to \n"
-"background noise.\n"
-"Toggling this setting will\n"
-"restart your measurement."
-msgstr ""
-
-#: src/interface.c:1730
+#: src/interface.c:1721
 msgid "Audio settings…"
 msgstr ""
 
-#: src/interface.c:1737
+#: src/interface.c:1725
+msgid "Algorithm configuration…"
+msgstr ""
+
+#: src/interface.c:1732
 msgid ""
 "Measures the error of\n"
 "your sound card clock,\n"
@@ -435,37 +841,86 @@ msgid ""
 "ticking once per second\n"
 "as reference.\n"
 "\n"
-"Takes about 15 minutes.\n"
+"Takes about 15 minutes\n"
+"with default settings.\n"
 "The result is stored\n"
 "in the cal field."
 msgstr ""
 
-#: src/interface.c:1751
+#: src/interface.c:1747
 msgid "User manual"
 msgstr ""
 
-#: src/interface.c:1752
+#: src/interface.c:1748
 msgid "Open the user manual (PDF)."
 msgstr ""
 
-#: src/interface.c:1759
+#: src/interface.c:1755
 msgid "Close all snapshots"
 msgstr ""
 
-#: src/interface.c:1765
+#: src/interface.c:1761
 msgid "Quit"
 msgstr ""
 
-#: src/interface.c:1930
+#: src/interface.c:1928
 msgid "The saved input was not found; using the default input."
 msgstr ""
 
-#: src/interface.c:1932
+#: src/interface.c:1930
 msgid "The saved rate is not available; using the default rate."
 msgstr ""
 
-#: src/interface.c:1946
+#: src/interface.c:1944
 msgid "Error starting computation thread"
+msgstr ""
+
+#: src/output_panel.c
+msgid "No watch detected."
+msgstr ""
+
+#: src/output_panel.c
+msgid "No watch detected: no valid beat period found."
+msgstr ""
+
+#: src/output_panel.c
+msgid "No watch detected: the detected period is too long."
+msgstr ""
+
+#: src/output_panel.c
+msgid "No watch detected: tic and toc could not be separated."
+msgstr ""
+
+#: src/output_panel.c
+msgid "No watch detected: the beat period is too unstable."
+msgstr ""
+
+#: src/output_panel.c
+msgid "Rate only: beat error and amplitude unavailable."
+msgstr ""
+
+#: src/output_panel.c
+msgid "Rate only: tic and toc could not be separated; beat error and amplitude are unavailable."
+msgstr ""
+
+#: src/output_panel.c
+msgid "Amplitude unavailable."
+msgstr ""
+
+#: src/output_panel.c
+msgid "Amplitude unavailable: lift pulses could not be measured."
+msgstr ""
+
+#: src/output_panel.c
+msgid "Amplitude unavailable: the measured amplitude is too low."
+msgstr ""
+
+#: src/output_panel.c
+msgid "Amplitude unavailable: the measured amplitude is too high."
+msgstr ""
+
+#: src/output_panel.c
+msgid "Amplitude unavailable: tic and toc amplitudes differ too much."
 msgstr ""
 
 #. TRANSLATORS: status tooltip. Keep the leading "0:"
@@ -498,210 +953,210 @@ msgid ""
 msgstr ""
 
 #. TRANSLATORS: legend of the paper strip, short, shown in a narrow row
-#: src/output_panel.c:1219
+#: src/output_panel.c:1224
 msgid "reference tick"
 msgstr ""
 
 #. TRANSLATORS: legend of the paper strip, short, shown in a narrow row. "cal" is the calibration value and stays as is
-#: src/output_panel.c:1221
+#: src/output_panel.c:1226
 msgid "current cal"
 msgstr ""
 
 #. TRANSLATORS: legend of the paper strip: the first sound of a watch beat (tic-toc). Short, shown in a narrow row
-#: src/output_panel.c:1224
+#: src/output_panel.c:1229
 msgid "tic"
 msgstr ""
 
 #. TRANSLATORS: legend of the paper strip: the second sound of a watch beat (tic-toc). Short, shown in a narrow row
-#: src/output_panel.c:1226
+#: src/output_panel.c:1231
 msgid "toc"
 msgstr ""
 
 #. TRANSLATORS: legend of the paper strip, short, shown in a narrow row
-#: src/output_panel.c:1228
+#: src/output_panel.c:1233
 msgid "amplitude"
 msgstr ""
 
 #. TRANSLATORS: legend of the paper strip: dashed guide line showing the rate. Short, shown in a narrow row
-#: src/output_panel.c:1230
+#: src/output_panel.c:1235
 msgid "rate guide"
 msgstr ""
 
 #. TRANSLATORS: title of the paper strip panel
-#: src/output_panel.c:1412
+#: src/output_panel.c:1417
 msgid "Paper strip: beat timing over time"
 msgstr ""
 
 #. TRANSLATORS: title of the paper strip panel while calibrating
-#: src/output_panel.c:1414
+#: src/output_panel.c:1419
 msgid "Paper strip: reference ticks"
 msgstr ""
 
-#: src/output_panel.c:1572
+#: src/output_panel.c:1577
 msgid "No long-term statistics"
 msgstr ""
 
-#: src/output_panel.c:1573
+#: src/output_panel.c:1578
 msgid "This snapshot was saved without them."
 msgstr ""
 
-#: src/output_panel.c:1578
+#: src/output_panel.c:1583
 msgid "Not recorded during calibration"
 msgstr ""
 
-#: src/output_panel.c:1580
+#: src/output_panel.c:1585
 msgid "No readings were recorded"
 msgstr ""
 
-#: src/output_panel.c:1582
+#: src/output_panel.c:1587
 msgid "Waiting for a steady signal"
 msgstr ""
 
-#: src/output_panel.c:1583
+#: src/output_panel.c:1588
 msgid "A reading is recorded every 2 s while the signal is good."
 msgstr ""
 
 #. TRANSLATORS: Trend page column head: the latest reading. Short, shown in a narrow column
-#: src/output_panel.c:1600
+#: src/output_panel.c:1605
 msgid "now"
 msgstr ""
 
 #. TRANSLATORS: Trend page column head: average. Short, shown in a narrow column
-#: src/output_panel.c:1602
+#: src/output_panel.c:1607
 msgid "avg"
 msgstr ""
 
 #. TRANSLATORS: Trend page column head: minimum. Short, shown in a narrow column
-#: src/output_panel.c:1604
+#: src/output_panel.c:1609
 msgid "min"
 msgstr ""
 
 #. TRANSLATORS: Trend page column head: maximum. Short, shown in a narrow column
-#: src/output_panel.c:1606
+#: src/output_panel.c:1611
 msgid "max"
 msgstr ""
 
 #. TRANSLATORS: Trend page column head: difference between maximum and minimum. Short, shown in a narrow column
-#: src/output_panel.c:1608
+#: src/output_panel.c:1613
 msgid "spread"
 msgstr ""
 
 #. TRANSLATORS: Trend page row: rate in seconds per day (s/d). Short, shown in a narrow column
-#: src/output_panel.c:1625
+#: src/output_panel.c:1630
 msgid "Rate s/d"
 msgstr ""
 
 #. TRANSLATORS: Trend page row: amplitude in degrees. Keep the degree sign. Short, shown in a narrow column
-#: src/output_panel.c:1627
+#: src/output_panel.c:1632
 msgid "Ampl. °"
 msgstr ""
 
 #. TRANSLATORS: Trend page row: beat error in milliseconds (ms). Short, shown in a narrow column
-#: src/output_panel.c:1629
+#: src/output_panel.c:1634
 msgid "Beat err. ms"
 msgstr ""
 
 #. TRANSLATORS: Trend page. %s is a duration such as 2:15:03, the number is a percentage
-#: src/output_panel.c:1659
+#: src/output_panel.c:1664
 #, c-format
 msgid "%s since the start, %.0f %% with signal (100 h limit reached)"
 msgstr ""
 
-#: src/output_panel.c:1660
+#: src/output_panel.c:1665
 #, c-format
 msgid "%s since the start, %.0f %% with signal"
 msgstr ""
 
 #. TRANSLATORS: Trend page: the settings used for the readings. "cal" is the calibration value and stays as is
-#: src/output_panel.c:1664
+#: src/output_panel.c:1669
 #, c-format
 msgid "%d bph, lift angle %.0f°, cal %+.1f s/d"
 msgstr ""
 
 #. TRANSLATORS: Trend page column head: time spent in this position (duration). Short, shown in a narrow column
-#: src/output_panel.c:1677
+#: src/output_panel.c:1682
 msgid "time"
 msgstr ""
 
 #. TRANSLATORS: Trend page column head: average rate in this position. Short, shown in a narrow column
-#: src/output_panel.c:1679
+#: src/output_panel.c:1684
 msgid "rate"
 msgstr ""
 
 #. TRANSLATORS: Trend page column head: average amplitude in this position. Short, shown in a narrow column
-#: src/output_panel.c:1681
+#: src/output_panel.c:1686
 msgid "ampl."
 msgstr ""
 
 #. TRANSLATORS: Trend page column head: beat error in this position. Short, shown in a narrow column
-#: src/output_panel.c:1683
+#: src/output_panel.c:1688
 msgid "BE"
 msgstr ""
 
 #. TRANSLATORS: Trend page column head over the list of watch positions. Short, shown in a narrow column
-#: src/output_panel.c:1687
+#: src/output_panel.c:1692
 msgid "Position"
 msgstr ""
 
 #. TRANSLATORS: Trend page: readings taken while no watch position was set. Short, shown in a narrow column
-#: src/output_panel.c:1699
+#: src/output_panel.c:1704
 msgid "not set"
 msgstr ""
 
-#: src/output_panel.c:1725
+#: src/output_panel.c:1730
 #, c-format
 msgid "Positional error (largest difference in rate): %.1f s/d"
 msgstr ""
 
-#: src/output_panel.c:1727
+#: src/output_panel.c:1732
 msgid "Measure more positions to see the positional error."
 msgstr ""
 
-#: src/output_panel.c:1733
+#: src/output_panel.c:1738
 msgid "Set the watch position to also get statistics per position."
 msgstr ""
 
-#: src/output_panel.c:1830
+#: src/output_panel.c:1835
 #, c-format
 msgid "Rate (s/d), dashed: average %+.1f"
 msgstr ""
 
-#: src/output_panel.c:1832 src/serializer.c:760
+#: src/output_panel.c:1837 src/serializer.c:762
 msgid "Rate (s/day)"
 msgstr ""
 
-#: src/output_panel.c:1849
+#: src/output_panel.c:1860
 #, c-format
 msgid "Amplitude (°), dashed: average %.1f"
 msgstr ""
 
-#: src/output_panel.c:1851 src/serializer.c:761
+#: src/output_panel.c:1862 src/serializer.c:763
 msgid "Amplitude (degrees)"
 msgstr ""
 
-#: src/output_panel.c:1879
+#: src/output_panel.c:1890
 #, c-format
 msgid "Beat error (ms), dashed: average %.1f"
 msgstr ""
 
-#: src/output_panel.c:1881 src/serializer.c:761
+#: src/output_panel.c:1892 src/serializer.c:763
 msgid "Beat error (ms)"
 msgstr ""
 
-#: src/output_panel.c:1938
+#: src/output_panel.c:1949
 #, c-format
 msgid "Settling: %d s remaining"
 msgstr ""
 
 #. TRANSLATORS: keep cal (wait), cal (acq.), cal (done), cal (fail) in English, they are shown like that in the results bar.
 #. * Also keep the word "done" in English where it is mentioned as a status, and keep the markup tags.
-#: src/output_panel.c:1996
+#: src/output_panel.c:2007
 msgid ""
 "<span size='x-large' weight='bold'>Calibration in progress</span>\n"
 "\n"
 "Calibration measures how fast your sound card clock really runs, so that "
-"rates are not skewed by the computer. It takes about 15 minutes (900 "
-"ticks).\n"
+"rates are not skewed by the computer. With default settings it takes about "
+"15 minutes (900 ticks).\n"
 "\n"
 "<b>1. Use a quartz reference</b>\n"
 "Place a quartz watch or clock that ticks once per second (an analog one with "
@@ -729,51 +1184,51 @@ msgid ""
 msgstr ""
 
 #. TRANSLATORS: paper strip button: erase the trace. Short, shown in a narrow button
-#: src/output_panel.c:2146
+#: src/output_panel.c:2157
 msgid "Clear"
 msgstr ""
 
 #. TRANSLATORS: paper strip button: center the trace. Short, shown in a narrow button
-#: src/output_panel.c:2154
+#: src/output_panel.c:2165
 msgid "Center"
 msgstr ""
 
 #. TRANSLATORS: paper strip setting: time between marks on the vertical (Y) axis. Short
-#: src/output_panel.c:2178
+#: src/output_panel.c:2189
 msgid "Y mark (s)"
 msgstr ""
 
-#: src/output_panel.c:2186
+#: src/output_panel.c:2197
 msgid "Time between marks on the vertical axis, in seconds."
 msgstr ""
 
 #. TRANSLATORS: paper strip setting: time span shown on the vertical (Y) axis. Short
-#: src/output_panel.c:2192
+#: src/output_panel.c:2203
 msgid "Y window (s)"
 msgstr ""
 
-#: src/output_panel.c:2198
+#: src/output_panel.c:2209
 msgid "Fixed time span shown vertically. It does not change automatically."
 msgstr ""
 
-#: src/output_panel.c:2215
+#: src/output_panel.c:2226
 msgid "Waveforms"
 msgstr ""
 
-#: src/output_panel.c:2219
+#: src/output_panel.c:2230
 msgid "Trend"
 msgstr ""
 
-#: src/output_panel.c:2223
+#: src/output_panel.c:2234
 msgid "Trend: rate, amplitude, and BE over time"
 msgstr ""
 
 #. TRANSLATORS: Trend page button: start the statistics over. Short, shown in a narrow button
-#: src/output_panel.c:2231
+#: src/output_panel.c:2242
 msgid "Reset"
 msgstr ""
 
-#: src/output_panel.c:2232
+#: src/output_panel.c:2243
 msgid ""
 "Start the statistics over.\n"
 "They also start over when bph, lift angle,\n"
@@ -781,111 +1236,119 @@ msgid ""
 msgstr ""
 
 #. TRANSLATORS: Trend page: label of the rate range selector (Auto, +-10 s/d, +-50 s/d). Short
-#: src/output_panel.c:2239
+#: src/output_panel.c:2250
 msgid "Rate"
 msgstr ""
 
 #. TRANSLATORS: Trend page rate range: chosen automatically. Short, shown in a narrow combo box
-#: src/output_panel.c:2242
+#: src/output_panel.c:2253
 msgid "Auto"
 msgstr ""
 
 #. TRANSLATORS: Trend page rate range; translate the unit s/d as in the other Trend page texts
-#: src/output_panel.c:2244
+#: src/output_panel.c:2255
 msgid "±10 s/d"
 msgstr ""
 
 #. TRANSLATORS: Trend page rate range; translate the unit s/d as in the other Trend page texts
-#: src/output_panel.c:2246
+#: src/output_panel.c:2257
 msgid "±50 s/d"
 msgstr ""
 
 #. TRANSLATORS: Trend page: label of the time span selector (All, Last 1 h, ...). Short
-#: src/output_panel.c:2251
+#: src/output_panel.c:2262
 msgid "Show"
 msgstr ""
 
 #. TRANSLATORS: Trend page time span: everything since the start. Short, shown in a narrow combo box
-#: src/output_panel.c:2254
+#: src/output_panel.c:2265
 msgid "All"
 msgstr ""
 
-#: src/output_panel.c:2255
+#: src/output_panel.c:2266
 msgid "Last 1 h"
 msgstr ""
 
-#: src/output_panel.c:2256
+#: src/output_panel.c:2267
 msgid "Last 6 h"
 msgstr ""
 
-#: src/output_panel.c:2257
+#: src/output_panel.c:2268
 msgid "Last 24 h"
 msgstr ""
 
-#: src/output_panel.c:2263
+#: src/output_panel.c:2274
 msgid "Settling time (s)"
 msgstr ""
 
-#: src/output_panel.c:2267
+#: src/output_panel.c:2278
 msgid "Seconds to wait after a position change; 0 disables settling."
 msgstr ""
 
-#: src/output_panel.c:2274
+#: src/output_panel.c:2285
 msgid "Calibration instructions"
 msgstr ""
 
-#: src/output_panel.c:2280
+#: src/output_panel.c:2291
 msgid "Tic: averaged sound of the first beat"
 msgstr ""
 
-#: src/output_panel.c:2287
+#: src/output_panel.c:2298
 msgid "Toc: averaged sound of the second beat"
 msgstr ""
 
-#: src/output_panel.c:2294
+#: src/output_panel.c:2305
 msgid "Full period: tic and toc (highlighted)"
 msgstr ""
 
-#: src/serializer.c:760
+#: src/serializer.c:762
 msgid "Elapsed time (s)"
 msgstr ""
 
-#: src/serializer.c:760
+#: src/serializer.c:762
 msgid "Position (code)"
 msgstr ""
 
-#: src/serializer.c:761
+#: src/serializer.c:763
 msgid "Validity"
 msgstr ""
 
-#: src/serializer.c:762
+#: src/serializer.c:764
 msgid "Beat rate (bph)"
 msgstr ""
 
-#: src/serializer.c:762
+#: src/serializer.c:764
 msgid "Calibration (s/day)"
 msgstr ""
 
-#: src/serializer.c:763
+#: src/serializer.c:765
 msgid "Sample rate (Hz)"
 msgstr ""
 
-#: src/serializer.c:763
+#: src/serializer.c:765
 msgid "Algorithm"
 msgstr ""
 
-#: src/serializer.c:802
+#: src/serializer.c:804
 msgid "Settling"
 msgstr ""
 
-#: src/serializer.c:802
+#: src/serializer.c:804
 msgid "Valid"
 msgstr ""
 
-#: src/serializer.c:808
+#: src/serializer.c:811
+msgid "Light (custom)"
+msgstr ""
+
+#: src/serializer.c:811
+msgid "Full (custom)"
+msgstr ""
+
+#: src/serializer.c:812
 msgid "Light"
 msgstr ""
 
-#: src/serializer.c:808
+#: src/serializer.c:812
 msgid "Full"
 msgstr ""

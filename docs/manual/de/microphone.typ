@@ -40,5 +40,6 @@ und stören die Messung.
 - Während der Messung weder den Tisch noch die Kabel berühren.
 - Eine weiche Unterlage unter dem Halter isoliert die Uhr von
   Tischerschütterungen.
-- Die Option #ui[Leichter Algorithmus] (im Menü) lässt die
+- Die Option #ui[Leichter Algorithmus] (unter #ui[Algorithmuskonfiguration…],
+  #ui[Grundlegend]) lässt die
   Rauschunterdrückung aus. Sie sollte ausgeschaltet bleiben, außer der Computer ist zu langsam.

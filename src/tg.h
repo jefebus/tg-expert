@@ -52,10 +52,6 @@
 #define MANUAL_FILE_NAME "tg-expert-manual.pdf"
 #define MANUAL_URL "https://github.com/jefebus/tg-expert/releases/latest"
 
-#define FILTER_CUTOFF 3000
-
-#define CAL_DATA_SIZE 900
-
 #define FIRST_STEP 1
 #define FIRST_STEP_LIGHT 0
 
@@ -104,6 +100,30 @@
 #define UNUSED(X) (void)(X)
 
 /* algo.c */
+enum algorithm_parameter {
+	ALG_FILTER, ALG_NOISE_WINDOW, ALG_NOISE_SEGMENT, ALG_NOISE_THRESHOLD,
+	ALG_TAPER, ALG_LOBES, ALG_GUESS_SEARCH, ALG_HARMONIC, ALG_DOUBLE_TRIGGER,
+	ALG_PERIOD_REFINE, ALG_BE_SEARCH, ALG_TIC_SMOOTH, ALG_EVENT_SEARCH,
+	ALG_TRIM, ALG_AMP_SMOOTH, ALG_AMP_INITIAL, ALG_AMP_NOISE, ALG_AMP_LIMIT,
+	ALG_AMP_STEP, ALG_AMP_MIN, ALG_AMP_DIFFERENCE, ALG_PERIOD_LIMIT,
+	ALG_PERIOD_SIGMA, ALG_CAL_COUNT, ALG_CAL_EDGE, ALG_CAL_INTERVAL,
+	ALG_CAL_PRECISION, ALG_CAL_LOCK_LOW, ALG_CAL_LOCK_HIGH, ALG_COUNT
+};
+extern double algorithm_parameters[ALG_COUNT];
+
+enum detection_status {
+	DETECTION_STATUS_OK,
+	DETECTION_STATUS_NO_WAVEFORM,
+	DETECTION_STATUS_PERIOD_TOO_LONG,
+	DETECTION_STATUS_NO_BEAT,
+	DETECTION_STATUS_UNSTABLE,
+	DETECTION_STATUS_RATE_ONLY,
+	DETECTION_STATUS_AMPLITUDE_NOT_FOUND,
+	DETECTION_STATUS_AMPLITUDE_TOO_LOW,
+	DETECTION_STATUS_AMPLITUDE_TOO_HIGH,
+	DETECTION_STATUS_AMPLITUDE_INCONSISTENT
+};
+
 struct processing_buffers {
 	int sample_rate;
 	int sample_count;
@@ -117,6 +137,8 @@ struct processing_buffers {
 	int waveform_max_i;
 	int tic,toc;
 	int ready;
+	int period_ready;
+	enum detection_status detection_status;
 	uint64_t timestamp, last_tic, last_toc, events_from;
 	uint64_t *events;
 	unsigned char *events_tictoc;
@@ -192,6 +214,7 @@ enum audio_input_status {
 struct snapshot {
 	struct processing_buffers *pb;
 	int is_old;
+	int rate_only;
 	uint64_t timestamp;
 	int is_light;
 
@@ -215,6 +238,7 @@ struct snapshot {
 
 	int signal;
 	int audio_status;
+	enum detection_status detection_status;
 
 	int cal_state;
 	int cal_percent;
@@ -248,6 +272,7 @@ enum watch_position {
 
 struct computer {
 	pthread_t thread;
+	int thread_joined;
 	pthread_mutex_t mutex;
 	pthread_cond_t cond;
 
@@ -269,6 +294,7 @@ struct computer {
 
 struct snapshot *snapshot_clone(struct snapshot *s);
 void snapshot_destroy(struct snapshot *s);
+void computer_join(struct computer *c);
 void computer_destroy(struct computer *c);
 struct computer *start_computer(int nominal_sr, int bph, double la, int cal, int light);
 void lock_computer(struct computer *c);
@@ -304,7 +330,7 @@ struct trend {
 	gint64 start_us, last_us, end_us;	// monotonic time; end_us only if frozen
 	gint64 settling_until_us;
 	// settings the readings were taken with
-	int bph, cal, nominal_sr, is_light;
+	int bph, cal, nominal_sr, is_light, algorithm_custom;
 	double la;
 	gint64 guess_mismatch_us;	// since when the guessed bph differs from bph, 0 if it does not
 	struct trend_stats rate, amp, be;
@@ -350,6 +376,9 @@ struct output_panel {
 	GtkWidget *trend_drawing_area;
 	GtkWidget *settling_spin;
 	GtkWidget *settling_status;
+	GtkWidget *detection_status_label;
+	enum detection_status shown_detection_status;
+	gint64 detection_status_until;
 	void (*settling_setting_changed)(void *, int);
 	void *settling_setting_data;
 	struct trend *trend;         // owned; NULL for snapshots loaded from a file
@@ -410,7 +439,7 @@ struct main_window {
 	GtkWidget *cal_button; // "Start calibration" / "Stop calibration" menu item
 	GtkWidget *notebook;
 	GtkWidget *open_item;
-	GtkWidget *light_item;
+	GtkWidget *algorithm_item;
 	GtkWidget *save_item;
 	GtkWidget *save_all_item;
 	GtkWidget *export_item;
@@ -436,6 +465,7 @@ struct main_window {
 	int csv_format;
 	int nominal_sr;
 	int restart_audio;
+	int restart_algorithm;
 	int pending_audio_device;
 	int pending_audio_rate;
 	int pending_audio_api;
@@ -450,6 +480,12 @@ struct main_window {
 	guint kick_timeout;
 	guint save_timeout;
 };
+
+void algorithm_settings_load(struct main_window *w);
+void algorithm_settings_open(struct main_window *w);
+int algorithm_settings_custom(int light);
+void algorithm_settings_prune_defaults(GKeyFile *config);
+void request_algorithm_restart(struct main_window *w, int light);
 
 extern int preset_bph[];
 

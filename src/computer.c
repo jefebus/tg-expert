@@ -106,6 +106,7 @@ static void compute_update_cal(struct computer *c)
 		pb_destroy_clone(c->actv->pb);
 		c->actv->pb = NULL;
 	}
+	c->actv->rate_only = 0;
 	c->actv->cal_state = c->cdata->state;
 	c->actv->cal_percent = 100*c->cdata->wp/c->cdata->size;
 	if(c->cdata->state == 1)
@@ -118,14 +119,34 @@ static void compute_update(struct computer *c)
 	struct processing_buffers *p = c->pdata->buffers;
 	c->actv->candidate_bph = 0;
 	int i;
-	for(i=0; i<NSTEPS && p[i].ready; i++);
-	for(i--; i>=0 && p[i].sigma > p[i].period / 10000; i--);
+	for(i=NSTEPS-1; i>=0; i--)
+		if(p[i].ready && p[i].sigma <= p[i].period * algorithm_parameters[ALG_PERIOD_SIGMA])
+			break;
 	if(i>=0) {
 		if(c->actv->pb) pb_destroy_clone(c->actv->pb);
 		c->actv->pb = pb_clone(&p[i]);
 		c->actv->is_old = 0;
+		c->actv->rate_only = 0;
 		c->actv->signal = i == NSTEPS-1 && p[i].amp < 0 ? signal-1 : signal;
+		c->actv->detection_status = p[i].detection_status;
 	} else {
+		for(i=NSTEPS-1; i>=0; i--)
+			if(p[i].period_ready && !p[i].ready &&
+					isfinite(p[i].period) && p[i].period > 0 &&
+					isfinite(p[i].sigma) &&
+					p[i].sigma <= p[i].period * algorithm_parameters[ALG_PERIOD_SIGMA])
+				break;
+		if(i >= 0) {
+			if(c->actv->pb) pb_destroy_clone(c->actv->pb);
+			c->actv->pb = pb_clone(&p[i]);
+			c->actv->is_old = 0;
+			c->actv->rate_only = 1;
+			c->actv->signal = signal;
+			c->actv->detection_status = DETECTION_STATUS_RATE_ONLY;
+			return;
+		}
+		c->actv->detection_status = signal ?
+			DETECTION_STATUS_UNSTABLE : p[0].detection_status;
 		if(c->actv->bph) {
 			for(int candidate_index = NSTEPS - 1; candidate_index >= 0; candidate_index--) {
 				if(p[candidate_index].candidate_period <= 0)
@@ -167,7 +188,7 @@ static void compute_events(struct computer *c)
 {
 	struct snapshot *s = c->actv;
 	struct processing_buffers *p = c->actv->pb;
-	if(p && !s->is_old) {
+	if(p && !s->is_old && !s->rate_only) {
 		uint64_t last = s->events[s->events_wp];
 		int i;
 		for(i=0; i<EVENTS_MAX && p->events[i]; i++)
@@ -194,9 +215,9 @@ void compute_results(struct snapshot *s)
 	if(s->pb) {
 		s->guessed_bph = s->bph ? s->bph : guess_bph(s->pb->period / s->sample_rate);
 		s->rate = (7200/(s->guessed_bph * s->pb->period / s->sample_rate) - 1)*24*3600;
-		s->be = fabs(s->pb->be) * 1000 / s->sample_rate;
-		s->amp = s->la * s->pb->amp; // 0 = not available
-		if(s->amp < 135 || s->amp > 360)
+		s->be = s->rate_only ? 0 : fabs(s->pb->be) * 1000 / s->sample_rate;
+		s->amp = s->rate_only ? 0 : s->la * s->pb->amp; // 0 = not available
+		if(s->amp < algorithm_parameters[ALG_AMP_MIN] || s->amp > 360)
 			s->amp = 0;
 	} else
 		s->guessed_bph = s->bph ? s->bph : DEFAULT_BPH;
@@ -265,8 +286,17 @@ static void *computing_thread(void *void_computer)
 	return NULL;
 }
 
+void computer_join(struct computer *c)
+{
+	if(!c->thread_joined) {
+		pthread_join(c->thread, NULL);
+		c->thread_joined = 1;
+	}
+}
+
 void computer_destroy(struct computer *c)
 {
+	computer_join(c);
 	int i;
 	for(i=0; i<NSTEPS; i++)
 		pb_destroy(&c->pdata->buffers[i]);
@@ -279,7 +309,6 @@ void computer_destroy(struct computer *c)
 		snapshot_destroy(c->curr);
 	pthread_mutex_destroy(&c->mutex);
 	pthread_cond_destroy(&c->cond);
-	pthread_join(c->thread, NULL);
 	free(c);
 }
 
@@ -325,6 +354,7 @@ struct computer *start_computer(int nominal_sr, int bph, double la, int cal, int
 	s->nominal_sr = nominal_sr;
 	s->pb = NULL;
 	s->is_old = 1;
+	s->rate_only = 0;
 	s->calibrate = 0;
 	s->signal = 0;
 	s->events_count = EVENTS_COUNT;
@@ -350,6 +380,7 @@ struct computer *start_computer(int nominal_sr, int bph, double la, int cal, int
 	s->cal_percent = 0;
 	s->cal_result = 0;
 	s->audio_status = AUDIO_STATUS_UNAVAILABLE;
+	s->detection_status = DETECTION_STATUS_OK;
 	s->candidate_bph = 0;
 	s->bph = bph;
 	s->la = la;
@@ -372,6 +403,7 @@ struct computer *start_computer(int nominal_sr, int bph, double la, int cal, int
 	c->recompute = 0;
 	c->calibrate = 0;
 	c->clear_trace = 0;
+	c->thread_joined = 0;
 
 	if(pthread_mutex_init(&c->mutex, NULL)) goto thread_init_error;
 	mutex_initialized = 1;

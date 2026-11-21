@@ -91,6 +91,12 @@ measurement settings. Only readings with a good signal are recorded, so
 omitted periods appear as gaps; rows are marked valid or settling. Amplitude
 is empty when it was not available.
 
+The algorithm is marked #ui[Light (custom)] or #ui[Full (custom)] if any
+measurement parameter used in that mode differs from its default. Calibration
+parameters do not count, nor do noise suppression parameters in Light mode.
+Snapshots retain this information; older snapshots without it are exported as
+#ui[Light] or #ui[Full].
+
 Choose portable CSV (comma separator and decimal point) or, when the
 interface is in Spanish or German, localized CSV (semicolon separator and
 decimal comma). The selected format is saved and reused for later exports,
@@ -107,4 +113,4 @@ characters.
   falling as the mainspring unwinds, and the rate graph shows how the rate
   follows it.
 4. Take a snapshot and save it. The Trend data is saved with it.
-#note[*Before changing settings:* take a snapshot and save it if you need to keep the current Trend recording. Changing bph, lift angle, cal, audio input, sample rate, or Light algorithm resets the Trend data. For long recordings, enter the known bph instead of relying on automatic detection.]
+#note[*Before changing settings:* take a snapshot and save it if you need to keep the current Trend recording. Changing bph, lift angle, cal, audio input, sample rate, or algorithm settings resets the Trend data. For long recordings, enter the known bph instead of relying on automatic detection.]

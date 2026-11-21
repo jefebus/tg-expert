@@ -98,6 +98,7 @@ void save_config(struct main_window *w)
 {
 	debug("Config: saving configuration file\n");
 
+	algorithm_settings_prune_defaults(w->config_file);
 	g_key_file_set_string(w->config_file, "tg", "version", VERSION);
 
 #define SAVE(NAME,PLACE,TYPE) \

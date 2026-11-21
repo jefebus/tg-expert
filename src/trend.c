@@ -114,7 +114,7 @@ double trend_elapsed(const struct trend *t)
 }
 
 /* Fill t, a new trend, with readings from a file and freeze it. The settings
- * (bph, la, cal, nominal_sr, is_light, full) must already be set. Returns 1,
+ * (bph, la, cal, nominal_sr, is_light, algorithm_custom, full) must already be set. Returns 1,
  * leaving t empty, if the data is not usable. */
 int trend_set_samples(struct trend *t, const float *tm, const float *rate, const float *amp,
 	const float *be, const int *position, const int *settling, int count, double elapsed)
@@ -122,7 +122,8 @@ int trend_set_samples(struct trend *t, const float *tm, const float *rate, const
 	if(count < 0 || count > TREND_MAX_SAMPLES || !isfinite(elapsed) || elapsed < 0)
 		return 1;
 	if(count && (t->bph < MIN_BPH || t->bph > MAX_BPH || t->la < MIN_LA || t->la > MAX_LA ||
-			t->cal < MIN_CAL || t->cal > MAX_CAL || t->nominal_sr <= 0))
+			t->cal < MIN_CAL || t->cal > MAX_CAL || t->nominal_sr <= 0 ||
+			(t->algorithm_custom != 0 && t->algorithm_custom != 1)))
 		return 1;
 	for(int i = 0; i < count; i++) {
 		if(!isfinite(tm[i]) || tm[i] < 0 || (i && tm[i] < tm[i-1]) ||
@@ -184,7 +185,8 @@ void trend_update(struct trend *t, const struct snapshot *s, int position)
 	if(position < POS_NONE || position >= POS_COUNT)
 		position = POS_NONE;
 
-	if(!s->pb || s->is_old || s->guessed_bph <= 0 || !isfinite(s->rate) || !isfinite(s->be))
+	if(!s->pb || s->is_old || s->rate_only || s->guessed_bph <= 0 ||
+			!isfinite(s->rate) || !isfinite(s->be))
 		return;	// no good signal: a gap
 
 	gint64 now = g_get_monotonic_time();
@@ -239,6 +241,7 @@ void trend_update(struct trend *t, const struct snapshot *s, int position)
 		t->cal = s->cal;
 		t->nominal_sr = s->nominal_sr;
 		t->is_light = s->is_light;
+		t->algorithm_custom = algorithm_settings_custom(s->is_light);
 	}
 
 	struct trend_sample *x = &t->samples[t->count++];
