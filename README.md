@@ -3,7 +3,7 @@
 tg-expert is a desktop timegrapher for mechanical watches. It listens to the
 ticking sound through the computer's audio input and shows rate, beat error,
 amplitude and beat frequency in real time. It also records long-term trends
-per watch position.
+per watch position, with correlation plots and CSV export.
 
 ## Download
 
@@ -22,20 +22,22 @@ Linux and macOS users build from source. See [BUILDING.md](BUILDING.md).
 4. Read the rate, beat error and amplitude from the results table and the
    paperstrip.
 
+Use "Listen LIVE" with headphones to check the microphone setup.
 For accurate rate readings in seconds per day, calibrate the setup first.
 The manual explains microphone placement, gain, noise and calibration.
 
 ## Manual
 
-The user manual is built from `docs/manual/` with [Typst](https://typst.app)
-and published as `tg-expert-manual.pdf` with each release.
+The user manual is available in English, Spanish and German. It is built
+from `docs/manual/` with [Typst](https://typst.app) and published with releases.
 
 ## Credits and history
 
 - **Tg** was written by Marcello Mamino and the contributors of
   [vacaboja/tg](https://github.com/vacaboja/tg).
 - **tg-timer** is Alejandro Grigera's continuation of Tg.
-- **tg-expert** continues tg-timer, adding new features as the audio settings dialog, a redesigned paperstrip and the Trend page. See [CHANGELOG.md](CHANGELOG.md).
+- **tg-expert** continues tg-timer with audio settings, a redesigned paperstrip
+  and Trend analysis. See [CHANGELOG.md](CHANGELOG.md).
 
 Saved `.tgj` files from Tg and tg-timer open in tg-expert.
 
