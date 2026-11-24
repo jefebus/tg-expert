@@ -41,10 +41,11 @@ static float monitor_ring[MONITOR_RING_CAPACITY];
 static volatile gint monitor_head;
 static volatile gint monitor_tail;
 static volatile gint monitor_active;
+static volatile gint monitor_shutdown;
 static volatile gint monitor_failed;
 static volatile gint monitor_volume;
 static volatile gint monitor_generation;
-static PaStream *monitor_stream;	// retained stopped between live-listening toggles
+static PaStream *monitor_stream;	// retained between live-listening toggles
 static PaDeviceIndex monitor_device = paNoDevice;
 static char *preferred_monitor_name;
 static double monitor_source_rate;
@@ -97,15 +98,44 @@ static int monitor_callback(const void *input_buffer, void *output_buffer,
 		return paAbort;
 	}
 
+	static gint seen_generation = -1;
+	static gboolean was_active;
+	gint generation = g_atomic_int_get(&monitor_generation);
+	gboolean active = g_atomic_int_get(&monitor_active);
 	unsigned head = (unsigned)g_atomic_int_get(&monitor_head);
 	unsigned tail = (unsigned)g_atomic_int_get(&monitor_tail);
+	if(generation != seen_generation) {
+		tail = 0;
+		g_atomic_int_set(&monitor_tail, 0);
+		monitor_phase = 0;
+		if(active) {
+			monitor_gain = 0;
+			monitor_primed = 0;
+		}
+		seen_generation = generation;
+	}
+	if(active && !was_active) {
+		monitor_phase = 0;
+		monitor_gain = 0;
+		monitor_primed = 0;
+	}
+	was_active = active;
 	unsigned available = head - tail;
 	unsigned target = (unsigned)(monitor_source_rate / 20.0);
 	if(target < 2)
 		target = 2;
-	gboolean active = g_atomic_int_get(&monitor_active);
 	if(active && available >= target)
 		monitor_primed = 1;
+
+	if(!active && monitor_gain <= 0.0001) {
+		memset(output, 0, frame_count * monitor_channels * sizeof(*output));
+		g_atomic_int_set(&monitor_tail, (gint)tail);
+		if(g_atomic_int_get(&monitor_shutdown)) {
+			g_atomic_int_set(&monitor_failed, 0);
+			return paComplete;
+		}
+		return paContinue;
+	}
 
 	/* Occupancy feedback compensates clock drift between independent devices. */
 	double correction = monitor_primed ?
@@ -158,7 +188,7 @@ static int monitor_callback(const void *input_buffer, void *output_buffer,
 	}
 	g_atomic_int_set(&monitor_tail, (gint)tail);
 
-	if(!active && monitor_gain <= 0.0001) {
+	if(!active && monitor_gain <= 0.0001 && g_atomic_int_get(&monitor_shutdown)) {
 		g_atomic_int_set(&monitor_failed, 0);
 		return paComplete;
 	}
@@ -641,14 +671,13 @@ int get_audio_output_device(void)
 
 static void reset_audio_monitor(double volume)
 {
+	g_atomic_int_set(&monitor_active, 0);
+	g_atomic_int_set(&monitor_shutdown, 0);
 	g_atomic_int_inc(&monitor_generation);
 	pthread_mutex_lock(&audio_mutex);
 	g_atomic_int_set(&monitor_head, 0);
 	g_atomic_int_set(&monitor_tail, 0);
 	pthread_mutex_unlock(&audio_mutex);
-	monitor_phase = 0;
-	monitor_gain = 0;
-	monitor_primed = 0;
 	g_atomic_int_set(&monitor_volume, (gint)(fmax(0, fmin(volume, 0.5)) * 10000));
 	g_atomic_int_set(&monitor_failed, 0);
 	g_atomic_int_set(&monitor_active, 1);
@@ -682,20 +711,12 @@ int start_audio_monitor(int device, double volume, char **error_message)
 		return 1;
 	}
 
-	/* Reuse the stopped stream so toggling listening does not reopen the device. */
+	/* Keep the output stream active and silent between listening toggles. */
 	if(monitor_stream && monitor_device == device && !g_atomic_int_get(&monitor_failed)) {
 		int active = Pa_IsStreamActive(monitor_stream);
-		PaError err = active == 1 ? Pa_StopStream(monitor_stream) : paNoError;
-		if(active >= 0 && (err == paNoError || err == paStreamIsStopped)) {
+		if(active == 1) {
 			reset_audio_monitor(volume);
-			err = Pa_StartStream(monitor_stream);
-			if(err == paNoError)
-				return 0;
-
-			g_atomic_int_set(&monitor_active, 0);
-			stop_audio_monitor();
-			debug("Audio monitor: could not restart stopped stream: %s; reopening\n",
-				Pa_GetErrorText(err));
+			return 0;
 		}
 	}
 	if(monitor_stream)
@@ -731,6 +752,9 @@ int start_audio_monitor(int device, double volume, char **error_message)
 		paFramesPerBufferUnspecified, paNoFlag, monitor_callback, NULL);
 	if(err == paNoError) {
 		monitor_output_rate = output_rate;
+		monitor_phase = 0;
+		monitor_gain = 0;
+		monitor_primed = 0;
 		reset_audio_monitor(volume);
 		err = Pa_StartStream(stream);
 	}
@@ -750,7 +774,7 @@ int start_audio_monitor(int device, double volume, char **error_message)
 
 void pause_audio_monitor(void)
 {
-	/* Let the callback fade out and finish; keep the stream for the next toggle. */
+	/* Fade to silence but keep the stream active for the next toggle. */
 	g_atomic_int_set(&monitor_active, 0);
 	g_atomic_int_inc(&monitor_generation);
 }
@@ -758,6 +782,7 @@ void pause_audio_monitor(void)
 void stop_audio_monitor(void)
 {
 	g_atomic_int_set(&monitor_active, 0);
+	g_atomic_int_set(&monitor_shutdown, 1);
 	g_atomic_int_inc(&monitor_generation);
 	if(monitor_stream) {
 		PaError err = Pa_StopStream(monitor_stream);
@@ -779,6 +804,7 @@ void stop_audio_monitor(void)
 	monitor_primed = 0;
 	monitor_phase = 0;
 	monitor_gain = 0;
+	g_atomic_int_set(&monitor_shutdown, 0);
 }
 
 int audio_monitor_status(void)
