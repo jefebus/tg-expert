@@ -17,12 +17,12 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-/* Audio settings dialog: audio system, input device and sample rate.
+/* Audio settings dialog: audio system, input/output devices and sample rate.
  *
  * The dialog is not modal, so the paperstrip and the output panels keep
  * updating behind it. Every change is applied at once (audio restarts),
  * and the choices below the changed one go back to a default:
- *   audio system -> its default input, default rate
+ *   audio system -> its default input, default rate and output device list
  *   input device -> the current rate if the device has it, else the default
  * Only the rates the selected device accepts are offered. */
 
@@ -389,7 +389,7 @@ void audio_settings_open(struct main_window *w)
 	grid_label(grid, _("Audio system"), 0);
 	as->api_combo = gtk_combo_box_text_new();
 	gtk_widget_set_tooltip_text(as->api_combo,
-		_("The sound system used to record.\n"
+		_("The sound system used for recording and live listening.\n"
 		"Choosing another one selects its\n"
 		"default input and the default rate."));
 	gtk_grid_attach(GTK_GRID(grid), as->api_combo, 1, 0, 2, 1);
@@ -418,7 +418,7 @@ void audio_settings_open(struct main_window *w)
 	as->output_combo = gtk_combo_box_text_new();
 	gtk_widget_set_hexpand(as->output_combo, TRUE);
 	gtk_widget_set_tooltip_text(as->output_combo,
-		_("Select the output explicitly. A missing output is not replaced automatically."));
+		_("Only output devices from the selected audio system are listed."));
 	gtk_grid_attach(GTK_GRID(grid), as->output_combo, 1, 4, 2, 1);
 
 	grid_label(grid, _("Listening volume (%)"), 5);

@@ -15,11 +15,13 @@ input currently in use.
 #shot("audio-settings.png", [The audio settings dialog. The line below the
 level meter shows the input in use.], width: 55%)
 
-/ Audio system: the sound system used to record. On Windows these are MME,
-  DirectSound, WASAPI and WDM-KS. On Linux, ALSA, and JACK if it is running.
-  Choosing another audio system selects its default input and the default
-  rate.
+/ Audio system: the sound system used for recording and live listening. On
+  Windows these are MME, DirectSound, WASAPI and WDM-KS. On Linux, ALSA, and
+  JACK if it is running. Choosing another audio system selects its default
+  input and the default rate. The output device list follows this system too.
 / Input device: the microphone or line input to record from.
+/ Output device: the device used to listen live. Only devices from the selected
+  audio system are listed.
 / Sample rate: the rate at which the input is recorded. Only the rates the
   device accepts are listed, out of 22.05, 32, 44.1 and 48 kHz. 44.1 kHz is
   a good default. A higher rate isn't always better, especially with a noisy

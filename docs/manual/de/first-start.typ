@@ -11,11 +11,14 @@ rechten Rand der oberen Leiste) oder über die Audio-Schaltfläche in der
 oberen Leiste, die den aktuell verwendeten Eingang anzeigt.
 #shot("audio-settings.png", [Der Dialog Audioeinstellungen. Die Zeile unter
 der Pegelanzeige zeigt den verwendeten Eingang.], width: 55%)
-/ Audiosystem: das Soundsystem für die Aufnahme. Unter Windows sind das MME,
-  DirectSound, WASAPI und WDM-KS. Unter Linux ALSA und, falls es läuft, JACK.
-  Bei einem Wechsel des Audiosystems werden dessen Standardeingang und die
-  Standardrate gewählt.
+/ Audiosystem: das Soundsystem für Aufnahme und Live-Abhören. Unter Windows
+  sind das MME, DirectSound, WASAPI und WDM-KS. Unter Linux ALSA und, falls
+  es läuft, JACK. Bei einem Wechsel des Audiosystems werden dessen
+  Standardeingang und Standardrate gewählt; die Ausgabegeräteliste folgt
+  ebenfalls diesem System.
 / Eingabegerät: das Mikrofon oder der Line-Eingang, von dem aufgenommen wird.
+/ Ausgabegerät: das Gerät für Live-Abhören. Es werden nur Geräte des
+  ausgewählten Audiosystems angezeigt.
 / Abtastrate: die Rate, mit der der Eingang aufgenommen wird. Aufgelistet
   werden nur die Raten, die das Gerät akzeptiert, aus 22.05, 32, 44.1 und
   48 kHz. 44.1 kHz ist ein guter Standardwert. Eine höhere Rate ist nicht

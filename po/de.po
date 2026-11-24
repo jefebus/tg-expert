@@ -618,11 +618,11 @@ msgstr "Audiosystem"
 
 #: src/audio_settings.c:308
 msgid ""
-"The sound system used to record.\n"
+"The sound system used for recording and live listening.\n"
 "Choosing another one selects its\n"
 "default input and the default rate."
 msgstr ""
-"Das Soundsystem für die Aufnahme.\n"
+"Das Soundsystem für Aufnahme und Live-Abhören.\n"
 "Bei einem Wechsel werden dessen\n"
 "Standardeingang und Standardrate gewählt."
 
@@ -1738,8 +1738,8 @@ msgid "Output device"
 msgstr "Ausgabegerät"
 
 #: src/audio_settings.c
-msgid "Select the output explicitly. A missing output is not replaced automatically."
-msgstr "Wählen Sie den Ausgang ausdrücklich aus. Ein fehlender Ausgang wird nicht automatisch ersetzt."
+msgid "Only output devices from the selected audio system are listed."
+msgstr "Es werden nur Ausgabegeräte des ausgewählten Audiosystems angezeigt."
 
 #: src/audio_settings.c
 msgid "Listening volume (%)"

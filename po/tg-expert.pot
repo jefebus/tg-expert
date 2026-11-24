@@ -536,7 +536,7 @@ msgstr ""
 
 #: src/audio_settings.c:308
 msgid ""
-"The sound system used to record.\n"
+"The sound system used for recording and live listening.\n"
 "Choosing another one selects its\n"
 "default input and the default rate."
 msgstr ""
@@ -1422,7 +1422,7 @@ msgstr ""
 msgid "Output device"
 msgstr ""
 
-msgid "Select the output explicitly. A missing output is not replaced automatically."
+msgid "Only output devices from the selected audio system are listed."
 msgstr ""
 
 msgid "Listening volume (%)"

@@ -11,12 +11,15 @@ de la barra superior), o haciendo clic en el botón de audio de la barra
 superior, que muestra la entrada que se está usando.
 #shot("audio-settings.png", [El diálogo de ajustes de audio. La línea situada
 bajo el medidor de nivel muestra la entrada en uso.], width: 55%)
-/ Sistema de audio: el sistema de sonido usado para grabar. En Windows son
-  MME, DirectSound, WASAPI y WDM-KS. En Linux, ALSA, y JACK si se está
-  ejecutando. Al elegir otro sistema de audio se selecciona su entrada
-  predeterminada y la frecuencia predeterminada.
+/ Sistema de audio: el sistema de sonido usado para grabar y escuchar en
+  directo. En Windows son MME, DirectSound, WASAPI y WDM-KS. En Linux, ALSA y
+  JACK si se está ejecutando. Al elegir otro sistema de audio se selecciona
+  su entrada y frecuencia predeterminadas. La lista de salidas también
+  corresponde a este sistema.
 / Dispositivo de entrada: el micrófono o la entrada de línea desde la que se
   graba.
+/ Dispositivo de salida: el dispositivo para la escucha en directo. Solo
+  aparecen dispositivos del sistema de audio seleccionado.
 / Frecuencia de muestreo: la frecuencia a la que se graba la entrada. Solo
   aparecen las frecuencias que admite el dispositivo, entre 22.05, 32, 44.1 y
   48 kHz. 44.1 kHz es un buen valor predeterminado. Una frecuencia más alta no

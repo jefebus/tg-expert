@@ -34,6 +34,7 @@ static int audio_errors_quiet = 0;
 static int pa_init_count = 0;
 static int stream_open = 0;	// an input stream is running on selected_input_device
 static char *preferred_device_name = NULL;	// device to look up by name when none is selected
+static PaHostApiIndex current_host_api(void);
 
 #define MONITOR_RING_CAPACITY ((guint)(MAX_SAMPLE_RATE * 2))
 static float monitor_ring[MONITOR_RING_CAPACITY];
@@ -65,9 +66,12 @@ static PaDeviceIndex find_audio_output(const char *name)
 {
 	if(!name || pa_init_count <= 0)
 		return paNoDevice;
+	PaHostApiIndex api = current_host_api();
+	if(api < 0)
+		return paNoDevice;
 	for(PaDeviceIndex i = 0; i < Pa_GetDeviceCount(); i++) {
 		const PaDeviceInfo *di = Pa_GetDeviceInfo(i);
-		if(!di || di->maxOutputChannels <= 0)
+		if(!di || di->hostApi != api || di->maxOutputChannels <= 0)
 			continue;
 		gchar *key = audio_output_key(i);
 		int matches = key && !strcmp(key, name);
@@ -189,6 +193,13 @@ static PaHostApiIndex current_host_api(void)
 			return api;
 	}
 	return Pa_GetDefaultHostApi();
+}
+
+static PaDeviceIndex default_audio_output_device(void)
+{
+	PaHostApiIndex api = current_host_api();
+	const PaHostApiInfo *info = api >= 0 ? Pa_GetHostApiInfo(api) : NULL;
+	return info ? info->defaultOutputDevice : paNoDevice;
 }
 
 /* Data for PA callback to use */
@@ -555,6 +566,12 @@ int list_audio_output_devices(int **devices, char ***names, int *count, int *def
 	int ndevices = pa_init_count > 0 ? Pa_GetDeviceCount() : 0;
 	if(ndevices < 0)
 		return 1;
+	/* Keep output choices on the same host API as the selected input system. */
+	PaHostApiIndex api = current_host_api();
+	const PaHostApiInfo *api_info = api >= 0 ? Pa_GetHostApiInfo(api) : NULL;
+	if(!api_info)
+		return 1;
+	*default_device = (int)api_info->defaultOutputDevice;
 	int *devs = malloc(ndevices * sizeof(*devs));
 	char **dev_names = malloc(ndevices * sizeof(*dev_names));
 	if(!devs || !dev_names) {
@@ -563,17 +580,13 @@ int list_audio_output_devices(int **devices, char ***names, int *count, int *def
 		return 1;
 	}
 
-	PaDeviceIndex system_default = Pa_GetDefaultOutputDevice();
 	int used = 0;
 	for(PaDeviceIndex i = 0; i < ndevices; i++) {
 		const PaDeviceInfo *di = Pa_GetDeviceInfo(i);
-		const PaHostApiInfo *hi = di ? Pa_GetHostApiInfo(di->hostApi) : NULL;
-		if(!di || !hi || di->maxOutputChannels <= 0)
+		if(!di || di->hostApi != api || di->maxOutputChannels <= 0)
 			continue;
 		devs[used] = i;
-		dev_names[used] = g_strdup_printf("%s | %s",
-			hi->name ? hi->name : _("Unknown audio system"),
-			di->name ? di->name : _("Unknown device"));
+		dev_names[used] = g_strdup(di->name ? di->name : _("Unknown device"));
 		if(!dev_names[used]) {
 			for(int j = 0; j < used; j++)
 				g_free(dev_names[j]);
@@ -581,8 +594,6 @@ int list_audio_output_devices(int **devices, char ***names, int *count, int *def
 			free(dev_names);
 			return 1;
 		}
-		if(i == system_default)
-			*default_device = i;
 		used++;
 	}
 	if(!used) {
@@ -621,9 +632,9 @@ int get_audio_output_device(void)
 		return AUDIO_DEVICE_DEFAULT;
 	PaDeviceIndex device = preferred_monitor_name ?
 		find_audio_output(preferred_monitor_name) : paNoDevice;
-	if(preferred_monitor_name)
-		return device == paNoDevice ? AUDIO_DEVICE_DEFAULT : (int)device;
-	device = Pa_GetDefaultOutputDevice();
+	if(device != paNoDevice)
+		return (int)device;
+	device = default_audio_output_device();
 	return device == paNoDevice ? AUDIO_DEVICE_DEFAULT : (int)device;
 }
 
@@ -632,7 +643,7 @@ void set_audio_output_device(int device)
 	if(pa_init_count <= 0 || device < 0 || device >= Pa_GetDeviceCount())
 		return;
 	const PaDeviceInfo *di = Pa_GetDeviceInfo((PaDeviceIndex)device);
-	if(!di || di->maxOutputChannels <= 0)
+	if(!di || di->hostApi != current_host_api() || di->maxOutputChannels <= 0)
 		return;
 	gchar *name = audio_output_key((PaDeviceIndex)device);
 	set_audio_output_device_name(name);
@@ -651,7 +662,7 @@ int start_audio_monitor(int device, double volume, char **error_message)
 		return 1;
 	}
 	const PaDeviceInfo *di = Pa_GetDeviceInfo((PaDeviceIndex)device);
-	if(!di || di->maxOutputChannels <= 0) {
+	if(!di || di->hostApi != current_host_api() || di->maxOutputChannels <= 0) {
 		if(error_message)
 			*error_message = g_strdup(_("The selected audio output is unavailable."));
 		return 1;
