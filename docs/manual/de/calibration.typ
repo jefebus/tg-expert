@@ -36,12 +36,22 @@ bestimmt die Genauigkeit der Kalibrierung, typischerweise besser als 0.5 s/t.
   - *cal (wait)*: noch kein stabiler Tick pro Sekunde gefunden. Den Aufbau
     prüfen.
   - *cal (acq.) NN %*: Ticks werden gesammelt. Nichts berühren.
+  - *Vorläufige Schätzung*: erscheint getrennt, sobald genügend gültige
+    Beobachtungen vorliegen. Sie ist mit `~` markiert, kann sich ändern und
+    ändert die aktuelle Korrektur nicht.
   - *cal (done) ±X.X s/d*: abgeschlossen. Der Wert wird in das Feld #ui[cal]
     übernommen und gespeichert.
   - *cal (fail)*: das Signal war zu unregelmäßig. Den Aufbau verbessern und
     erneut starten.
 5. Sobald *done* angezeigt wird, im Menü #ui[Kalibrierung beenden] wählen, um
   zur normalen Messung zurückzukehren.
+
+Wenn Sie vor Abschluss stoppen und eine brauchbare Schätzung vorliegt, fragt
+tg-expert, ob sie übernommen werden soll. Die bisherige Korrektur bleibt
+erhalten, sofern Sie die Übernahme nicht ausdrücklich bestätigen. Eine
+übernommene Schätzung wird zum normalen gespeicherten Kalibrierwert und ist
+nicht mehr vorläufig. Bei zu wenigen gültigen Beobachtungen bleibt beim Stoppen
+einfach die bisherige Korrektur erhalten.
 Mit den Standard-Algorithmuseinstellungen dauert die Kalibrierung etwa
 15 Minuten (900 Ticks); andere Einstellungen können die Dauer ändern. Wiederholen Sie sie
 einmal, um das Ergebnis zu bestätigen. Zwei Durchläufe sollten auf wenige

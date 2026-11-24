@@ -160,6 +160,13 @@ struct calibration_data {
 	uint64_t *events;
 };
 
+struct calibration_estimate {
+	double calibration;
+	double uncertainty;
+	double duration;
+	int observations;
+};
+
 void setup_buffers(struct processing_buffers *b);
 void pb_destroy(struct processing_buffers *b);
 struct processing_buffers *pb_clone(struct processing_buffers *p);
@@ -167,6 +174,7 @@ void pb_destroy_clone(struct processing_buffers *p);
 void process(struct processing_buffers *p, int bph, double la, int light);
 void setup_cal_data(struct calibration_data *cd);
 void cal_data_destroy(struct calibration_data *cd);
+int estimate_calibration(const struct calibration_data *cd, struct calibration_estimate *estimate);
 int test_cal(struct processing_buffers *p);
 int process_cal(struct processing_buffers *p, struct calibration_data *cd);
 
@@ -243,6 +251,10 @@ struct snapshot {
 	int cal_state;
 	int cal_percent;
 	int cal_result; // 0.1 s/d
+	int cal_estimate_available;
+	int cal_estimate_result; // 0.1 s/d
+	int cal_estimate_observations;
+	double cal_estimate_duration;
 
 	// data dependent on bph, la, cal
 	double sample_rate;
@@ -370,6 +382,7 @@ struct output_panel {
 	GtkWidget *paperstrip_tick_spin;
 	GtkWidget *paperstrip_window_spin;
 	GtkWidget *right_stack; // "panels" (tic/toc/period) or "calibration" (instructions)
+	GtkWidget *calibration_estimate_label;
 	GtkWidget *output_frame;     // titled frames whose title depends on calibration
 	GtkWidget *paperstrip_frame;
 	double paperstrip_tick_seconds;
@@ -466,6 +479,7 @@ struct main_window {
 	int zombie;
 	int controls_active;
 	int calibrate;
+	int calibration_stop_pending;
 	int bph;
 	int audio_device;
 	int audio_api;	// PaHostApiTypeId, or AUDIO_API_DEFAULT
@@ -543,6 +557,7 @@ struct conf_data {
 
 void load_config(struct main_window *w);
 void save_config(struct main_window *w);
+gboolean save_config_checked(struct main_window *w, GError **error);
 void save_on_change(struct main_window *w);
 void close_config(struct main_window *w);
 

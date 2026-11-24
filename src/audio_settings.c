@@ -46,7 +46,8 @@ struct audio_settings {
 
 static int audio_change_allowed(struct main_window *w)
 {
-	return w->controls_active && !w->calibrate && !w->restart_audio && !w->restart_algorithm;
+	return w->controls_active && !w->calibrate && !w->calibration_stop_pending &&
+		!w->restart_audio && !w->restart_algorithm;
 }
 
 static gchar *rate_label(int rate)

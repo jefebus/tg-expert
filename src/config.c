@@ -94,7 +94,7 @@ static int audio_device_name_changed(struct main_window *w)
 	return changed;
 }
 
-void save_config(struct main_window *w)
+gboolean save_config_checked(struct main_window *w, GError **error)
 {
 	debug("Config: saving configuration file\n");
 
@@ -102,25 +102,29 @@ void save_config(struct main_window *w)
 	g_key_file_set_string(w->config_file, "tg", "version", VERSION);
 
 #define SAVE(NAME,PLACE,TYPE) \
-	g_key_file_set_ ## TYPE (w->config_file, "tg", #NAME, w -> PLACE); \
-	w -> conf_data -> PLACE = w -> PLACE;
+	g_key_file_set_ ## TYPE (w->config_file, "tg", #NAME, w -> PLACE);
 
 	CONFIG_FIELDS(SAVE);
 	if(w->audio_device_name)
 		g_key_file_set_string(w->config_file, "tg", AUDIO_DEVICE_NAME_KEY, w->audio_device_name);
 
-#ifdef DEBUG
-	GError *ge = NULL;
-	g_key_file_save_to_file(w->config_file, w->config_file_name, &ge);
+	if(!g_key_file_save_to_file(w->config_file, w->config_file_name, error))
+		return FALSE;
 
-	if(ge) {
-		debug("Config: failed to save config file: %s\n",ge->message);
-		g_error_free(ge);
-		if(testing) exit(1);
+#define SAVED(NAME,PLACE,TYPE) \
+	w -> conf_data -> PLACE = w -> PLACE;
+
+	CONFIG_FIELDS(SAVED);
+	return TRUE;
+}
+
+void save_config(struct main_window *w)
+{
+	GError *error = NULL;
+	if(!save_config_checked(w, &error)) {
+		g_warning("Config: failed to save config file: %s", error->message);
+		g_error_free(error);
 	}
-#else
-	g_key_file_save_to_file(w->config_file, w->config_file_name, NULL);
-#endif
 }
 
 void save_on_change(struct main_window *w)

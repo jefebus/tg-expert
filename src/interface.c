@@ -149,7 +149,7 @@ static const char *selected_watch(struct main_window *w)
 static void watch_update_buttons(struct main_window *w)
 {
 	// Watches change bph and lift angle, which are locked while calibrating
-	int enabled = w->controls_active && !w->calibrate;
+	int enabled = w->controls_active && !w->calibrate && !w->calibration_stop_pending;
 	gtk_widget_set_sensitive(w->watch_combo_box, enabled);
 	gtk_widget_set_sensitive(w->watch_save_button, enabled);
 	gtk_widget_set_sensitive(w->watch_delete_button, enabled && selected_watch(w));
@@ -380,7 +380,8 @@ static void handle_cal_change(GtkSpinButton *b, struct main_window *w)
  * computer_terminated(). Used by the audio settings dialog. */
 void request_audio_restart(struct main_window *w, int api, int device, int rate)
 {
-	if(!w->controls_active || w->calibrate || w->restart_audio || w->restart_algorithm) return;
+	if(!w->controls_active || w->calibrate || w->calibration_stop_pending ||
+			w->restart_audio || w->restart_algorithm) return;
 	w->pending_audio_api = api;
 	w->pending_audio_device = device;
 	w->pending_audio_rate = rate;
@@ -649,7 +650,7 @@ static guint kick_computer(struct main_window *w)
 static void set_menu_item_enabled(struct main_window *w, GtkWidget *item, int enabled)
 {
 	g_object_set_data(G_OBJECT(item), "enabled-wanted", GINT_TO_POINTER(enabled ? 1 : 2));
-	gtk_widget_set_sensitive(item, enabled && !w->calibrate);
+	gtk_widget_set_sensitive(item, enabled && !w->calibrate && !w->calibration_stop_pending);
 }
 
 static int menu_item_wanted(GtkWidget *item)
@@ -686,7 +687,8 @@ static void update_export_item(struct main_window *w)
 static void update_sensitivity(struct main_window *w)
 {
 	int live = w->controls_active;
-	int settings = live && !w->calibrate && !w->restart_algorithm;
+	int calibration_locked = w->calibrate || w->calibration_stop_pending;
+	int settings = live && !calibration_locked && !w->restart_algorithm;
 
 	watch_update_buttons(w);
 	gtk_widget_set_sensitive(w->bph_combo_box, settings);
@@ -696,27 +698,87 @@ static void update_sensitivity(struct main_window *w)
 	audio_settings_update(w);
 
 	// Always allow stopping a running calibration, whichever tab is shown
-	gtk_widget_set_sensitive(w->cal_button, (live || w->calibrate) && !w->restart_algorithm);
+	gtk_widget_set_sensitive(w->cal_button,
+		(live || w->calibrate) && !w->restart_algorithm && !w->calibration_stop_pending);
 	gtk_menu_item_set_label(GTK_MENU_ITEM(w->cal_button),
 			w->calibrate ? _("Stop calibration") : _("Start calibration"));
 
 	// Other menu entries are locked while calibrating (Quit stays available)
-	gtk_widget_set_sensitive(w->open_item, !w->calibrate);
-	gtk_widget_set_sensitive(w->algorithm_item, !w->calibrate && !w->restart_audio && !w->restart_algorithm);
-	gtk_widget_set_sensitive(w->save_item, menu_item_wanted(w->save_item) && !w->calibrate);
-	gtk_widget_set_sensitive(w->save_all_item, menu_item_wanted(w->save_all_item) && !w->calibrate);
+	gtk_widget_set_sensitive(w->open_item, !calibration_locked);
+	gtk_widget_set_sensitive(w->algorithm_item, !calibration_locked && !w->restart_audio && !w->restart_algorithm);
+	gtk_widget_set_sensitive(w->save_item, menu_item_wanted(w->save_item) && !calibration_locked);
+	gtk_widget_set_sensitive(w->save_all_item, menu_item_wanted(w->save_all_item) && !calibration_locked);
 	if(w->export_item)
 		gtk_widget_set_sensitive(w->export_item,
-			menu_item_wanted(w->export_item) && !w->calibrate);
-	gtk_widget_set_sensitive(w->close_all_item, menu_item_wanted(w->close_all_item) && !w->calibrate);
+			menu_item_wanted(w->export_item) && !calibration_locked);
+	gtk_widget_set_sensitive(w->close_all_item, menu_item_wanted(w->close_all_item) && !calibration_locked);
 }
 
 static void handle_calibrate(GtkMenuItem *b, struct main_window *w)
 {
 	UNUSED(b);
+	w->calibration_stop_pending = w->calibrate;
 	w->calibrate = !w->calibrate;
 	update_sensitivity(w);
 	recompute(w);
+}
+
+static void format_calibration_value(int value, char *buffer, size_t size)
+{
+	snprintf(buffer, size, "%s%d.%d", value < 0 ? "-" : "+",
+		abs(value) / 10, abs(value) % 10);
+}
+
+static void apply_calibration_value(struct main_window *w, int value, gboolean persist)
+{
+	w->cal = value;
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w->cal_spin_button), value);
+	if(w->controls_active) {
+		refresh_results(w);
+		gtk_widget_queue_draw(w->notebook);
+	}
+
+	if(persist) {
+		GError *error = NULL;
+		if(!save_config_checked(w, &error)) {
+			GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(w->window),
+				GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+				GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE,
+				_("The correction was applied in memory but could not be saved:\n%s"),
+				error->message);
+			gtk_dialog_run(GTK_DIALOG(dialog));
+			gtk_widget_destroy(dialog);
+			g_error_free(error);
+		}
+	}
+}
+
+static gboolean confirm_provisional_calibration(struct main_window *w,
+	const struct snapshot *snapshot)
+{
+	char estimate[32], previous[32];
+	format_calibration_value(snapshot->cal_estimate_result, estimate, sizeof(estimate));
+	format_calibration_value(w->cal, previous, sizeof(previous));
+	char *message = g_strdup_printf(
+		_("Calibration is not complete.\n\n"
+		  "Provisional estimate: ~%s s/d\n"
+		  "Previous correction: %s s/d\n"
+		  "Data used: %d observations / %.0f s\n\n"
+		  "Replace the previous correction with this estimate?"),
+		estimate, previous, snapshot->cal_estimate_observations,
+		snapshot->cal_estimate_duration);
+	GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(w->window),
+		GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+		GTK_MESSAGE_QUESTION, GTK_BUTTONS_NONE, "%s", message);
+	g_free(message);
+	gtk_dialog_add_buttons(GTK_DIALOG(dialog),
+		_("_Keep previous calibration"), GTK_RESPONSE_CANCEL,
+		_("_Apply estimate"), GTK_RESPONSE_ACCEPT,
+		NULL);
+	gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_CANCEL);
+	int response = gtk_dialog_run(GTK_DIALOG(dialog));
+	gtk_widget_destroy(dialog);
+	return response == GTK_RESPONSE_ACCEPT;
 }
 
 void request_algorithm_restart(struct main_window *w, int light)
@@ -1837,6 +1899,19 @@ guint refresh(struct main_window *w)
 		gtk_widget_queue_draw(w->notebook);
 	}
 	gtk_widget_set_sensitive(w->snapshot_button, photogenic);
+
+	if(w->calibration_stop_pending && !w->active_snapshot->calibrate) {
+		w->calibration_stop_pending = 0;
+		if(w->active_snapshot->cal_state == 1) {
+			apply_calibration_value(w, w->active_snapshot->cal_result, FALSE);
+			save_on_change(w);
+		} else if(w->active_snapshot->cal_state == 0 &&
+				w->active_snapshot->cal_estimate_available &&
+				confirm_provisional_calibration(w, w->active_snapshot)) {
+			apply_calibration_value(w, w->active_snapshot->cal_estimate_result, TRUE);
+		}
+		update_sensitivity(w);
+	}
 	return FALSE;
 }
 
@@ -1861,6 +1936,7 @@ static void start_interface(GApplication* app, void *p)
 	w->bph = 0;
 	w->la = DEFAULT_LA;
 	w->calibrate = 0;
+	w->calibration_stop_pending = 0;
 	w->is_light = 0;
 	w->paperstrip_tick_seconds = 10.0;
 	w->paperstrip_window_seconds = 60.0;

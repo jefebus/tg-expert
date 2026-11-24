@@ -1644,3 +1644,47 @@ msgstr "Tiempo transcurrido: %s\nPosición: %s\nMarcha: %s\nAmplitud: %s\nError 
 
 #~ msgid "Expert"
 #~ msgstr "Experto"
+
+msgid "Provisional estimate: insufficient data"
+msgstr "Estimación provisional: datos insuficientes"
+
+#, c-format
+msgid "Provisional estimate: ~%s s/d"
+msgstr "Estimación provisional: ~%s s/d"
+
+msgid "The estimate may change; completing calibration is recommended."
+msgstr "La estimación puede cambiar; se recomienda completar la calibración."
+
+msgid "Calibration complete"
+msgstr "Calibración completada"
+
+msgid "Calibration fit failed; improve the signal and try again."
+msgstr "El ajuste de calibración falló; mejore la señal e inténtelo de nuevo."
+
+#, c-format
+msgid ""
+"Calibration is not complete.\n"
+"\n"
+"Provisional estimate: ~%s s/d\n"
+"Previous correction: %s s/d\n"
+"Data used: %d observations / %.0f s\n"
+"\n"
+"Replace the previous correction with this estimate?"
+msgstr ""
+"La calibración no ha terminado.\n"
+"\n"
+"Estimación provisional: ~%s s/d\n"
+"Corrección anterior: %s s/d\n"
+"Datos utilizados: %d observaciones / %.0f s\n"
+"\n"
+"¿Quieres sustituir la corrección anterior por esta estimación?"
+
+msgid "_Keep previous calibration"
+msgstr "_Conservar la calibración anterior"
+
+msgid "_Apply estimate"
+msgstr "_Aplicar estimación"
+
+#, c-format
+msgid "The correction was applied in memory but could not be saved:\n%s"
+msgstr "La corrección se aplicó en memoria, pero no se pudo guardar:\n%s"

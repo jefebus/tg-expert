@@ -1263,45 +1263,90 @@ static int add_sample_cal(struct processing_buffers *p, struct calibration_data 
 }
 
 /**
- * @brief Calculate audio time-base correction by linear regression.
+ * @brief Estimate audio time-base correction from accepted phase observations.
  *
- * Phase drift is fitted against elapsed time and converted to seconds per day, the same unit
- * used for watch rate.
+ * The regression is calculated from a local unwrapped view of the phases, so asking for an
+ * intermediate estimate never changes the observations used by later calibration cycles.
  *
- * @param cd Completed calibration observation set.
+ * @param cd Calibration observations.
+ * @param estimate Receives the fit and the observation span.
+ * @return Nonzero when at least three valid observations produce a bounded finite fit.
  */
-static void compute_cal(struct calibration_data *cd)
+int estimate_calibration(const struct calibration_data *cd, struct calibration_estimate *estimate)
 {
-	int i;
+	if(!cd || !estimate)
+		return 0;
+	memset(estimate, 0, sizeof(*estimate));
+	int count = cd->wp;
+	if(count < 3 || count > cd->size || !cd->times || !cd->phases)
+		return 0;
+
 	double x = 0, y = 0;
-	for(i=0;i<cd->size;i++) {
+	for(int i=0; i<count; i++) {
+		if(!isfinite(cd->times[i]) || !isfinite(cd->phases[i]) ||
+				cd->phases[i] < 0 || cd->phases[i] >= 1 ||
+				(i && cd->times[i] <= cd->times[i-1]))
+			return 0;
 		x += cos(cd->phases[i] * 2 * M_PI);
 		y += sin(cd->phases[i] * 2 * M_PI);
 	}
 	/* Find the circular mean phase before unwrapping the observations. */
 	double c = (atan2(y,x) - M_PI) / (2 * M_PI);
 	double x_av = 0, y_av = 0;
-	for(i=0;i<cd->size;i++) {
+	for(int i=0; i<count; i++) {
 		x_av += cd->times[i];
-		y_av += cd->phases[i] = fmod(cd->phases[i] - c, 1);
+		y_av += fmod(cd->phases[i] - c, 1);
 	}
-	x_av /= cd->size;
-	y_av /= cd->size;
+	x_av /= count;
+	y_av /= count;
 	double xx = 0, xy = 0, yy = 0;
-	for(i=0;i<cd->size;i++) {
+	for(int i=0; i<count; i++) {
 		double x = cd->times[i] - x_av;
-		double y = cd->phases[i] - y_av;
+		double y = fmod(cd->phases[i] - c, 1) - y_av;
 		/* Accumulate covariance terms for linear regression. */
 		xx += x * x;
 		xy += x * y;
 		yy += y * y;
 	}
-	/* Convert phase drift per second into seconds per day. */
-	cd->calibration = xy * 3600 * 24 / xx;
-	double delta = sqrt((xx * yy - xy * xy) / (cd->size - 2)) / xx;
-	debug("Calibration result: %f s/d +- %f\n",cd->calibration,delta*3600*24);
-	/* Convert phase drift per second into seconds per day. */
-	cd->state = delta * 3600 * 24 < algorithm_parameters[ALG_CAL_PRECISION] ? 1 : -1;
+	double determinant = xx * yy - xy * xy;
+	double determinant_scale = fmax(fabs(xx * yy), fabs(xy * xy));
+	if(!isfinite(xx) || !isfinite(xy) || !isfinite(yy) || xx <= 0 ||
+			!isfinite(determinant) ||
+			(determinant < 0 &&
+			 determinant < -DBL_EPSILON * determinant_scale * 16))
+		return 0;
+	if(determinant < 0)
+		determinant = 0;
+
+	double calibration = xy * 3600 * 24 / xx;
+	double uncertainty = sqrt(determinant / (count - 2)) / xx * 3600 * 24;
+	double duration = cd->times[count-1] - cd->times[0];
+	if(!isfinite(calibration) || !isfinite(uncertainty) || !isfinite(duration) ||
+			duration <= 0 || calibration < MIN_CAL / 10.0 || calibration > MAX_CAL / 10.0)
+		return 0;
+
+	estimate->calibration = calibration;
+	estimate->uncertainty = uncertainty;
+	estimate->duration = duration;
+	estimate->observations = count;
+	return 1;
+}
+
+/**
+ * @brief Finalize calibration using the same regression as provisional estimates.
+ *
+ * @param cd Completed calibration observation set.
+ */
+static void compute_cal(struct calibration_data *cd)
+{
+	struct calibration_estimate estimate;
+	if(!estimate_calibration(cd, &estimate)) {
+		cd->state = -1;
+		return;
+	}
+	cd->calibration = estimate.calibration;
+	debug("Calibration result: %f s/d +- %f\n", cd->calibration, estimate.uncertainty);
+	cd->state = estimate.uncertainty < algorithm_parameters[ALG_CAL_PRECISION] ? 1 : -1;
 }
 
 /**

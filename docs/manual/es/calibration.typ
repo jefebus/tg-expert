@@ -34,12 +34,22 @@ de la calibración, normalmente mejor que 0.5 s/día.
   - *cal (wait)*: todavía no se ha encontrado un tic estable una vez por
     segundo. Revise la instalación.
   - *cal (acq.) NN %*: recopilando tics. No toque nada.
+  - *Estimación provisional*: aparece por separado cuando hay suficientes
+    observaciones válidas. Se marca con `~`, puede cambiar y no modifica la
+    corrección actual.
   - *cal (done) ±X.X s/d*: terminado. El valor se copia en el campo #ui[cal]
     y se guarda.
   - *cal (fail)*: la señal fue demasiado irregular. Mejore la instalación y
     empiece de nuevo.
 5. Cuando aparezca *done*, elija #ui[Detener calibración] en el menú para
   volver a la medición normal.
+
+Si detiene la calibración antes de terminar y hay una estimación utilizable,
+tg-expert pregunta si quiere aplicarla. La corrección anterior se conserva
+salvo que elija explícitamente aplicar la estimación. Al aceptarla, pasa a ser
+el valor normal de calibración guardado y deja de ser provisional. Si no hay
+suficientes observaciones válidas, detener simplemente conserva la corrección
+anterior.
 Con los ajustes predeterminados del algoritmo, la calibración dura unos
 15 minutos (900 tics); otros ajustes pueden cambiar la duración. Repítala una vez para
 confirmar el resultado. Dos mediciones deberían coincidir con una diferencia

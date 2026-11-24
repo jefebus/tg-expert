@@ -2108,7 +2108,7 @@ static void update_right_side(struct output_panel *op)
 	set_frame_title(op->paperstrip_frame, cal ? _(TITLE_PAPERSTRIP_CAL) : _(TITLE_PAPERSTRIP));
 }
 
-static GtkWidget *make_calibration_instructions(void)
+static GtkWidget *make_calibration_instructions(struct output_panel *op)
 {
 	const char *markup =
 		/* TRANSLATORS: keep cal (wait), cal (acq.), cal (done), cal (fail) in English, they are shown like that in the results bar.
@@ -2156,12 +2156,45 @@ static GtkWidget *make_calibration_instructions(void)
 	GtkWidget *scroll = gtk_scrolled_window_new(NULL, NULL);
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
 	gtk_container_add(GTK_CONTAINER(scroll), label);
-	return scroll;
+
+	GtkWidget *box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
+	op->calibration_estimate_label = gtk_label_new(_("Provisional estimate: insufficient data"));
+	gtk_label_set_xalign(GTK_LABEL(op->calibration_estimate_label), 0);
+	gtk_widget_set_margin_start(op->calibration_estimate_label, 20);
+	gtk_widget_set_margin_end(op->calibration_estimate_label, 20);
+	GtkWidget *notice = gtk_label_new(
+		_("The estimate may change; completing calibration is recommended."));
+	gtk_label_set_xalign(GTK_LABEL(notice), 0);
+	gtk_label_set_line_wrap(GTK_LABEL(notice), TRUE);
+	gtk_widget_set_margin_start(notice, 20);
+	gtk_widget_set_margin_end(notice, 20);
+	gtk_box_pack_start(GTK_BOX(box), op->calibration_estimate_label, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(box), notice, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(box), scroll, TRUE, TRUE, 0);
+	return box;
 }
 
 void op_set_snapshot(struct output_panel *op, struct snapshot *snst)
 {
 	op->snst = snst;
+	if(snst->cal_state == 1)
+		gtk_label_set_text(GTK_LABEL(op->calibration_estimate_label),
+			_("Calibration complete"));
+	else if(snst->cal_state == -1)
+		gtk_label_set_text(GTK_LABEL(op->calibration_estimate_label),
+			_("Calibration fit failed; improve the signal and try again."));
+	else if(snst->cal_estimate_available) {
+		char value[32];
+		snprintf(value, sizeof(value), "%s%d.%d",
+			snst->cal_estimate_result < 0 ? "-" : "+",
+			abs(snst->cal_estimate_result) / 10,
+			abs(snst->cal_estimate_result) % 10);
+		char *text = g_strdup_printf(_("Provisional estimate: ~%s s/d"), value);
+		gtk_label_set_text(GTK_LABEL(op->calibration_estimate_label), text);
+		g_free(text);
+	} else
+		gtk_label_set_text(GTK_LABEL(op->calibration_estimate_label),
+			_("Provisional estimate: insufficient data"));
 	if(op->snst && op->snst->trace_zoom <= 0)
 		op->snst->trace_zoom = 1.0;
 	update_detection_status(op);
@@ -2396,7 +2429,7 @@ struct output_panel *init_output_panel(struct computer *comp, struct snapshot *s
 	gtk_stack_add_titled(GTK_STACK(op->right_stack), correlations_page,
 		"correlations", _("Correlations"));
 	// No title: the switcher does not offer it, calibration shows it by itself
-	GtkWidget *cal_info = titled_frame(make_calibration_instructions(), _("Calibration instructions"));
+	GtkWidget *cal_info = titled_frame(make_calibration_instructions(op), _("Calibration instructions"));
 	gtk_stack_add_named(GTK_STACK(op->right_stack), cal_info, "calibration");
 
 	// Tic waveform area

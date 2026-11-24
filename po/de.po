@@ -1651,3 +1651,47 @@ msgstr "Vergangene Zeit: %s\nLage: %s\nGangabweichung: %s\nAmplitude: %s\nAbfall
 
 #~ msgid "Expert"
 #~ msgstr "Experte"
+
+msgid "Provisional estimate: insufficient data"
+msgstr "Vorläufige Schätzung: unzureichende Daten"
+
+#, c-format
+msgid "Provisional estimate: ~%s s/d"
+msgstr "Vorläufige Schätzung: ~%s s/d"
+
+msgid "The estimate may change; completing calibration is recommended."
+msgstr "Die Schätzung kann sich ändern; der Abschluss der Kalibrierung wird empfohlen."
+
+msgid "Calibration complete"
+msgstr "Kalibrierung abgeschlossen"
+
+msgid "Calibration fit failed; improve the signal and try again."
+msgstr "Die Kalibrierungsanpassung ist fehlgeschlagen; verbessern Sie das Signal und versuchen Sie es erneut."
+
+#, c-format
+msgid ""
+"Calibration is not complete.\n"
+"\n"
+"Provisional estimate: ~%s s/d\n"
+"Previous correction: %s s/d\n"
+"Data used: %d observations / %.0f s\n"
+"\n"
+"Replace the previous correction with this estimate?"
+msgstr ""
+"Die Kalibrierung ist nicht abgeschlossen.\n"
+"\n"
+"Vorläufige Schätzung: ~%s s/d\n"
+"Bisherige Korrektur: %s s/d\n"
+"Verwendete Daten: %d Beobachtungen / %.0f s\n"
+"\n"
+"Soll die bisherige Korrektur durch diese Schätzung ersetzt werden?"
+
+msgid "_Keep previous calibration"
+msgstr "Bisherige Kalibrierung _beibehalten"
+
+msgid "_Apply estimate"
+msgstr "Schätzung _übernehmen"
+
+#, c-format
+msgid "The correction was applied in memory but could not be saved:\n%s"
+msgstr "Die Korrektur wurde im Arbeitsspeicher angewendet, konnte aber nicht gespeichert werden:\n%s"

@@ -37,12 +37,22 @@ the calibration, typically better than 0.5 s/d.
 4. Watch the status in the results table:
   - *cal (wait)*: no steady tick once per second found yet. Check the setup.
   - *cal (acq.) NN %*: collecting ticks. Leave everything untouched.
+  - *Provisional estimate*: shown separately once enough valid observations
+    are available. It is marked with `~`, can change, and does not change the
+    current correction.
   - *cal (done) ±X.X s/d*: finished. The value is copied to the #ui[cal]
     field and saved.
   - *cal (fail)*: the signal was too irregular. Improve the setup and start
     again.
 5. When it shows *done*, choose #ui[Stop calibration] in the menu to return to
   normal measurement.
+
+If you stop before calibration is complete and there is a usable estimate,
+tg-expert asks whether to apply it. The previous correction is kept unless you
+explicitly choose to apply the estimate. An accepted estimate becomes the
+ordinary saved calibration value; it is no longer provisional after acceptance.
+If there are not enough valid observations, stopping simply keeps the previous
+correction.
 
 With default algorithm settings, calibration takes about 15 minutes (900 ticks).
 Other algorithm settings can change the duration. Repeat it once to confirm

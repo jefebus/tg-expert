@@ -99,6 +99,25 @@ static int guess_bph(double period)
 	return preset_bph[ret];
 }
 
+static void copy_calibration_estimate(struct snapshot *s, const struct calibration_data *cd)
+{
+	struct calibration_estimate estimate;
+	s->cal_estimate_available = estimate_calibration(cd, &estimate);
+	if(s->cal_estimate_available) {
+		int result = round(10 * estimate.calibration);
+		if(result >= MIN_CAL && result <= MAX_CAL) {
+			s->cal_estimate_result = result;
+			s->cal_estimate_observations = estimate.observations;
+			s->cal_estimate_duration = estimate.duration;
+			return;
+		}
+		s->cal_estimate_available = 0;
+	}
+	s->cal_estimate_result = 0;
+	s->cal_estimate_observations = 0;
+	s->cal_estimate_duration = 0;
+}
+
 static void compute_update_cal(struct computer *c)
 {
 	c->actv->signal = analyze_pa_data_cal(c->pdata, c->cdata);
@@ -109,6 +128,7 @@ static void compute_update_cal(struct computer *c)
 	c->actv->rate_only = 0;
 	c->actv->cal_state = c->cdata->state;
 	c->actv->cal_percent = 100*c->cdata->wp/c->cdata->size;
+	copy_calibration_estimate(c->actv, c->cdata);
 	if(c->cdata->state == 1)
 		c->actv->cal_result = round(10 * c->cdata->calibration);
 }
@@ -248,6 +268,13 @@ static void *computing_thread(void *void_computer)
 			c->cdata->state = 0;
 			c->actv->cal_state = 0;
 			c->actv->cal_percent = 0;
+			c->actv->cal_estimate_available = 0;
+			c->actv->cal_estimate_result = 0;
+			c->actv->cal_estimate_observations = 0;
+			c->actv->cal_estimate_duration = 0;
+		}
+		if(!calibrate && c->actv->calibrate) {
+			copy_calibration_estimate(c->actv, c->cdata);
 		}
 		if(calibrate != c->actv->calibrate) {
 			memset(c->actv->events,0,c->actv->events_count*sizeof(uint64_t));
@@ -379,6 +406,10 @@ struct computer *start_computer(int nominal_sr, int bph, double la, int cal, int
 	s->cal_state = 0;
 	s->cal_percent = 0;
 	s->cal_result = 0;
+	s->cal_estimate_available = 0;
+	s->cal_estimate_result = 0;
+	s->cal_estimate_observations = 0;
+	s->cal_estimate_duration = 0;
 	s->audio_status = AUDIO_STATUS_UNAVAILABLE;
 	s->detection_status = DETECTION_STATUS_OK;
 	s->candidate_bph = 0;
