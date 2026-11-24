@@ -47,7 +47,7 @@ tg_expert_prf_LDFLAGS = $(AM_LDFLAGS)
 tg_expert_vlg_LDFLAGS = $(AM_LDFLAGS)
 
 if HAVE_MSGFMT
-tg-expert-dbg$(EXEEXT): po/stamp-locale
+tg_expert_dbg_DEPENDENCIES = po/stamp-locale
 po/stamp-locale: $(srcdir)/po/es.po $(srcdir)/po/de.po
 	$(MAKE) -C po
 endif
