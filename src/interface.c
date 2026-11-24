@@ -738,7 +738,7 @@ static void handle_listen_toggled(GtkToggleButton *button, struct main_window *w
 	if(w->listen_updating)
 		return;
 	if(!gtk_toggle_button_get_active(button)) {
-		stop_audio_monitor();
+		pause_audio_monitor();
 		w->listen_active = 0;
 		audio_settings_update(w);
 		return;

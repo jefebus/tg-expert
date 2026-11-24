@@ -203,6 +203,7 @@ const char *get_audio_output_device_name(void);
 int get_audio_output_device(void);
 void set_audio_output_device(int device);
 int start_audio_monitor(int device, double volume, char **error_message);
+void pause_audio_monitor(void);
 void stop_audio_monitor(void);
 int audio_monitor_status(void);
 void set_audio_monitor_volume(double volume);

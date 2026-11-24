@@ -286,8 +286,8 @@ static void handle_output_changed(GtkComboBox *combo, struct audio_settings *as)
 		return;
 
 	int restart = w->listen_active;
+	stop_audio_monitor();
 	if(restart) {
-		stop_audio_monitor();
 		w->listen_active = 0;
 	}
 	set_audio_output_device(device);
