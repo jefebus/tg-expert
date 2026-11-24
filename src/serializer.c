@@ -805,6 +805,9 @@ int write_trend_csv(FILE *f, const struct trend *t, char separator, char decimal
 			return 1;
 		if(x->amp > 0 && csv_write_number(f, x->amp, decimal))
 			return 1;
+		const char *algorithm_name = t->algorithm_custom ?
+				(t->is_light ? _("Light (custom)") : _("Full (custom)")) :
+				(t->is_light ? _("Light") : _("Full"));
 		if(fputc(separator, f) == EOF ||
 				csv_write_number(f, x->be, decimal) ||
 				fputc(separator, f) == EOF || fputs(x->settling ? _("Settling") : _("Valid"), f) == EOF ||
@@ -813,9 +816,7 @@ int write_trend_csv(FILE *f, const struct trend *t, char separator, char decimal
 				csv_write_number(f, t->la, decimal) || fputc(separator, f) == EOF ||
 				csv_write_number(f, t->cal / 10.0, decimal) || fputc(separator, f) == EOF ||
 				fprintf(f, "%d", t->nominal_sr) < 0 || fputc(separator, f) == EOF ||
-				fprintf(f, "%s\r\n", t->algorithm_custom ?
-					(t->is_light ? _("Light (custom)") : _("Full (custom)")) :
-					(t->is_light ? _("Light") : _("Full"))) < 0)
+				fprintf(f, "%s\r\n", algorithm_name) < 0)
 			return 1;
 	}
 	return ferror(f) ? 1 : 0;
