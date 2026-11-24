@@ -106,7 +106,7 @@ double trend_stats_sd(const struct trend_stats *s)
 }
 
 void trend_get_plot_ranges(const struct trend *t, double t0, double t1,
-	double fixed_rate, struct trend_plot_ranges *ranges)
+	double fixed_rate, double fixed_be, struct trend_plot_ranges *ranges)
 {
 	double max_rate = 0, max_be = 0;
 	ranges->amp_min = 120;
@@ -135,13 +135,16 @@ void trend_get_plot_ranges(const struct trend *t, double t0, double t1,
 	ranges->rate_min = -rate_range;
 	ranges->rate_max = rate_range;
 
-	static const double be_ranges[] = {1, 2, 5, 10, 20, 50, 100, 0};
-	ranges->be_max = 100;
-	for(int i = 0; be_ranges[i]; i++)
-		if(max_be <= be_ranges[i]) {
-			ranges->be_max = be_ranges[i];
-			break;
-		}
+	ranges->be_max = fixed_be;
+	if(ranges->be_max <= 0) {
+		static const double be_ranges[] = {1, 2, 5, 10, 20, 50, 100, 0};
+		ranges->be_max = 100;
+		for(int i = 0; be_ranges[i]; i++)
+			if(max_be <= be_ranges[i]) {
+				ranges->be_max = be_ranges[i];
+				break;
+			}
+	}
 }
 
 /* Seconds since the recording started (until the snapshot, for a frozen copy) */

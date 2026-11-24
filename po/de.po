@@ -1528,6 +1528,9 @@ msgstr "Vollständig"
 msgid "Correlations"
 msgstr "Korrelationen"
 
+msgid "B.E."
+msgstr "Abfallfehler"
+
 msgid "Amplitude → rate"
 msgstr "Amplitude → Gangabweichung"
 

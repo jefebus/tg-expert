@@ -65,12 +65,14 @@ Lagenfehler bedeutet, dass die Uhr gut reguliert ist.
 == Diagramme
 Unten teilen sich drei Diagramme eine Zeitachse: Gangabweichung, Amplitude
 und Abfallfehler. Jedes zeigt eine gestrichelte Linie für den Mittelwert,
-wenn dieser im sichtbaren Bereich liegt. Das Abfallfehler-Diagramm wählt
-seinen vertikalen Bereich automatisch. Eine senkrechte Linie mit dem
+wenn dieser im sichtbaren Bereich liegt. Eine senkrechte Linie mit dem
 Lagenkürzel (DU, DD, ...) markiert jeden Lagenwechsel. Die Bedienelemente
 unten auf der Seite legen fest:
 / Gangabweichung: den vertikalen Bereich des Gangabweichungs-Diagramms:
   #ui[Auto], #ui[±10 s/t] oder #ui[±50 s/t].
+/ Abfallfehler: #ui[Alle] skaliert den Abfallfehler automatisch; < 1 ms und
+  < 2 ms legen die Obergrenze fest. Größere Werte erscheinen am Rand; Daten
+  und Statistiken bleiben unverändert. Die Einstellung gilt auch für Korrelationen.
 / Zeige: den angezeigten Zeitraum: #ui[Alle], #ui[Letzte Std.],
   #ui[Letzte 6 Std.] oder #ui[Letzte 24 Std.].
 

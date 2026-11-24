@@ -64,12 +64,15 @@ pequeño indica que el reloj está bien ajustado.
 == Gráficas
 En la parte inferior, tres gráficas comparten el eje de tiempo: marcha,
 amplitud y error de batido. Cada una muestra una línea discontinua con su
-media cuando esta cabe en la escala visible. La gráfica de error de batido
-ajusta automáticamente su escala vertical. Una línea vertical con el código
+media cuando esta cabe en la escala visible. Una línea vertical con el código
 de posición (DU, DD, ...) marca cada cambio de posición. Los controles
 situados bajo la página establecen:
 / Marcha: el intervalo vertical de la gráfica de marcha: #ui[Auto], ±10 s/día
   o ±50 s/día.
+/ B.E.: #ui[Todo] ajusta automáticamente la escala del error de batido;
+  < 1 ms y < 2 ms fijan su límite superior. Los valores mayores aparecen en
+  el borde, sin cambiar los datos ni las estadísticas. El ajuste también se
+  aplica a Correlaciones.
 / Mostrar: el tiempo mostrado: #ui[Todo], o la última 1, 6 o 24 horas.
 
 == Correlaciones

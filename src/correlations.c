@@ -113,7 +113,8 @@ static void correlation_ranges(struct correlation_plot *plot, const struct outpu
 	enum correlation_kind kind, double t0, double t1)
 {
 	struct trend_plot_ranges ranges;
-	trend_get_plot_ranges(op->trend, t0, t1, op->trend_rate_range, &ranges);
+	trend_get_plot_ranges(op->trend, t0, t1, op->trend_rate_range,
+		op->trend_be_range, &ranges);
 	plot->xmin = kind == CORRELATION_AMP_RATE ? ranges.amp_min : ranges.be_min;
 	plot->xmax = kind == CORRELATION_AMP_RATE ? ranges.amp_max : ranges.be_max;
 	plot->ymin = kind == CORRELATION_BE_AMP ? ranges.amp_min : ranges.rate_min;
@@ -453,6 +454,9 @@ GtkWidget *correlations_create_page(struct output_panel *op)
 	gtk_box_pack_start(GTK_BOX(controls), gtk_label_new(_("Show")), FALSE, FALSE, 0);
 	op->correlation_span_combo = op_create_trend_span_combo(op);
 	gtk_box_pack_start(GTK_BOX(controls), op->correlation_span_combo, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(controls), gtk_label_new(_("B.E.")), FALSE, FALSE, 0);
+	op->correlation_be_combo = op_create_trend_be_combo(op);
+	gtk_box_pack_start(GTK_BOX(controls), op->correlation_be_combo, FALSE, FALSE, 0);
 
 	GtkWidget *scroll = gtk_scrolled_window_new(NULL, NULL);
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),

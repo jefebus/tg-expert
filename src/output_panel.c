@@ -1918,7 +1918,7 @@ static gboolean trend_draw_event(GtkWidget *widget, cairo_t *c, struct output_pa
 	// Rate: fixed range or the smallest round one that holds the readings shown
 	int n = trend_columns(t, t0, t1, gx, gw, TREND_SERIES_RATE, cols, max_cols);
 	struct trend_plot_ranges ranges;
-	trend_get_plot_ranges(t, t0, t1, op->trend_rate_range, &ranges);
+	trend_get_plot_ranges(t, t0, t1, op->trend_rate_range, op->trend_be_range, &ranges);
 	double range = ranges.rate_max;
 	cairo_set_line_width(c, 1);
 	for(int k = -2; k <= 2; k++) {
@@ -1957,7 +1957,7 @@ static gboolean trend_draw_event(GtkWidget *widget, cairo_t *c, struct output_pa
 		snprintf(s, sizeof(s), "%s", _("Amplitude (degrees)"));
 	trend_text(c, gx, amp_top - font * 0.4, 0, s);
 
-	// Beat error: automatic range from zero to the smallest round value that holds the readings
+	// Beat error: fixed range or the smallest round one that holds the readings shown
 	n = trend_columns(t, t0, t1, gx, gw, TREND_SERIES_BEAT_ERROR, cols, max_cols);
 	double be_range = ranges.be_max;
 	cairo_set_font_size(c, font * 0.8);
@@ -2047,6 +2047,33 @@ static void handle_trend_rate_range(GtkComboBox *b, struct output_panel *op)
 	op->trend_rate_range = id ? atoi(id) : 0;
 	gtk_widget_queue_draw(op->trend_drawing_area);
 	correlations_queue_draw(op);
+}
+
+static void handle_trend_be_range(GtkComboBox *b, struct output_panel *op)
+{
+	const gchar *id = gtk_combo_box_get_active_id(b);
+	op->trend_be_range = id ? atoi(id) : 0;
+	if(op->trend_be_combo && g_strcmp0(gtk_combo_box_get_active_id(
+			GTK_COMBO_BOX(op->trend_be_combo)), id))
+		gtk_combo_box_set_active_id(GTK_COMBO_BOX(op->trend_be_combo), id);
+	if(op->correlation_be_combo && g_strcmp0(gtk_combo_box_get_active_id(
+			GTK_COMBO_BOX(op->correlation_be_combo)), id))
+		gtk_combo_box_set_active_id(GTK_COMBO_BOX(op->correlation_be_combo), id);
+	gtk_widget_queue_draw(op->trend_drawing_area);
+	correlations_queue_draw(op);
+}
+
+GtkWidget *op_create_trend_be_combo(struct output_panel *op)
+{
+	GtkWidget *combo = gtk_combo_box_text_new();
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(combo), "0", _("All"));
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(combo), "1", "< 1 ms");
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(combo), "2", "< 2 ms");
+	char id[16];
+	snprintf(id, sizeof(id), "%d", op->trend_be_range);
+	gtk_combo_box_set_active_id(GTK_COMBO_BOX(combo), id);
+	g_signal_connect(combo, "changed", G_CALLBACK(handle_trend_be_range), op);
+	return combo;
 }
 
 static void handle_trend_span(GtkComboBox *b, struct output_panel *op)
@@ -2257,9 +2284,12 @@ struct output_panel *init_output_panel(struct computer *comp, struct snapshot *s
 	// Only the live panel records; a snapshot tab gets a frozen copy, if any
 	op->trend = comp ? trend_new() : NULL;
 	op->trend_rate_range = 0;
+	op->trend_be_range = 0;
 	op->trend_span_s = 0;
 	op->trend_span_combo = NULL;
 	op->correlation_span_combo = NULL;
+	op->trend_be_combo = NULL;
+	op->correlation_be_combo = NULL;
 	memset(op->correlation_areas, 0, sizeof(op->correlation_areas));
 	op->correlation_position = -1;
 	op->settling_spin = NULL;
@@ -2409,6 +2439,9 @@ struct output_panel *init_output_panel(struct computer *comp, struct snapshot *s
 	gtk_combo_box_set_active_id(GTK_COMBO_BOX(range_combo), "0");
 	gtk_box_pack_start(GTK_BOX(trend_box), range_combo, FALSE, FALSE, 0);
 	g_signal_connect(range_combo, "changed", G_CALLBACK(handle_trend_rate_range), op);
+	gtk_box_pack_start(GTK_BOX(trend_box), gtk_label_new(_("B.E.")), FALSE, FALSE, 0);
+	op->trend_be_combo = op_create_trend_be_combo(op);
+	gtk_box_pack_start(GTK_BOX(trend_box), op->trend_be_combo, FALSE, FALSE, 0);
 	/* TRANSLATORS: Trend page: label of the time span selector (All, Last 1 h, ...). Short */
 	gtk_box_pack_start(GTK_BOX(trend_box), gtk_label_new(_("Show")), FALSE, FALSE, 0);
 	op->trend_span_combo = op_create_trend_span_combo(op);

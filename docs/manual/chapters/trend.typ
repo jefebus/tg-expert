@@ -74,12 +74,14 @@ positional error means the watch is well adjusted.
 
 At the bottom, three graphs share a time axis: rate, amplitude and beat error.
 Each has a dashed line for its average when that average is within the visible
-range. The beat error graph picks its vertical range automatically. A vertical
-line with the position code (DU, DD, ...) marks each change of position. The
+range. A vertical line with the position code (DU, DD, ...) marks each change of position. The
 controls below the page set:
 
 / Rate: the vertical range of the rate graph: #ui[Auto], ±10 s/d or
   ±50 s/d.
+/ B.E.: #ui[All] automatically scales beat error, or choose < 1 ms or < 2 ms
+  for a fixed vertical range. Larger values appear at the edge; the recorded
+  data and statistics are unchanged. This setting also applies to Correlations.
 / Show: the time shown: #ui[All], or the last 1, 6 or 24 hours.
 
 == Correlations

@@ -1519,6 +1519,9 @@ msgstr "Completo"
 msgid "Correlations"
 msgstr "Correlaciones"
 
+msgid "B.E."
+msgstr "B.E."
+
 msgid "Amplitude → rate"
 msgstr "Amplitud → marcha"
 

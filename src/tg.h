@@ -377,7 +377,7 @@ double trend_elapsed(const struct trend *t);
 double trend_stats_mean(const struct trend_stats *s);
 double trend_stats_sd(const struct trend_stats *s);
 void trend_get_plot_ranges(const struct trend *t, double t0, double t1,
-	double fixed_rate, struct trend_plot_ranges *ranges);
+	double fixed_rate, double fixed_be, struct trend_plot_ranges *ranges);
 
 /* output_panel.c */
 struct output_panel {
@@ -407,6 +407,8 @@ struct output_panel {
 	GtkWidget *trend_drawing_area;
 	GtkWidget *trend_span_combo;
 	GtkWidget *correlation_span_combo;
+	GtkWidget *trend_be_combo;
+	GtkWidget *correlation_be_combo;
 	GtkWidget *correlation_areas[3];
 	int correlation_position;   // -1 = all positions
 	GtkWidget *settling_spin;
@@ -418,6 +420,7 @@ struct output_panel {
 	void *settling_setting_data;
 	struct trend *trend;         // owned; NULL for snapshots loaded from a file
 	int trend_rate_range;        // s/d shown either side of 0, 0 = automatic
+	int trend_be_range;          // maximum beat error in ms, 0 = automatic
 	int trend_span_s;            // time shown, 0 = everything since the start
 	float audio_meter_level;
 	gint64 audio_meter_time;
@@ -543,6 +546,7 @@ const char *watch_position_label(int pos);
 GtkWidget *correlations_create_page(struct output_panel *op);
 void correlations_queue_draw(struct output_panel *op);
 GtkWidget *op_create_trend_span_combo(struct output_panel *op);
+GtkWidget *op_create_trend_be_combo(struct output_panel *op);
 void format_duration(char *s, size_t n, double seconds);
 
 /* audio_settings.c */
