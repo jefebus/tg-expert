@@ -26,19 +26,19 @@ different for a minute starts the recording over. For long recordings, set
 the beat rate by hand.
 Nothing is recorded during calibration.
 
-== Settling after a position change
+== Settling at startup and after a position change
 
 On the live Trend page, set #ui[Settling time (s)] (default 0, which disables
 it). The setting is saved between sessions and changes apply to
 the next countdown.
 
+The countdown begins when the application starts and runs even without a good
+signal, so initial readings affected by the smoothing window are excluded.
 Select the new position in the software *before* physically moving the
 watch. When changing from a named position to another position, including
 #ui[not set], the countdown begins immediately and runs even without a good
-signal. Returning to a previously used position starts it again. The first
-selection from #ui[not set] does not start a countdown. A position already
-selected when recording starts does not start one either. #ui[Reset] does
-not start or restart a countdown; an active one continues.
+signal. Returning to a previously used position starts it again. #ui[Reset]
+does not start or restart a countdown; an active one continues.
 
 Good-signal readings during the countdown are retained, shaded in the
 graphs, and marked #ui[Settling] in CSV exports. They are excluded from

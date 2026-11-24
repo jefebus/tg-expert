@@ -1282,7 +1282,7 @@ msgid "Settling time (s)"
 msgstr ""
 
 #: src/output_panel.c:2278
-msgid "Seconds to wait after a position change; 0 disables settling."
+msgid "Seconds to wait at startup and after a position change; 0 disables settling."
 msgstr ""
 
 #: src/output_panel.c:2285

@@ -21,19 +21,22 @@ detectada que se mantenga distinta durante un minuto reinicia el registro.
 Para registros largos, ajuste la frecuencia de batido a mano.
 Durante la calibración no se registra nada.
 
-== Estabilización tras cambiar de posición
+== Estabilización al inicio y tras cambiar de posición
 
 En la página de tendencia en tiempo real, ajusta #ui[Tiempo de estabilización
 (s)] (0 por defecto, lo que la desactiva). El ajuste se guarda entre
 sesiones y los cambios se aplican a la siguiente cuenta atrás.
 
+La cuenta atrás comienza al iniciar la aplicación y continúa incluso sin
+buena señal, para excluir las primeras lecturas afectadas por la ventana de
+suavizado.
 Selecciona la nueva posición en el programa *antes* de mover físicamente el
 reloj. Al cambiar desde una posición definida a otra, incluida #ui[sin
 definir], la cuenta atrás empieza inmediatamente y continúa incluso sin buena
 señal. Volver a una posición usada anteriormente la inicia de nuevo. La
-primera selección desde #ui[sin definir] no inicia una cuenta atrás, ni
-tampoco una posición ya seleccionada al comenzar el registro. #ui[Reiniciar]
-no inicia ni reinicia la cuenta atrás; si hay una activa, continúa.
+posición seleccionada al iniciar el registro no necesita cambiarse para que
+se aplique la cuenta atrás inicial. #ui[Reiniciar] no inicia ni reinicia la
+cuenta atrás; si hay una activa, continúa.
 
 Las lecturas con buena señal durante la cuenta atrás se conservan, se
 resaltan en las gráficas y se marcan como #ui[Estabilización] en el CSV. Se

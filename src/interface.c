@@ -2136,6 +2136,7 @@ static void start_interface(GApplication* app, void *p)
 	op_set_paperstrip_settings_callback(w->active_panel, handle_paperstrip_settings_changed, w);
 	op_set_settling_setting(w->active_panel, w->settling_seconds,
 		handle_settling_setting_changed, w);
+	trend_start_settling(w->active_panel->trend, w->settling_seconds);
 
 	init_main_window(w);
 	audio_settings_update(w);

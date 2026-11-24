@@ -2452,7 +2452,7 @@ struct output_panel *init_output_panel(struct computer *comp, struct snapshot *s
 			FALSE, FALSE, 0);
 		op->settling_spin = gtk_spin_button_new_with_range(0, TREND_MAX_SETTLING_S, 1);
 		gtk_widget_set_tooltip_text(op->settling_spin,
-			_("Seconds to wait after a position change; 0 disables settling."));
+			_("Seconds to wait at startup and after a position change; 0 disables settling."));
 		gtk_box_pack_start(GTK_BOX(trend_box), op->settling_spin, FALSE, FALSE, 0);
 		g_signal_connect(op->settling_spin, "value_changed", G_CALLBACK(handle_settling_setting), op);
 		op->settling_status = gtk_label_new("");
