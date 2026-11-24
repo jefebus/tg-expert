@@ -6,10 +6,12 @@ EXTRA_PROGRAMS = tg-expert-dbg \
 MOSTLYCLEANFILES = $(EXTRA_PROGRAMS)
 
 tg_expert_SOURCES = src/algo.c \
+		   src/algorithm_settings.c \
 		   src/audio.c \
 		   src/audio_settings.c \
 		   src/computer.c \
 		   src/config.c \
+		   src/correlations.c \
 		   src/interface.c \
 		   src/output_panel.c \
 		   src/serializer.c \
@@ -44,6 +46,12 @@ tg_expert_dbg_LDFLAGS = $(AM_LDFLAGS)
 tg_expert_prf_LDFLAGS = $(AM_LDFLAGS)
 tg_expert_vlg_LDFLAGS = $(AM_LDFLAGS)
 
+if HAVE_MSGFMT
+tg-expert-dbg$(EXEEXT): po/stamp-locale
+po/stamp-locale: $(srcdir)/po/es.po $(srcdir)/po/de.po
+	$(MAKE) -C po
+endif
+
 if BE_WINDOWS
 if HAVE_WINDRES
 tg_expert_SOURCES += icons/tg-timer.rc
@@ -74,6 +82,7 @@ MANUAL_EN = $(srcdir)/version $(MANUAL_DIR)/main.typ $(MANUAL_DIR)/lib.typ \
 	    $(MANUAL_DIR)/chapters/introduction.typ $(MANUAL_DIR)/chapters/installation.typ \
 	    $(MANUAL_DIR)/chapters/first-start.typ $(MANUAL_DIR)/chapters/microphone.typ \
 	    $(MANUAL_DIR)/chapters/main-window.typ $(MANUAL_DIR)/chapters/measuring.typ \
+	    $(MANUAL_DIR)/chapters/algorithm.typ \
 	    $(MANUAL_DIR)/chapters/trend.typ $(MANUAL_DIR)/chapters/calibration.typ \
 	    $(MANUAL_DIR)/chapters/files.typ $(MANUAL_DIR)/chapters/swiss_lever.typ \
 	    $(MANUAL_DIR)/chapters/troubleshooting.typ \
@@ -82,6 +91,7 @@ MANUAL_ES = $(srcdir)/version $(MANUAL_DIR)/main-es.typ $(MANUAL_DIR)/lib.typ \
 	    $(MANUAL_DIR)/es/introduction.typ $(MANUAL_DIR)/es/installation.typ \
 	    $(MANUAL_DIR)/es/first-start.typ $(MANUAL_DIR)/es/microphone.typ \
 	    $(MANUAL_DIR)/es/main-window.typ $(MANUAL_DIR)/es/measuring.typ \
+	    $(MANUAL_DIR)/es/algorithm.typ \
 	    $(MANUAL_DIR)/es/trend.typ $(MANUAL_DIR)/es/calibration.typ \
 	    $(MANUAL_DIR)/es/files.typ $(MANUAL_DIR)/es/swiss_lever.typ \
 	    $(MANUAL_DIR)/es/troubleshooting.typ \
@@ -90,6 +100,7 @@ MANUAL_DE = $(srcdir)/version $(MANUAL_DIR)/main-de.typ $(MANUAL_DIR)/lib.typ \
 	    $(MANUAL_DIR)/de/introduction.typ $(MANUAL_DIR)/de/installation.typ \
 	    $(MANUAL_DIR)/de/first-start.typ $(MANUAL_DIR)/de/microphone.typ \
 	    $(MANUAL_DIR)/de/main-window.typ $(MANUAL_DIR)/de/measuring.typ \
+	    $(MANUAL_DIR)/de/algorithm.typ \
 	    $(MANUAL_DIR)/de/trend.typ $(MANUAL_DIR)/de/calibration.typ \
 	    $(MANUAL_DIR)/de/files.typ $(MANUAL_DIR)/de/swiss_lever.typ \
 	    $(MANUAL_DIR)/de/troubleshooting.typ \

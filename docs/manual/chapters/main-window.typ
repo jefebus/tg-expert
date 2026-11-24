@@ -5,7 +5,7 @@
 #shot("main-window.png", [The main window while measuring a 28800 bph watch.])
 
 The window has a top bar, a row of tabs, the results table, the paperstrip on
-the left and, on the right, the waveform panels or the Trend page.
+the left and, on the right, the waveform, Trend or Correlations page.
 
 == The top bar
 
@@ -28,8 +28,12 @@ From left to right:
 / Current snapshot: the name of the selected snapshot tab, which can be
   edited.
 / Menu: #ui[Open], #ui[Save current display], #ui[Save all snapshots],
-  #ui[Light algorithm], #ui[Audio settings…], #ui[Start calibration],
+  #ui[Audio settings…], #ui[Algorithm configuration…], #ui[Start calibration],
   #ui[User manual], #ui[Close all snapshots] and #ui[Quit].
+
+The detection process and the #ui[Algorithm configuration…] dialog are
+described in @algorithm, with the complete parameter reference in
+@algorithm-configuration.
 
 == The results table
 
@@ -110,9 +114,25 @@ separate clicks of the escapement.])
 
 The tic and toc panels have a ms scale at the bottom and an amplitude scale in
 degrees at the top. The blue vertical line marks the amplitude measured from
-the waveform.
+the waveform. The view expands to the left when needed to include the
+configured minimum amplitude; the highlighted
+windows in the full-period panel expand to match. This changes only the
+display, not the amplitude detection.
 
 A clean waveform with sharp, separate clicks means a good signal. A flat or
 fuzzy waveform means the microphone isn't picking up the watch well.
+The status line below the waveforms stays in place when empty. Hover over a
+truncated message to see its full text.
 
-The #ui[Trend] page is described in @trend.
+When the beat is detected but amplitude cannot be measured, the status below
+the waveforms says "Amplitude unavailable". Rate and beat error remain
+available; the beat error is not refined using lift-pulse timing. The debug
+build also shows the reason for the amplitude rejection.
+
+If a stable period is found but tic and toc cannot be separated, the display
+switches automatically to "Rate only": beat error and amplitude are shown as
+unavailable, and no new waveform, paperstrip events, or Trend readings are
+produced until tic and toc can be detected again. Earlier trace and Trend
+history remain visible.
+
+The #ui[Trend] and #ui[Correlations] pages are described in @trend.

@@ -33,11 +33,28 @@ sala y puede recortar los batidos.
 Desactive las «mejoras» de audio del sistema operativo: la supresión de ruido,
 el control automático de ganancia y la cancelación de eco modifican la señal y
 perturban la medición.
+== Escucha en directo
+Elija #ui[Escuchar LIVE] para oír la entrada actual del micrófono por la salida
+seleccionada. Use auriculares: tg-expert no puede detectar si están conectados
+físicamente y los altavoces pueden realimentar el micrófono. La escucha sigue
+la entrada en directo aunque esté seleccionada una pestaña de instantánea; no
+reproduce audio de instantáneas ni histórico.
+Elija la salida y ajuste el volumen independiente de escucha en
+#ui[Configuración de audio]. El volumen tiene un límite conservador y no cambia
+la ganancia de entrada ni mejora la señal usada por la medición. Si desaparece
+la salida seleccionada, la escucha se detiene y debe reactivarse después de
+elegir una salida disponible. Algunos sistemas pueden conmutar físicamente un
+mismo conector entre auriculares y altavoces sin cambiar su identidad, algo que
+el programa no puede detectar.
+Escuche los tics frente al ruido de la sala, pruebe distintas posiciones y
+presiones de contacto y fíjese en golpes o roces del cable. Compruebe también
+un posible recorte con el medidor del nivel de entrada. La escucha solo ayuda
+a preparar la instalación; no diagnostica automáticamente el movimiento.
 == Ruido
 - Trabaje en una sala silenciosa. Apague los ventiladores, los altavoces y los
   aparatos ruidosos cercanos.
 - No toque la mesa ni los cables durante la medición.
 - Una almohadilla blanda bajo el soporte aísla el reloj de las vibraciones de
   la mesa.
-- El #ui[Algoritmo ligero] (en el menú) omite el supresor de ruido. Déjelo
+- El #ui[Algoritmo ligero] (en #ui[Configuración del algoritmo…], #ui[Básico]) omite el supresor de ruido. Déjelo
   desactivado salvo que el ordenador sea demasiado lento.

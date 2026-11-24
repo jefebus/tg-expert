@@ -149,7 +149,7 @@ static const char *selected_watch(struct main_window *w)
 static void watch_update_buttons(struct main_window *w)
 {
 	// Watches change bph and lift angle, which are locked while calibrating
-	int enabled = w->controls_active && !w->calibrate;
+	int enabled = w->controls_active && !w->calibrate && !w->calibration_stop_pending;
 	gtk_widget_set_sensitive(w->watch_combo_box, enabled);
 	gtk_widget_set_sensitive(w->watch_save_button, enabled);
 	gtk_widget_set_sensitive(w->watch_delete_button, enabled && selected_watch(w));
@@ -380,7 +380,13 @@ static void handle_cal_change(GtkSpinButton *b, struct main_window *w)
  * computer_terminated(). Used by the audio settings dialog. */
 void request_audio_restart(struct main_window *w, int api, int device, int rate)
 {
-	if(!w->controls_active || w->calibrate || w->restart_audio) return;
+	if(!w->controls_active || w->calibrate || w->calibration_stop_pending ||
+			w->restart_audio || w->restart_algorithm) return;
+	if(w->listen_active) {
+		stop_audio_monitor();
+		w->listen_active = 0;
+		audio_settings_update(w);
+	}
 	w->pending_audio_api = api;
 	w->pending_audio_device = device;
 	w->pending_audio_rate = rate;
@@ -435,6 +441,7 @@ static void on_shutdown(GApplication *app, void *p)
 		op_destroy(w->active_panel);
 		close_config(w);
 		g_free(w->audio_device_name);
+		g_free(w->audio_output_device_name);
 		free(w);
 	}
 	terminate_portaudio();
@@ -442,6 +449,8 @@ static void on_shutdown(GApplication *app, void *p)
 
 static void recompute(struct main_window *w);
 static void computer_callback(void *w);
+guint refresh(struct main_window *w);
+static gboolean watch_audio_monitor(struct main_window *w);
 
 static void remove_runtime_timers(struct main_window *w)
 {
@@ -493,6 +502,12 @@ static guint computer_terminated(struct main_window *w)
 		gtk_widget_destroy(w->window);
 	} else {
 		debug("Restarting computer");
+
+		int algorithm_changed = w->restart_algorithm;
+		if(algorithm_changed) {
+			computer_join(w->computer);
+			algorithm_settings_load(w);
+		}
 
 		if(w->restart_audio) {
 			int requested_device = w->pending_audio_device;
@@ -554,6 +569,11 @@ static guint computer_terminated(struct main_window *w)
 			w->computer->callback = computer_callback;
 			w->computer->callback_data = w;
 
+			if(algorithm_changed) {
+				trend_reset(w->active_panel->trend);
+				refresh(w);
+			}
+			w->restart_algorithm = 0;
 			recompute(w);
 			update_sensitivity(w);
 		}
@@ -621,6 +641,8 @@ static void recompute(struct main_window *w)
 
 static guint kick_computer(struct main_window *w)
 {
+	watch_audio_monitor(w);
+	op_update_settling_status(w->active_panel);
 	w->computer_timeout++;
 	if(w->calibrate && w->computer_timeout < 10) {
 		return TRUE;
@@ -636,7 +658,7 @@ static guint kick_computer(struct main_window *w)
 static void set_menu_item_enabled(struct main_window *w, GtkWidget *item, int enabled)
 {
 	g_object_set_data(G_OBJECT(item), "enabled-wanted", GINT_TO_POINTER(enabled ? 1 : 2));
-	gtk_widget_set_sensitive(item, enabled && !w->calibrate);
+	gtk_widget_set_sensitive(item, enabled && !w->calibrate && !w->calibration_stop_pending);
 }
 
 static int menu_item_wanted(GtkWidget *item)
@@ -644,47 +666,205 @@ static int menu_item_wanted(GtkWidget *item)
 	return GPOINTER_TO_INT(g_object_get_data(G_OBJECT(item), "enabled-wanted")) != 2;
 }
 
+static struct trend *current_trend(struct main_window *w, GtkWidget **tab)
+{
+	int page = gtk_notebook_get_current_page(GTK_NOTEBOOK(w->notebook));
+	GtkWidget *current = page >= 0 ?
+		gtk_notebook_get_nth_page(GTK_NOTEBOOK(w->notebook), page) : NULL;
+	if(tab)
+		*tab = current;
+	if(!current)
+		return NULL;
+	struct output_panel *op = g_object_get_data(G_OBJECT(current), "op-pointer");
+	if(op)
+		return op->trend;
+	return w->active_panel ? w->active_panel->trend : NULL;
+}
+
+static void update_export_item(struct main_window *w)
+{
+	if(!w->export_item)
+		return;
+	struct trend *trend = current_trend(w, NULL);
+	int enabled = trend && trend->count > 0;
+	if(menu_item_wanted(w->export_item) != enabled)
+		set_menu_item_enabled(w, w->export_item, enabled);
+}
+
 /* Apply widget sensitivity from controls_active (real-time tab shown) and calibrate */
 static void update_sensitivity(struct main_window *w)
 {
 	int live = w->controls_active;
-	int settings = live && !w->calibrate;
+	int calibration_locked = w->calibrate || w->calibration_stop_pending;
+	int settings = live && !calibration_locked && !w->restart_algorithm;
 
 	watch_update_buttons(w);
 	gtk_widget_set_sensitive(w->bph_combo_box, settings);
 	gtk_widget_set_sensitive(w->la_spin_button, settings);
 	gtk_widget_set_sensitive(w->cal_spin_button, settings);
+	if(w->listen_button)
+		gtk_widget_set_sensitive(w->listen_button, w->audio_ok && !w->restart_audio);
 	// The audio settings dialog locks itself when audio cannot be changed
 	audio_settings_update(w);
 
 	// Always allow stopping a running calibration, whichever tab is shown
-	gtk_widget_set_sensitive(w->cal_button, live || w->calibrate);
+	gtk_widget_set_sensitive(w->cal_button,
+		(live || w->calibrate) && !w->restart_algorithm && !w->calibration_stop_pending);
 	gtk_menu_item_set_label(GTK_MENU_ITEM(w->cal_button),
 			w->calibrate ? _("Stop calibration") : _("Start calibration"));
 
 	// Other menu entries are locked while calibrating (Quit stays available)
-	gtk_widget_set_sensitive(w->open_item, !w->calibrate);
-	gtk_widget_set_sensitive(w->light_item, !w->calibrate);
-	gtk_widget_set_sensitive(w->save_item, menu_item_wanted(w->save_item) && !w->calibrate);
-	gtk_widget_set_sensitive(w->save_all_item, menu_item_wanted(w->save_all_item) && !w->calibrate);
-	gtk_widget_set_sensitive(w->close_all_item, menu_item_wanted(w->close_all_item) && !w->calibrate);
+	gtk_widget_set_sensitive(w->open_item, !calibration_locked);
+	gtk_widget_set_sensitive(w->algorithm_item, !calibration_locked && !w->restart_audio && !w->restart_algorithm);
+	gtk_widget_set_sensitive(w->save_item, menu_item_wanted(w->save_item) && !calibration_locked);
+	gtk_widget_set_sensitive(w->save_all_item, menu_item_wanted(w->save_all_item) && !calibration_locked);
+	if(w->export_item)
+		gtk_widget_set_sensitive(w->export_item,
+			menu_item_wanted(w->export_item) && !calibration_locked);
+	gtk_widget_set_sensitive(w->close_all_item, menu_item_wanted(w->close_all_item) && !calibration_locked);
 }
 
 static void handle_calibrate(GtkMenuItem *b, struct main_window *w)
 {
 	UNUSED(b);
+	w->calibration_stop_pending = w->calibrate;
 	w->calibrate = !w->calibrate;
 	update_sensitivity(w);
 	recompute(w);
 }
 
-static void handle_light(GtkCheckMenuItem *b, struct main_window *w)
+static void handle_listen_toggled(GtkToggleButton *button, struct main_window *w)
 {
-	int button_state = gtk_check_menu_item_get_active(b) == TRUE;
-	if(button_state != w->is_light) {
-		w->is_light = button_state;
-		recompute(w);
+	if(w->listen_updating)
+		return;
+	if(!gtk_toggle_button_get_active(button)) {
+		stop_audio_monitor();
+		w->listen_active = 0;
+		audio_settings_update(w);
+		return;
 	}
+	if(!w->listen_warning_shown) {
+		GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(w->window),
+			GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+			GTK_MESSAGE_WARNING, GTK_BUTTONS_NONE,
+			_("Use headphones for live listening. Speakers can feed back into the microphone; "
+			  "TG-Expert cannot detect whether headphones are connected."));
+		gtk_dialog_add_buttons(GTK_DIALOG(dialog),
+			_("_Cancel"), GTK_RESPONSE_CANCEL,
+			_("_Continue"), GTK_RESPONSE_ACCEPT,
+			NULL);
+		gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_CANCEL);
+		int response = gtk_dialog_run(GTK_DIALOG(dialog));
+		gtk_widget_destroy(dialog);
+		w->listen_warning_shown = 1;
+		if(response != GTK_RESPONSE_ACCEPT) {
+			w->listen_active = 0;
+			audio_settings_update(w);
+			return;
+		}
+	}
+
+	char *message = NULL;
+	if(!w->audio_ok || start_audio_monitor(get_audio_output_device(),
+			w->listen_volume, &message)) {
+		w->listen_active = 0;
+		w->audio_message = _("Live listening could not be started.");
+		audio_settings_update(w);
+		if(message) {
+			error("%s", message);
+			g_free(message);
+		} else
+			error("%s", w->audio_message);
+		return;
+	}
+	w->audio_message = NULL;
+	w->listen_active = 1;
+	audio_settings_update(w);
+}
+
+static gboolean watch_audio_monitor(struct main_window *w)
+{
+	if(!w->listen_active)
+		return !w->zombie;
+	int status = audio_monitor_status();
+	if(status == 1)
+		return TRUE;
+	stop_audio_monitor();
+	w->listen_active = 0;
+	w->audio_message = _("Live listening stopped because the selected output failed. "
+		"Select an available output and activate listening again.");
+	audio_settings_update(w);
+	error("%s", w->audio_message);
+	return !w->zombie;
+}
+
+static void format_calibration_value(int value, char *buffer, size_t size)
+{
+	snprintf(buffer, size, "%s%d.%d", value < 0 ? "-" : "+",
+		abs(value) / 10, abs(value) % 10);
+}
+
+static void apply_calibration_value(struct main_window *w, int value, gboolean persist)
+{
+	w->cal = value;
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w->cal_spin_button), value);
+	if(w->controls_active) {
+		refresh_results(w);
+		gtk_widget_queue_draw(w->notebook);
+	}
+
+	if(persist) {
+		GError *error = NULL;
+		if(!save_config_checked(w, &error)) {
+			GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(w->window),
+				GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+				GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE,
+				_("The correction was applied in memory but could not be saved:\n%s"),
+				error->message);
+			gtk_dialog_run(GTK_DIALOG(dialog));
+			gtk_widget_destroy(dialog);
+			g_error_free(error);
+		}
+	}
+}
+
+static gboolean confirm_provisional_calibration(struct main_window *w,
+	const struct snapshot *snapshot)
+{
+	char estimate[32], previous[32];
+	format_calibration_value(snapshot->cal_estimate_result, estimate, sizeof(estimate));
+	format_calibration_value(w->cal, previous, sizeof(previous));
+	char *message = g_strdup_printf(
+		_("Calibration is not complete.\n\n"
+		  "Provisional estimate: ~%s s/d\n"
+		  "Previous correction: %s s/d\n"
+		  "Data used: %d observations / %.0f s\n\n"
+		  "Replace the previous correction with this estimate?"),
+		estimate, previous, snapshot->cal_estimate_observations,
+		snapshot->cal_estimate_duration);
+	GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(w->window),
+		GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+		GTK_MESSAGE_QUESTION, GTK_BUTTONS_NONE, "%s", message);
+	g_free(message);
+	gtk_dialog_add_buttons(GTK_DIALOG(dialog),
+		_("_Keep previous calibration"), GTK_RESPONSE_CANCEL,
+		_("_Apply estimate"), GTK_RESPONSE_ACCEPT,
+		NULL);
+	gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_CANCEL);
+	int response = gtk_dialog_run(GTK_DIALOG(dialog));
+	gtk_widget_destroy(dialog);
+	return response == GTK_RESPONSE_ACCEPT;
+}
+
+void request_algorithm_restart(struct main_window *w, int light)
+{
+	w->is_light = light;
+	w->restart_algorithm = 1;
+	update_sensitivity(w);
+	lock_computer(w->computer);
+	if(w->computer->recompute >= 0)
+		kill_computer(w);
+	unlock_computer(w->computer);
 }
 
 static void controls_active(struct main_window *w, int active)
@@ -741,6 +921,7 @@ static void handle_tab_changed(GtkNotebook *nbk, GtkWidget *panel, guint x, stru
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w->la_spin_button), la);
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w->cal_spin_button), cal);
 	set_menu_item_enabled(w, w->save_item, !snap->calibrate && snap->pb);
+	update_export_item(w);
 
 	// Snapshot tabs show their own bph/la, so no saved watch is selected there
 	if(op)
@@ -799,6 +980,13 @@ static const char *position_labels[POS_COUNT] = {
 	/* TRANSLATORS: watch position. Translate the words, keep the code (CR) unchanged */
 	N_("Crown right (CR)")
 };
+
+const char *watch_position_label(int pos)
+{
+	if(pos < POS_NONE || pos >= POS_COUNT)
+		pos = POS_NONE;
+	return _(position_labels[pos]);
+}
 
 /* Tab title: "<name or Snapshot>" plus " (<position>)" when a position is set */
 static void update_tab_label(GtkWidget *panel)
@@ -901,6 +1089,10 @@ static void handle_position_change(GtkComboBox *b, struct main_window *w)
 	if(pos < POS_NONE || pos >= POS_COUNT) pos = POS_NONE;
 	if(!op) {
 		// Real-time tab: remember it for the next snapshot
+		if(pos != w->live_position && w->live_position != POS_NONE) {
+			trend_start_settling(w->active_panel->trend, w->settling_seconds);
+			op_update_settling_status(w->active_panel);
+		}
 		w->live_position = pos;
 		return;
 	}
@@ -974,6 +1166,13 @@ static void handle_paperstrip_settings_changed(void *data, double tick_seconds,
 	save_on_change(w);
 }
 
+static void handle_settling_setting_changed(void *data, int seconds)
+{
+	struct main_window *w = data;
+	w->settling_seconds = seconds;
+	save_on_change(w);
+}
+
 static struct output_panel *add_new_tab(struct snapshot *s, char *name, struct main_window *w)
 {
 	struct output_panel *op = init_output_panel(NULL, s, 5);
@@ -1004,6 +1203,7 @@ static void handle_snapshot(GtkButton *b, struct main_window *w)
 	struct output_panel *op = add_new_tab(s, (char *)selected_watch(w), w);
 	// The snapshot keeps the long-term statistics as they are now
 	op->trend = trend_clone(w->active_panel->trend);
+	update_export_item(w);
 }
 
 /* Keyboard shortcut for the most frequent action: Ctrl+Space takes a snapshot.
@@ -1022,12 +1222,14 @@ static gboolean handle_key_press(GtkWidget *widget, GdkEventKey *event, struct m
 	return FALSE;
 }
 
-static void chooser_set_filters(GtkFileChooser *chooser)
+static void chooser_set_filters(GtkFileChooser *chooser, const char *extension)
 {
-	GtkFileFilter *tgj_filter = gtk_file_filter_new();
-	gtk_file_filter_set_name(tgj_filter, ".tgj");
-	gtk_file_filter_add_pattern(tgj_filter, "*.tgj");
-	gtk_file_chooser_add_filter(chooser, tgj_filter);
+	GtkFileFilter *file_filter = gtk_file_filter_new();
+	gtk_file_filter_set_name(file_filter, extension);
+	gchar *pattern = g_strdup_printf("*%s", extension);
+	gtk_file_filter_add_pattern(file_filter, pattern);
+	g_free(pattern);
+	gtk_file_chooser_add_filter(chooser, file_filter);
 
 	GtkFileFilter *all_filter = gtk_file_filter_new();
 	gtk_file_filter_set_name(all_filter, _("All files"));
@@ -1035,7 +1237,7 @@ static void chooser_set_filters(GtkFileChooser *chooser)
 	gtk_file_chooser_add_filter(chooser, all_filter);
 
 	// On windows seems not to work...
-	gtk_file_chooser_set_filter(chooser, tgj_filter);
+	gtk_file_chooser_set_filter(chooser, file_filter);
 }
 
 static FILE *fopen_check(char *filename, char *mode, struct main_window *w)
@@ -1071,67 +1273,101 @@ error:	g_free(name);
 	return f;
 }
 
-static FILE *choose_file_for_save(struct main_window *w, const char *title, char *suggestion)
+static FILE *save_selected_file(struct main_window *w, GtkFileChooser *chooser,
+	const char *extension, int force_extension)
 {
-	FILE *f = NULL;
-	GtkWidget *dialog = gtk_file_chooser_dialog_new (title,
-			GTK_WINDOW(w->window),
-			GTK_FILE_CHOOSER_ACTION_SAVE,
-			_("Cancel"),
-			GTK_RESPONSE_CANCEL,
-			_("Save"),
-			GTK_RESPONSE_ACCEPT,
-			NULL);
-	GtkFileChooser *chooser = GTK_FILE_CHOOSER (dialog);
-	if(suggestion)
-		gtk_file_chooser_set_current_name(chooser, suggestion);
-
-	chooser_set_filters(chooser);
-
-	if(GTK_RESPONSE_ACCEPT == gtk_dialog_run (GTK_DIALOG (dialog)))
-	{
-		GFile *gf = gtk_file_chooser_get_file(chooser);
-		char *filename = g_file_get_path(gf);
-		g_object_unref(gf);
-		if(!strcmp(".tgj", gtk_file_filter_get_name(gtk_file_chooser_get_filter(chooser)))) {
-			char *s = strdup(filename);
-			if(strlen(s) > 3 && strcasecmp(".tgj", s + strlen(s) - 4)) {
-				char *t = g_malloc(strlen(filename)+5);
-				sprintf(t,"%s.tgj",filename);
-				g_free(filename);
-				filename = t;
-			}
-			free(s);
-		}
-		struct stat stst;
-		int do_open = 0;
-		if(!stat(filename, &stst)) {
-			GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(w->window),
-				GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
-				GTK_MESSAGE_QUESTION,
-				GTK_BUTTONS_OK_CANCEL,
-				_("File %s already exists. Do you want to replace it?"),
-				filename);
-			do_open = GTK_RESPONSE_OK == gtk_dialog_run(GTK_DIALOG(dialog));
-			gtk_widget_destroy(dialog);
-		} else
-			do_open = 1;
-		if(do_open) {
-			f = fopen_check(filename, "wb", w);
-			if(f) {
-				char *uri = g_filename_to_uri(filename,NULL,NULL);
-				if(f && uri)
-					gtk_recent_manager_add_item(
-						gtk_recent_manager_get_default(), uri);
-				g_free(uri);
-			}
-		}
-		g_free (filename);
+	GFile *gf = gtk_file_chooser_get_file(chooser);
+	if(!gf) {
+		GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(w->window), 0,
+			GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE, _("Error opening file\n"));
+		gtk_dialog_run(GTK_DIALOG(dialog));
+		gtk_widget_destroy(dialog);
+		return NULL;
+	}
+	char *filename = g_file_get_path(gf);
+	g_object_unref(gf);
+	if(!filename) {
+		GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(w->window), 0,
+			GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE, _("Error opening file\n"));
+		gtk_dialog_run(GTK_DIALOG(dialog));
+		gtk_widget_destroy(dialog);
+		return NULL;
 	}
 
-	gtk_widget_destroy(dialog);
+	const char *filter_name = gtk_file_filter_get_name(gtk_file_chooser_get_filter(chooser));
+	int add_extension = force_extension || (filter_name && !strcmp(extension, filter_name));
+	size_t name_length = strlen(filename);
+	size_t extension_length = strlen(extension);
+	if(add_extension && (name_length < extension_length ||
+			strcasecmp(extension, filename + name_length - extension_length))) {
+		char *with_extension = g_strconcat(filename, extension, NULL);
+		g_free(filename);
+		filename = with_extension;
+	}
 
+	struct stat stst;
+	int do_open = 0;
+	if(!stat(filename, &stst)) {
+		GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(w->window),
+			GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+			GTK_MESSAGE_QUESTION,
+			GTK_BUTTONS_OK_CANCEL,
+			_("File %s already exists. Do you want to replace it?"),
+			filename);
+		do_open = GTK_RESPONSE_OK == gtk_dialog_run(GTK_DIALOG(dialog));
+		gtk_widget_destroy(dialog);
+	} else
+		do_open = 1;
+
+	FILE *f = NULL;
+	if(do_open) {
+		f = fopen_check(filename, "wb", w);
+		if(f) {
+			char *uri = g_filename_to_uri(filename,NULL,NULL);
+			if(uri)
+				gtk_recent_manager_add_item(gtk_recent_manager_get_default(), uri);
+			g_free(uri);
+		}
+	}
+	g_free(filename);
 	return f;
+}
+
+static FILE *choose_file_for_save_with_options(struct main_window *w, const char *title,
+	char *suggestion, const char *extension, GtkWidget *extra, GtkWidget *choice,
+	int *selected_choice, int force_extension)
+{
+	GtkWidget *dialog = gtk_file_chooser_dialog_new(title,
+		GTK_WINDOW(w->window),
+		GTK_FILE_CHOOSER_ACTION_SAVE,
+		_("Cancel"),
+		GTK_RESPONSE_CANCEL,
+		_("Save"),
+		GTK_RESPONSE_ACCEPT,
+		NULL);
+	GtkFileChooser *chooser = GTK_FILE_CHOOSER(dialog);
+	if(suggestion)
+		gtk_file_chooser_set_current_name(chooser, suggestion);
+	chooser_set_filters(chooser, extension);
+	if(extra) {
+		gtk_file_chooser_set_extra_widget(chooser, extra);
+		gtk_widget_show_all(extra);
+	}
+
+	FILE *f = NULL;
+	if(GTK_RESPONSE_ACCEPT == gtk_dialog_run(GTK_DIALOG(dialog))) {
+		if(selected_choice && choice)
+			*selected_choice = gtk_combo_box_get_active(GTK_COMBO_BOX(choice));
+		f = save_selected_file(w, chooser, extension, force_extension);
+	}
+	gtk_widget_destroy(dialog);
+	return f;
+}
+
+static FILE *choose_file_for_save(struct main_window *w, const char *title, char *suggestion)
+{
+	return choose_file_for_save_with_options(w, title, suggestion, ".tgj",
+		NULL, NULL, NULL, 0);
 }
 
 static void save_current(GtkMenuItem *m, struct main_window *w)
@@ -1212,6 +1448,122 @@ static void save_all(GtkMenuItem *m, struct main_window *w)
 	fclose(f);
 }
 
+static gboolean localized_csv_available(void)
+{
+	const char *msgid = "Localized CSV (semicolon, decimal comma)";
+	return strcmp(_(msgid), msgid) != 0;
+}
+
+static char *csv_suggested_name(struct main_window *w)
+{
+	int page = gtk_notebook_get_current_page(GTK_NOTEBOOK(w->notebook));
+	GtkWidget *tab = page >= 0 ?
+		gtk_notebook_get_nth_page(GTK_NOTEBOOK(w->notebook), page) : NULL;
+	if(!tab)
+		return NULL;
+
+	struct output_panel *op = g_object_get_data(G_OBJECT(tab), "op-pointer");
+	const char *clock_name = op ? g_object_get_data(G_OBJECT(tab), "tab-name") :
+		selected_watch(w);
+	GDateTime *now = g_date_time_new_now_local();
+	if(!now)
+		return NULL;
+	char *timestamp = g_date_time_format(now, "%Y-%m-%d %H-%M");
+	g_date_time_unref(now);
+	if(!timestamp)
+		return NULL;
+
+	char *safe_name = clock_name ? g_strdup(clock_name) : NULL;
+	if(safe_name) {
+		g_strstrip(safe_name);
+		for(char *p = safe_name; *p; p++)
+			if((guchar)*p < 0x20 || strchr("\\/:*?\"<>|", *p))
+				*p = '_';
+		size_t length = strlen(safe_name);
+		while(length && (safe_name[length - 1] == ' ' || safe_name[length - 1] == '.'))
+			safe_name[--length] = '_';
+		if(!length) {
+			g_free(safe_name);
+			safe_name = NULL;
+		}
+	}
+
+	char *suggestion = safe_name ?
+		g_strdup_printf("%s %s.csv", timestamp, safe_name) :
+		g_strconcat(timestamp, ".csv", NULL);
+	g_free(safe_name);
+	g_free(timestamp);
+	return suggestion;
+}
+
+static void export_trend_csv(GtkMenuItem *m, struct main_window *w)
+{
+	UNUSED(m);
+	struct trend *trend = current_trend(w, NULL);
+	if(!trend || !trend->count)
+		return;
+
+	char *suggestion = csv_suggested_name(w);
+	if(!suggestion) {
+		GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(w->window), 0,
+			GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE, _("Could not create the export filename."));
+		gtk_dialog_run(GTK_DIALOG(dialog));
+		gtk_widget_destroy(dialog);
+		return;
+	}
+
+	GtkWidget *format_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+	GtkWidget *format_label = gtk_label_new(_("CSV format"));
+	gtk_box_pack_start(GTK_BOX(format_box), format_label, FALSE, FALSE, 0);
+	GtkWidget *format_combo = gtk_combo_box_text_new();
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(format_combo), "portable",
+		_("Portable CSV (comma, decimal point)"));
+	gboolean has_localized_format = localized_csv_available();
+	if(has_localized_format)
+		gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(format_combo), "localized",
+			_("Localized CSV (semicolon, decimal comma)"));
+	gtk_combo_box_set_active(GTK_COMBO_BOX(format_combo),
+		w->csv_format == CSV_FORMAT_LOCALIZED && has_localized_format ? 1 : 0);
+	gtk_box_pack_start(GTK_BOX(format_box), format_combo, FALSE, FALSE, 0);
+
+	int format = w->csv_format;
+	FILE *f = choose_file_for_save_with_options(w, _("Export Trend as CSV"),
+		suggestion, ".csv", format_box, format_combo, &format, 1);
+	g_free(suggestion);
+	if(format != w->csv_format) {
+		w->csv_format = format;
+		save_config(w);
+	}
+	if(!f)
+		return;
+
+	char separator, decimal;
+	if(format == CSV_FORMAT_PORTABLE) {
+		separator = ',';
+		decimal = '.';
+	} else if(format == CSV_FORMAT_LOCALIZED && has_localized_format) {
+		separator = ';';
+		decimal = ',';
+	} else {
+		fclose(f);
+		GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(w->window), 0,
+			GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE, _("Invalid CSV format."));
+		gtk_dialog_run(GTK_DIALOG(dialog));
+		gtk_widget_destroy(dialog);
+		return;
+	}
+
+	int write_error = write_trend_csv(f, trend, separator, decimal);
+	if(fclose(f))
+		write_error = 1;
+	if(write_error) {
+		GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(w->window),0,
+			GTK_MESSAGE_ERROR,GTK_BUTTONS_CLOSE,_("Error writing file"));
+		gtk_dialog_run(GTK_DIALOG(dialog));
+		gtk_widget_destroy(dialog);
+	}
+}
+
 static void load_snapshots(FILE *f, char *name, struct main_window *w)
 {
 	struct snapshot **s;
@@ -1223,6 +1575,7 @@ static void load_snapshots(FILE *f, char *name, struct main_window *w)
 		for(i = 0; i < cnt; i++) {
 			struct output_panel *op = add_new_tab(s[i], names[i] ? names[i] : name, w);
 			op->trend = trends[i]; // NULL for files saved without one
+			update_export_item(w);
 			free(names[i]);
 		}
 		free(s);
@@ -1265,7 +1618,7 @@ static void load(GtkMenuItem *m, struct main_window *w)
 			NULL);
 	GtkFileChooser *chooser = GTK_FILE_CHOOSER (dialog);
 
-	chooser_set_filters(chooser);
+	chooser_set_filters(chooser, ".tgj");
 
 	if(GTK_RESPONSE_ACCEPT == gtk_dialog_run (GTK_DIALOG (dialog)))
 	{
@@ -1410,6 +1763,12 @@ static void init_main_window(struct main_window *w)
 	gtk_box_pack_start(GTK_BOX(hbox), w->audio_button, FALSE, FALSE, 0);
 	g_signal_connect_swapped(w->audio_button, "clicked", G_CALLBACK(audio_settings_open), w);
 
+	w->listen_button = gtk_toggle_button_new_with_label(_("Listen LIVE"));
+	gtk_widget_set_tooltip_text(w->listen_button,
+		_("Listen to the live input through headphones. Speakers can feed back into the microphone."));
+	gtk_box_pack_start(GTK_BOX(hbox), w->listen_button, FALSE, FALSE, 0);
+	g_signal_connect(w->listen_button, "toggled", G_CALLBACK(handle_listen_toggled), w);
+
 	// Calibration label
 	label = gtk_label_new("cal");
 	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
@@ -1501,35 +1860,21 @@ static void init_main_window(struct main_window *w)
 	g_signal_connect(w->save_all_item, "activate", G_CALLBACK(save_all), w);
 	set_menu_item_enabled(w, w->save_all_item, FALSE);
 
-	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), gtk_separator_menu_item_new());
+	w->export_item = gtk_menu_item_new_with_label(_("Export Trend as CSV…"));
+	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), w->export_item);
+	g_signal_connect(w->export_item, "activate", G_CALLBACK(export_trend_csv), w);
+	set_menu_item_enabled(w, w->export_item, FALSE);
 
-	// ... Light checkbox
-	GtkWidget *light_checkbox = gtk_check_menu_item_new_with_label(_("Light algorithm"));
-	w->light_item = light_checkbox;
-	gtk_widget_set_tooltip_text(light_checkbox,
-		_("Reduces CPU load, \n"
-		"for slow computers.\n"
-		"\n"
-		"It processes half of\n"
-		"the audio samples, \n"
-		"uses shorter analysis\n"
-		"windows and skips the\n"
-		"noise suppressor.\n"
-		"Results update faster,\n"
-		"but they are less stable\n"
-		"and more sensitive to \n"
-		"background noise.\n"
-		"Toggling this setting will\n"
-		"restart your measurement.")
-		);
-	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), light_checkbox);
-	g_signal_connect(light_checkbox, "toggled", G_CALLBACK(handle_light), w);
-	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(light_checkbox), w->is_light);
+	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), gtk_separator_menu_item_new());
 
 	// ... Audio settings: audio system, input device and rate
 	GtkWidget *audio_settings_item = gtk_menu_item_new_with_label(_("Audio settings…"));
 	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), audio_settings_item);
 	g_signal_connect_swapped(audio_settings_item, "activate", G_CALLBACK(audio_settings_open), w);
+
+	w->algorithm_item = gtk_menu_item_new_with_label(_("Algorithm configuration…"));
+	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), w->algorithm_item);
+	g_signal_connect_swapped(w->algorithm_item, "activate", G_CALLBACK(algorithm_settings_open), w);
 
 	// ... Start / Stop calibration (label switches with the state)
 	w->cal_button = gtk_menu_item_new_with_label(_("Start calibration"));
@@ -1540,7 +1885,8 @@ static void init_main_window(struct main_window *w)
 		"ticking once per second\n"
 		"as reference.\n"
 		"\n"
-		"Takes about 15 minutes.\n"
+		"Takes about 15 minutes\n"
+		"with default settings.\n"
 		"The result is stored\n"
 		"in the cal field.")
 		);
@@ -1622,6 +1968,7 @@ guint refresh(struct main_window *w)
 	unlock_computer(w->computer);
 	refresh_results(w);
 	trend_update(w->active_panel->trend, w->active_snapshot, w->live_position);
+	update_export_item(w);
 	op_set_snapshot(w->active_panel, w->active_snapshot);
 
 	int p = gtk_notebook_get_current_page(GTK_NOTEBOOK(w->notebook));
@@ -1633,6 +1980,19 @@ guint refresh(struct main_window *w)
 		gtk_widget_queue_draw(w->notebook);
 	}
 	gtk_widget_set_sensitive(w->snapshot_button, photogenic);
+
+	if(w->calibration_stop_pending && !w->active_snapshot->calibrate) {
+		w->calibration_stop_pending = 0;
+		if(w->active_snapshot->cal_state == 1) {
+			apply_calibration_value(w, w->active_snapshot->cal_result, FALSE);
+			save_on_change(w);
+		} else if(w->active_snapshot->cal_state == 0 &&
+				w->active_snapshot->cal_estimate_available &&
+				confirm_provisional_calibration(w, w->active_snapshot)) {
+			apply_calibration_value(w, w->active_snapshot->cal_estimate_result, TRUE);
+		}
+		update_sensitivity(w);
+	}
 	return FALSE;
 }
 
@@ -1657,27 +2017,46 @@ static void start_interface(GApplication* app, void *p)
 	w->bph = 0;
 	w->la = DEFAULT_LA;
 	w->calibrate = 0;
+	w->calibration_stop_pending = 0;
 	w->is_light = 0;
 	w->paperstrip_tick_seconds = 10.0;
 	w->paperstrip_window_seconds = 60.0;
+	w->settling_seconds = 0;
+	w->csv_format = CSV_FORMAT_PORTABLE;
 	w->nominal_sr = PA_SAMPLE_RATE;
 	w->audio_device = AUDIO_DEVICE_DEFAULT;
 	w->restart_audio = 0;
+	w->restart_algorithm = 0;
 	w->pending_audio_device = AUDIO_DEVICE_DEFAULT;
 	w->pending_audio_rate = PA_SAMPLE_RATE;
 	w->audio_api = AUDIO_API_DEFAULT;
 	w->pending_audio_api = AUDIO_API_DEFAULT;
 	w->audio_device_name = NULL;
+	w->audio_output_device_name = NULL;
+	w->listen_volume = 0.15;
+	w->listen_active = 0;
+	w->listen_updating = 0;
+	w->listen_warning_shown = 0;
 	w->audio_message = NULL;
 	w->audio_ok = 0;
 	w->audio_button = NULL;
 	w->audio_button_label = NULL;
+	w->listen_button = NULL;
 	w->audio_settings = NULL;
 	w->watch_updating = 0;
 	w->position_updating = 0;
 	w->live_position = POS_NONE;
 
 	load_config(w);
+	set_audio_output_device_name(w->audio_output_device_name);
+	algorithm_settings_load(w);
+	if(!isfinite(w->listen_volume) || w->listen_volume < 0 || w->listen_volume > 0.5)
+		w->listen_volume = 0.15;
+	set_audio_monitor_volume(w->listen_volume);
+	if(w->settling_seconds < 0 || w->settling_seconds > TREND_MAX_SETTLING_S)
+		w->settling_seconds = 0;
+	if(w->csv_format != CSV_FORMAT_PORTABLE && w->csv_format != CSV_FORMAT_LOCALIZED)
+		w->csv_format = CSV_FORMAT_PORTABLE;
 	if(!isfinite(w->paperstrip_tick_seconds) || w->paperstrip_tick_seconds < 0.01 ||
 		w->paperstrip_tick_seconds > 3600.0)
 		w->paperstrip_tick_seconds = 10.0;
@@ -1706,6 +2085,10 @@ static void start_interface(GApplication* app, void *p)
 		audio_failed = open_audio(AUDIO_DEVICE_DEFAULT, rate, &real_sr);
 	}
 	set_audio_input_device_name(NULL);
+	if(!w->audio_output_device_name && get_audio_output_device() >= 0) {
+		set_audio_output_device(get_audio_output_device());
+		w->audio_output_device_name = g_strdup(get_audio_output_device_name());
+	}
 	set_audio_errors_quiet(0);
 
 	w->audio_ok = !audio_failed;
@@ -1751,6 +2134,8 @@ static void start_interface(GApplication* app, void *p)
 	op_set_paperstrip_settings(w->active_panel, w->paperstrip_tick_seconds,
 		w->paperstrip_window_seconds);
 	op_set_paperstrip_settings_callback(w->active_panel, handle_paperstrip_settings_changed, w);
+	op_set_settling_setting(w->active_panel, w->settling_seconds,
+		handle_settling_setting_changed, w);
 
 	init_main_window(w);
 	audio_settings_update(w);
@@ -1797,9 +2182,8 @@ static void handle_open(GApplication* app, GFile **files, int cnt, char *hint, v
 	}
 }
 
-/* Folder with the translations for the user's languages, or NULL. It is
- * looked for in LOCALEDIR and in locale/ under the system data folders
- * (on Windows, the share folder of the installation). */
+/* Folder with translations for the user's languages, or NULL. Debug builds
+ * prefer po/locale, followed by LOCALEDIR and the system data folders. */
 static gchar *find_locale_dir(void)
 {
 	const gchar * const *langs = g_get_language_names();
@@ -1808,10 +2192,10 @@ static gchar *find_locale_dir(void)
 	while(data_dirs[n]) n++;
 	gchar **dirs = g_new0(gchar *, n + 3);
 	int k = 0;
-	dirs[k++] = g_strdup(LOCALEDIR);
 #ifdef DEBUG
 	dirs[k++] = g_strdup("po/locale");	// built by make in the source tree
 #endif
+	dirs[k++] = g_strdup(LOCALEDIR);
 	for(int i = 0; i < n; i++)
 		dirs[k++] = g_build_filename(data_dirs[i], "locale", NULL);
 	gchar *found = NULL;

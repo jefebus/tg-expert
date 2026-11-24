@@ -68,7 +68,7 @@ inició.
   la sala y ajuste la ganancia. Véase @microphone.
 - Revise los paneles de forma de onda. Unos clics nítidos y separados indican
   una buena señal.
-- Desactive el #ui[Algoritmo ligero] si está activado.
+- Desactive el #ui[Algoritmo ligero] en #ui[Configuración del algoritmo…] si está activado.
 - No toque el reloj ni la mesa durante la medición.
 - Parte de la inestabilidad se debe al propio reloj. Un mecanismo desgastado o
   sucio varía de un batido a otro. La σ de la página de tendencia indica

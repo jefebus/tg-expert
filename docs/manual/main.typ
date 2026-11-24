@@ -24,5 +24,6 @@
 #include "chapters/calibration.typ"
 #include "chapters/files.typ"
 #include "chapters/swiss_lever.typ"
+#include "chapters/algorithm.typ"
 #include "chapters/troubleshooting.typ"
 #include "chapters/appendix.typ"

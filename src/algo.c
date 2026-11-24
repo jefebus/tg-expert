@@ -17,6 +17,7 @@
 */
 
 #include "tg.h"
+#include <float.h>
 
 /**
  * @brief Coefficients of a second-order IIR biquad.
@@ -150,9 +151,9 @@ void setup_buffers(struct processing_buffers *b)
 	b->plan_f = fftwf_plan_dft_r2c_1d(b->sample_rate, b->slice_wf, b->slice_fft, FFTW_ESTIMATE);
 	b->plan_g = fftwf_plan_dft_c2r_1d(b->sample_rate, b->slice_fft, b->slice_wf, FFTW_ESTIMATE);
 	b->hpf = malloc(sizeof(struct filter));
-	make_hp(b->hpf,(double)FILTER_CUTOFF/b->sample_rate);
+	make_hp(b->hpf,algorithm_parameters[ALG_FILTER]/b->sample_rate);
 	b->lpf = malloc(sizeof(struct filter));
-	make_lp(b->lpf,(double)FILTER_CUTOFF/b->sample_rate);
+	make_lp(b->lpf,algorithm_parameters[ALG_FILTER]/b->sample_rate);
 	b->events = malloc(EVENTS_MAX * sizeof(uint64_t));
 	b->events_tictoc = malloc(EVENTS_MAX * sizeof(unsigned char));
 	b->ready = 0;
@@ -376,7 +377,7 @@ static void quickselect(float* x, int n, int k)
 /**
  * @brief Suppress sustained high-energy interference in the recording.
  *
- * Energy is integrated over 20 ms windows and summarized in half-second sections. Regions
+ * Energy is integrated over configurable windows and summarized in sections. Regions
  * greatly exceeding the median section level are cleared before escapement periodicity is
  * measured.
  *
@@ -386,8 +387,8 @@ static void noise_suppressor(struct processing_buffers *p)
 {
 	float *a = p->samples_sc;
 	float *b = p->samples_sc + p->sample_count;
-	/* Integrate squared signal energy over 20 ms windows. */
-	int window = p->sample_rate / 50;
+	/* Integrate squared signal energy over the configured window. */
+	int window = (int)(p->sample_rate * algorithm_parameters[ALG_NOISE_WINDOW] / 1000);
 	int i;
 
 	for(i = 0; i < p->sample_count; i++)
@@ -404,8 +405,8 @@ static void noise_suppressor(struct processing_buffers *p)
 	}
 
 	int m = p->sample_count - window + 1;
-	/* Summarize each half-second section by its strongest local energy. */
-	int step = p->sample_rate / 2;
+	/* Summarize each section by its strongest local energy. */
+	int step = (int)(p->sample_rate * algorithm_parameters[ALG_NOISE_SEGMENT] / 1000);
 	int j = 0;
 	for(i = 0; i + step - 1 < m; i += step)
 		a[j++] = vmax(b, i, i+step, NULL);
@@ -416,8 +417,8 @@ static void noise_suppressor(struct processing_buffers *p)
 	for(i = 0; i < p->sample_count; i++) {
 		int j = i - window / 2;
 		j = j < 0 ? 0 : j > p->sample_count - window ? p->sample_count - window : j;
-		/* Remove samples belonging to sustained energy more than twice the reference level. */
-		if(b[j] > 2*k) p->samples[i] = 0;
+		/* Remove samples exceeding the configured multiple of the reference level. */
+		if(b[j] > algorithm_parameters[ALG_NOISE_THRESHOLD]*k) p->samples[i] = 0;
 	}
 }
 
@@ -456,9 +457,10 @@ static void prepare_data(struct processing_buffers *b, int run_noise_suppressor)
 	for(i=0; i < b->sample_count; i++)
 		b->samples[i] -= average;
 
-	for(i=0; i < b->sample_rate/10; i++) {
+	int taper = (int)(b->sample_rate * algorithm_parameters[ALG_TAPER] / 1000);
+	for(i=0; i < taper; i++) {
 		/* Apply a raised-cosine taper to reduce FFT edge discontinuities. */
-		double k = ( 1 - cos(i*M_PI/(b->sample_rate/10)) ) / 2;
+		double k = ( 1 - cos(i*M_PI/taper) ) / 2;
 		b->samples[i] *= k;
 		b->samples[b->sample_count - i - 1] *= k;
 	}
@@ -514,7 +516,7 @@ static int peak_detector(float *buff, int a, int b)
 			down = 1;
 	}
 	debug("max = %f med = %f cnt = %d\n",max,med,cnt);
-	if(cnt > 20)
+	if(cnt > algorithm_parameters[ALG_LOBES])
 		return -1;
 	return i_max;
 }
@@ -531,6 +533,7 @@ static int peak_detector(float *buff, int a, int b)
 static double estimate_period(struct processing_buffers *p)
 {
 	int first_estimate;
+	int tolerance = (int)(p->sample_rate * algorithm_parameters[ALG_GUESS_SEARCH] / 1000);
 	/* Restrict the initial search to plausible mechanical-watch beat periods. */
 	vmax(p->samples_sc, p->sample_rate / 12, p->sample_rate, &first_estimate);
 	first_estimate = peak_detector(p->samples_sc,
@@ -548,25 +551,25 @@ static double estimate_period(struct processing_buffers *p)
 	/* Restrict the initial search to plausible mechanical-watch beat periods. */
 	for(fct = 2; first_estimate / fct > p->sample_rate / 12; fct++) {
 		int new_estimate = peak_detector(p->samples_sc,
-					first_estimate / fct - p->sample_rate / 50,
-					first_estimate / fct + p->sample_rate / 50);
-		if(new_estimate > -1 && p->samples_sc[new_estimate] > 0.9 * p->samples_sc[first_estimate]) {
+					first_estimate / fct - tolerance,
+					first_estimate / fct + tolerance);
+		if(new_estimate > -1 && p->samples_sc[new_estimate] > algorithm_parameters[ALG_HARMONIC] / 100 * p->samples_sc[first_estimate]) {
 			estimate = new_estimate;
 			factor = fct;
 		}
 	}
 	/* Inspect the alternating tic/toc structure at one and a half candidate periods. */
-	int a = estimate*3/2 - p->sample_rate / 50;
+	int a = estimate*3/2 - tolerance;
 	/* Inspect the alternating tic/toc structure at one and a half candidate periods. */
-	int b = estimate*3/2 + p->sample_rate / 50;
+	int b = estimate*3/2 + tolerance;
 	double max = vmax(p->samples_sc, a, b+1, NULL);
-	if(max < 0.2 * p->samples_sc[estimate]) {
+	if(max < algorithm_parameters[ALG_DOUBLE_TRIGGER] / 100 * p->samples_sc[estimate]) {
 		if(first_estimate * 2 / factor < p->sample_rate ) {
 			/* Fall back to a doubled interval when each acoustic beat has been counted twice. */
 			debug("double triggered\n");
 			return peak_detector(p->samples_sc,
-					first_estimate * 2 / factor - p->sample_rate / 50,
-					first_estimate * 2 / factor + p->sample_rate / 50);
+					first_estimate * 2 / factor - tolerance,
+					first_estimate * 2 / factor + tolerance);
 		} else {
 			debug("period rejected (immense beat error?)\n");
 			return -1;
@@ -588,20 +591,21 @@ static double estimate_period(struct processing_buffers *p)
 static int compute_period(struct processing_buffers *b, int bph)
 {
 	double estimate;
+	int tolerance = (int)(b->sample_rate * algorithm_parameters[ALG_GUESS_SEARCH] / 1000);
 	if(bph)
 		estimate = peak_detector(b->samples_sc,
 				/* Convert nominal beats per hour into the expected tic-to-tic or toc-to-toc interval in samples. */
-				7200 * b->sample_rate / bph - b->sample_rate / 50,
+				7200 * b->sample_rate / bph - tolerance,
 				/* Convert nominal beats per hour into the expected tic-to-tic or toc-to-toc interval in samples. */
-				7200 * b->sample_rate / bph + b->sample_rate / 50);
+				7200 * b->sample_rate / bph + tolerance);
 	else
 		estimate = estimate_period(b);
 	if(estimate == -1) {
 		debug("failed to estimate period\n");
 		return 1;
 	}
-	/* Allow a 20 ms search tolerance around each predicted correlation peak. */
-	double delta = b->sample_rate * 0.02;
+	/* Allow the configured search tolerance around each predicted correlation peak. */
+	double delta = b->sample_rate * algorithm_parameters[ALG_PERIOD_REFINE] / 1000;
 	double new_estimate = estimate;
 	double sum = 0;
 	double sq_sum = 0;
@@ -694,7 +698,7 @@ static float mean_less_greatest(const float *x, int n)
  */
 static float mean_less_two_greatest(const float *x, int n)
 {
-	float sum = x[0], greatest[2] = {x[0], FLT_MIN};
+	float sum = x[0], greatest[2] = {x[0], -FLT_MAX};
 	int i;
 	for(i = 1; i < n; i++) {
 		sum += x[i];
@@ -708,26 +712,15 @@ static float mean_less_two_greatest(const float *x, int n)
 	return (sum - greatest[0] - greatest[1]) / (n-2);
 }
 
-/** Find the mean of the lower four quintiles.
- *
- * Find mean of the lower four quintiles of x, i.e. the mean of the values in x
- * with the largest 20% excluded.
- *
- * @warning This may modify the list to re-order the values.
- *
- * @param[in] x The values.
- * @param[n] n The number of values.
- * @returns The mean of the lower four quintiles.
- */
 /**
- * @brief Calculate the mean of the lower four quintiles.
+ * @brief Calculate the mean after removing the configured percentage of highest values.
  *
- * Discarding the highest 20 percent prevents occasional impacts, speech, or handling noise
+ * Discarding high values prevents occasional impacts, speech, or handling noise
  * from becoming part of the representative tic/toc waveform.
  *
  * @param x Values; ordering may be modified.
  * @param n Number of values.
- * @return Trimmed mean of the lower 80 percent.
+ * @return Trimmed mean.
  */
 static float tmean(float *x, int n)
 {
@@ -737,14 +730,16 @@ static float tmean(float *x, int n)
 	 * lists, use a quickselect based algorithm with average case O(n)
 	 * performance rather than the O(n^2) that the first algorithm has.
 	 *
-	 * After size 10, the specialized functions don't provide much benefit.
 	 * */
-	if (n <= 5)
+	int excluded = (n * (int)algorithm_parameters[ALG_TRIM] + 99) / 100;
+	if(n <= 1) return x[0];
+	if(excluded >= n) excluded = n - 1;
+	if (excluded == 1)
 		return mean_less_greatest(x, n);
-	else if (n <= 10)
+	else if (excluded == 2)
 		return mean_less_two_greatest(x, n);
 	else {
-		int k = (n+4)/5;	/* Index of upper quintile */
+		int k = excluded;
 		quickselect(x, n, k);
 		/* Now x[0] to x[k-1] should be the values to exclude */
 
@@ -912,10 +907,12 @@ static void smooth(float *in, float *out, int window, int size)
  */
 static int compute_parameters(struct processing_buffers *p)
 {
+	int tolerance = (int)(p->sample_rate * algorithm_parameters[ALG_BE_SEARCH] / 1000);
+	int low = floor(p->period / 2) - tolerance;
+	int high = floor(p->period / 2) + tolerance;
+	if(low < 0 || high >= 2 * p->sample_rate) return 1;
 	/* Search near half a period, where the opposite pallet action should occur. */
-	int tic_to_toc = peak_detector(p->waveform_sc,
-			floor(p->period/2)-p->sample_rate/50,
-			floor(p->period/2)+p->sample_rate/50);
+	int tic_to_toc = peak_detector(p->waveform_sc, low, high);
 	if(tic_to_toc < 0) {
 		debug("beat error = ---\n");
 		return 1;
@@ -926,12 +923,13 @@ static int compute_parameters(struct processing_buffers *p)
 	}
 
 	int wf_size = ceil(p->period);
+	int window = MAX(1, (int)(p->sample_rate * algorithm_parameters[ALG_TIC_SMOOTH] / 1000));
+	if(tic_to_toc >= wf_size || wf_size - tic_to_toc <= window) return 1;
 	float fold_wf[wf_size - tic_to_toc];
 	int i;
 	for(i = 0; i < wf_size - tic_to_toc; i++)
 		/* Superimpose tic and shifted toc to obtain a stronger common timing reference. */
 		fold_wf[i] = p->waveform[i] + p->waveform[i+tic_to_toc];
-	int window = p->sample_rate / 2000;
 	float smooth_wf[wf_size - tic_to_toc - window];
 	smooth(fold_wf, smooth_wf, window, wf_size - tic_to_toc);
 	int max_i;
@@ -982,6 +980,7 @@ static int compute_parameters(struct processing_buffers *p)
 static void do_locate_events(struct detected_event *events, struct processing_buffers *p, float *waveform, int last, int offset, int count, unsigned char tictoc)
 {
 	int i;
+	double tolerance = p->sample_rate * algorithm_parameters[ALG_EVENT_SEARCH] / 1000;
 	/* Zero-pad the selected half-cycle template to one second. */
 	memset(p->tic_wf, 0, p->sample_rate * sizeof(float));
 	for(i=0; i<floor(p->period)/2; i++)
@@ -1000,15 +999,13 @@ static void do_locate_events(struct detected_event *events, struct processing_bu
 		fftwf_execute(p->plan_g);
 		for(i=0; i < p->sample_rate/2; i++)
 			p->tic_c[i+s] = p->slice_wf[i];
-		/* Search each predicted event within plus or minus 20 ms. */
-		if(s < last - offset - (count-1)*p->period - 0.02*p->sample_rate) break;
+		/* Search each predicted event within the configured tolerance. */
+		if(s < last - offset - (count-1)*p->period - tolerance) break;
 	}
 
 	for(i=0; i<count; i++) {
-		/* Search each predicted event within plus or minus 20 ms. */
-		int a = round(last - offset - i*p->period - 0.02*p->sample_rate);
-		/* Search each predicted event within plus or minus 20 ms. */
-		int b = round(last - offset - i*p->period + 0.02*p->sample_rate);
+		int a = round(last - offset - i*p->period - tolerance);
+		int b = round(last - offset - i*p->period + tolerance);
 		/* Attach the tic/toc polarity to the located event. */
 		events[i].tictoc = tictoc;
 		if(a < 0 || b >= p->sample_count - p->period/2)
@@ -1081,8 +1078,8 @@ static void compute_amplitude(struct processing_buffers *p, double la)
 	int i,j,k;
 
 	int wf_size = ceil(p->period);
-	/* Use an approximately 1 ms smoothing window for the lift-sound envelope. */
-	int window = p->sample_rate / 1000;
+	/* Smooth the lift-sound envelope using the configured window. */
+	int window = MAX(1, (int)(p->sample_rate * algorithm_parameters[ALG_AMP_SMOOTH] / 1000));
 	for(i = 0; i < window; i++)
 		/* Extend the waveform circularly because a lift pulse may cross the period boundary. */
 		p->waveform[i + wf_size] = p->waveform[i];
@@ -1100,13 +1097,17 @@ static void compute_amplitude(struct processing_buffers *p, double la)
 	}
 	double glob_max = vmax(smooth_wf, 0, ceil(p->period), NULL);
 	/* Set the initial detection threshold from both global pulse strength and local background. */
-	double threshold = fmax(.01 * glob_max, 1.4 * max);
-	debug("amp threshold from %s\n", .01 * glob_max > 1.4 * max ? "global maximum" : "noise level");
+	double threshold = fmax(algorithm_parameters[ALG_AMP_INITIAL] / 100 * glob_max,
+		algorithm_parameters[ALG_AMP_NOISE] * max);
+	debug("amp threshold from %s\n",
+		algorithm_parameters[ALG_AMP_INITIAL] / 100 * glob_max >
+		algorithm_parameters[ALG_AMP_NOISE] * max ? "global maximum" : "noise level");
 
 	p->amp = -1;
 	p->tic_pulse = p->toc_pulse = -1;
+	enum detection_status rejection = DETECTION_STATUS_AMPLITUDE_NOT_FOUND;
 	/* Try progressively higher thresholds until both directions produce plausible amplitudes. */
-	while(threshold < .2 * glob_max) {
+	while(threshold < algorithm_parameters[ALG_AMP_LIMIT] / 100 * glob_max) {
 		debug("amp threshold = %f%% glob max\n", threshold * 100 / glob_max);
 		double tic_pulse = -1;
 		double toc_pulse = -1;
@@ -1143,7 +1144,14 @@ static void compute_amplitude(struct processing_buffers *p, double la)
 		double tic_amp = la * tic_amp_abs;
 		double toc_amp = la * toc_amp_abs;
 		/* Accept only physically plausible and mutually consistent tic/toc amplitudes. */
-		if(135 < tic_amp && tic_amp < 360 && 135 < toc_amp && toc_amp < 360 && fabs(tic_amp - toc_amp) < 60) {
+		if(tic_amp <= algorithm_parameters[ALG_AMP_MIN] ||
+				toc_amp <= algorithm_parameters[ALG_AMP_MIN]) {
+			rejection = DETECTION_STATUS_AMPLITUDE_TOO_LOW;
+		} else if(tic_amp >= 360 || toc_amp >= 360) {
+			rejection = DETECTION_STATUS_AMPLITUDE_TOO_HIGH;
+		} else if(fabs(tic_amp - toc_amp) >= algorithm_parameters[ALG_AMP_DIFFERENCE]) {
+			rejection = DETECTION_STATUS_AMPLITUDE_INCONSISTENT;
+		} else {
 			/* Apply the sinusoidal relation between lift time, event period, and balance amplitude. */
 			p->amp = (tic_amp_abs + toc_amp_abs) / 2;
 			p->tic_pulse = tic_pulse;
@@ -1152,12 +1160,21 @@ static void compute_amplitude(struct processing_buffers *p, double la)
 			p->be = p->period/2 - fabs(p->toc - p->tic + p->tic_pulse - p->toc_pulse);
 			debug("amp: be = %.1f\n",fabs(p->be)*1000/p->sample_rate);
 			debug("amp = %f\n", la * p->amp);
+			p->detection_status = DETECTION_STATUS_OK;
 			break;
-		} else
+		}
+		if(rejection != DETECTION_STATUS_AMPLITUDE_NOT_FOUND)
 			debug("amp rejected\n");
-next_threshold:	threshold *= 1.4;
+next_threshold:	{
+			double next = threshold * algorithm_parameters[ALG_AMP_STEP];
+			if(next <= threshold) break;
+			threshold = next;
+		}
 	}
-	if(p->amp < 0) debug("amp failed\n");
+	if(p->amp < 0) {
+		p->detection_status = rejection;
+		debug("amp failed\n");
+	}
 }
 
 /**
@@ -1169,7 +1186,7 @@ next_threshold:	threshold *= 1.4;
  */
 void setup_cal_data(struct calibration_data *cd)
 {
-	cd->size = CAL_DATA_SIZE;
+	cd->size = (int)algorithm_parameters[ALG_CAL_COUNT];
 	cd->times = malloc(cd->size * sizeof(double));
 	cd->phases = malloc(cd->size * sizeof(double));
 	cd->events = malloc(cd->size * sizeof(uint64_t));
@@ -1203,20 +1220,22 @@ static int add_sample_cal(struct processing_buffers *p, struct calibration_data 
 {
 	int i;
 	double phase = -1;
+	int lock_low = (int)(p->sample_rate * algorithm_parameters[ALG_CAL_LOCK_LOW] / 100);
+	int lock_high = (int)(p->sample_rate * algorithm_parameters[ALG_CAL_LOCK_HIGH] / 100);
 	/* Require the calibration pulse to lie near the center of the folded second. */
-	if(p->waveform_max_i < p->sample_rate*4/10 || p->waveform_max_i > p->sample_rate*6/10) {
+	if(p->waveform_max_i < lock_low || p->waveform_max_i > lock_high) {
 		debug("unable to lock on signal\n");
 		return 1;
 	}
 	double maxa = vmax(p->waveform,0,p->sample_rate/4,NULL);
 	double maxb = vmax(p->waveform,p->sample_rate*3/4,p->sample_rate,NULL);
 	double max = fmax(maxa,maxb);
-	/* Place the rising-edge threshold five percent above the surrounding maxima. */
-	double thd = max + (p->waveform_max - max) * 0.05;
+	/* Place the rising-edge threshold above the surrounding maxima. */
+	double thd = max + (p->waveform_max - max) * algorithm_parameters[ALG_CAL_EDGE] / 100;
 	for(i = p->sample_rate/4; i <= p->waveform_max_i; i++) {
 		if(p->waveform[i] > thd) {
 			/* Require the calibration pulse to lie near the center of the folded second. */
-			if(i > p->sample_rate*4/10)
+			if(i > lock_low)
 				/* Convert the selected edge into fractional-second phase. */
 				phase = fmod((p->timestamp + p->phase + i) / p->sample_rate, 1.);
 			break;
@@ -1231,8 +1250,8 @@ static int add_sample_cal(struct processing_buffers *p, struct calibration_data 
 		if(cd->wp == 0)
 			cd->start_time = p->timestamp;
 		double time = (double)(p->timestamp - cd->start_time) / p->sample_rate;
-		/* Store at most one independent phase observation per approximately one second. */
-		if(cd->wp == 0 || time > cd->times[cd->wp-1] + 0.9) {
+		/* Keep at least the configured interval between phase observations. */
+		if(cd->wp == 0 || time > cd->times[cd->wp-1] + algorithm_parameters[ALG_CAL_INTERVAL]) {
 			cd->times[cd->wp] = time;
 			cd->phases[cd->wp] = phase;
 			cd->events[cd->wp] = (p->timestamp - p->timestamp % p->sample_rate) +
@@ -1244,45 +1263,90 @@ static int add_sample_cal(struct processing_buffers *p, struct calibration_data 
 }
 
 /**
- * @brief Calculate audio time-base correction by linear regression.
+ * @brief Estimate audio time-base correction from accepted phase observations.
  *
- * Phase drift is fitted against elapsed time and converted to seconds per day, the same unit
- * used for watch rate.
+ * The regression is calculated from a local unwrapped view of the phases, so asking for an
+ * intermediate estimate never changes the observations used by later calibration cycles.
  *
- * @param cd Completed calibration observation set.
+ * @param cd Calibration observations.
+ * @param estimate Receives the fit and the observation span.
+ * @return Nonzero when at least three valid observations produce a bounded finite fit.
  */
-static void compute_cal(struct calibration_data *cd)
+int estimate_calibration(const struct calibration_data *cd, struct calibration_estimate *estimate)
 {
-	int i;
+	if(!cd || !estimate)
+		return 0;
+	memset(estimate, 0, sizeof(*estimate));
+	int count = cd->wp;
+	if(count < 3 || count > cd->size || !cd->times || !cd->phases)
+		return 0;
+
 	double x = 0, y = 0;
-	for(i=0;i<cd->size;i++) {
+	for(int i=0; i<count; i++) {
+		if(!isfinite(cd->times[i]) || !isfinite(cd->phases[i]) ||
+				cd->phases[i] < 0 || cd->phases[i] >= 1 ||
+				(i && cd->times[i] <= cd->times[i-1]))
+			return 0;
 		x += cos(cd->phases[i] * 2 * M_PI);
 		y += sin(cd->phases[i] * 2 * M_PI);
 	}
 	/* Find the circular mean phase before unwrapping the observations. */
 	double c = (atan2(y,x) - M_PI) / (2 * M_PI);
 	double x_av = 0, y_av = 0;
-	for(i=0;i<cd->size;i++) {
+	for(int i=0; i<count; i++) {
 		x_av += cd->times[i];
-		y_av += cd->phases[i] = fmod(cd->phases[i] - c, 1);
+		y_av += fmod(cd->phases[i] - c, 1);
 	}
-	x_av /= cd->size;
-	y_av /= cd->size;
+	x_av /= count;
+	y_av /= count;
 	double xx = 0, xy = 0, yy = 0;
-	for(i=0;i<cd->size;i++) {
+	for(int i=0; i<count; i++) {
 		double x = cd->times[i] - x_av;
-		double y = cd->phases[i] - y_av;
+		double y = fmod(cd->phases[i] - c, 1) - y_av;
 		/* Accumulate covariance terms for linear regression. */
 		xx += x * x;
 		xy += x * y;
 		yy += y * y;
 	}
-	/* Convert phase drift per second into seconds per day. */
-	cd->calibration = xy * 3600 * 24 / xx;
-	double delta = sqrt((xx * yy - xy * xy) / (cd->size - 2)) / xx;
-	debug("Calibration result: %f s/d +- %f\n",cd->calibration,delta*3600*24);
-	/* Convert phase drift per second into seconds per day. */
-	cd->state = delta * 3600 * 24 < 0.1 ? 1 : -1;
+	double determinant = xx * yy - xy * xy;
+	double determinant_scale = fmax(fabs(xx * yy), fabs(xy * xy));
+	if(!isfinite(xx) || !isfinite(xy) || !isfinite(yy) || xx <= 0 ||
+			!isfinite(determinant) ||
+			(determinant < 0 &&
+			 determinant < -DBL_EPSILON * determinant_scale * 16))
+		return 0;
+	if(determinant < 0)
+		determinant = 0;
+
+	double calibration = xy * 3600 * 24 / xx;
+	double uncertainty = sqrt(determinant / (count - 2)) / xx * 3600 * 24;
+	double duration = cd->times[count-1] - cd->times[0];
+	if(!isfinite(calibration) || !isfinite(uncertainty) || !isfinite(duration) ||
+			duration <= 0 || calibration < MIN_CAL / 10.0 || calibration > MAX_CAL / 10.0)
+		return 0;
+
+	estimate->calibration = calibration;
+	estimate->uncertainty = uncertainty;
+	estimate->duration = duration;
+	estimate->observations = count;
+	return 1;
+}
+
+/**
+ * @brief Finalize calibration using the same regression as provisional estimates.
+ *
+ * @param cd Completed calibration observation set.
+ */
+static void compute_cal(struct calibration_data *cd)
+{
+	struct calibration_estimate estimate;
+	if(!estimate_calibration(cd, &estimate)) {
+		cd->state = -1;
+		return;
+	}
+	cd->calibration = estimate.calibration;
+	debug("Calibration result: %f s/d +- %f\n", cd->calibration, estimate.uncertainty);
+	cd->state = estimate.uncertainty < algorithm_parameters[ALG_CAL_PRECISION] ? 1 : -1;
 }
 
 /**
@@ -1301,18 +1365,21 @@ void process(struct processing_buffers *p, int bph, double la, int light)
 {
 	/* Clear any alternative period candidate from the previous processing block. */
 	p->candidate_period = 0;
+	p->period_ready = 0;
+	p->detection_status = DETECTION_STATUS_NO_WAVEFORM;
 	/* Condition the audio and calculate its autocorrelation. */
 	prepare_data(p, !light);
 	/* Measure the interval between consecutive equivalent tic or toc events. */
 	p->ready = !compute_period(p,bph);
-	/* Limit to 20% greater when period is known, or use typical BPH when guessing. */
+	/* Limit the period with the configured multiplier, using typical BPH when guessing. */
 	const int min_bph = bph ? bph : TYP_BPH;
 	/* Reject periods more than 20 percent slower than the configured or typical beat rate. */
-	const int max_period = (int)(1.2 * 3600 * 2) * p->sample_rate / min_bph;
+	const int max_period = (int)(algorithm_parameters[ALG_PERIOD_LIMIT] * 7200 * p->sample_rate / min_bph);
 	/* Reject periods more than 20 percent slower than the configured or typical beat rate. */
 	if(p->ready && p->period >= max_period) {
 		debug("Detected period too long\n");
 		p->ready = 0;
+		p->detection_status = DETECTION_STATUS_PERIOD_TOO_LONG;
 	}
 	if(!p->ready && bph)
 		p->candidate_period = estimate_period(p);
@@ -1321,17 +1388,26 @@ void process(struct processing_buffers *p, int bph, double la, int light)
 		debug("abort after compute_period()\n");
 		return;
 	}
+	p->period_ready = 1;
 	/* Fold repeated beats into one representative tic/toc cycle. */
 	prepare_waveform(p);
 	/* Separate tic from toc and calculate their timing asymmetry. */
 	p->ready = !compute_parameters(p);
+	if(!p->ready)
+		p->detection_status = DETECTION_STATUS_NO_BEAT;
 	if(bph && !p->ready)
 		p->candidate_period = estimate_period(p);
-	if(bph && p->ready && p->sigma > p->period / 10000)
+	if(bph && p->ready && p->sigma > p->period * algorithm_parameters[ALG_PERIOD_SIGMA])
 		p->candidate_period = estimate_period(p);
 	if(!p->ready) {
 		/* Separate tic from toc and calculate their timing asymmetry. */
 		debug("abort after compute_parameters()\n");
+		p->tic = p->toc = 0;
+		p->tic_pulse = p->toc_pulse = -1;
+		p->amp = -1;
+		p->be = 0;
+		memset(p->events, 0, EVENTS_MAX * sizeof(*p->events));
+		memset(p->events_tictoc, 0, EVENTS_MAX * sizeof(*p->events_tictoc));
 		return;
 	}
 	/* Measure acoustic lift times and infer balance amplitude from the configured lift angle. */

@@ -37,6 +37,9 @@ struct audio_settings {
 	GtkWidget *api_combo;
 	GtkWidget *device_combo;
 	GtkWidget *rate_combo;
+	GtkWidget *output_combo;
+	GtkWidget *volume_scale;
+	GtkWidget *listen_help;
 	GtkWidget *level_bar;
 	GtkWidget *level_label;
 	GtkWidget *status_label;
@@ -44,9 +47,16 @@ struct audio_settings {
 	int updating;	// set while the combos are filled programmatically
 };
 
+static int monitor_change_allowed(struct main_window *w)
+{
+	return !w->calibrate && !w->calibration_stop_pending &&
+		!w->restart_audio && !w->restart_algorithm;
+}
+
 static int audio_change_allowed(struct main_window *w)
 {
-	return w->controls_active && !w->calibrate && !w->restart_audio;
+	return w->controls_active && !w->calibrate && !w->calibration_stop_pending &&
+		!w->restart_audio && !w->restart_algorithm;
 }
 
 static gchar *rate_label(int rate)
@@ -161,6 +171,26 @@ static void fill_rate_combo(struct audio_settings *as)
 	combo_set_active_int(as->rate_combo, w->nominal_sr);
 }
 
+static int fill_output_combo(struct audio_settings *as)
+{
+	gtk_combo_box_text_remove_all(GTK_COMBO_BOX_TEXT(as->output_combo));
+	int *devices = NULL;
+	char **names = NULL;
+	int count = 0, default_device = AUDIO_DEVICE_DEFAULT;
+	int selected = get_audio_output_device();
+	if(list_audio_output_devices(&devices, &names, &count, &default_device))
+		return 0;
+	for(int i = 0; i < count; i++) {
+		gchar *text = devices[i] == default_device ?
+			g_strdup_printf(_("%s (system default)"), names[i]) : g_strdup(names[i]);
+		combo_append_int(as->output_combo, devices[i], text);
+		g_free(text);
+	}
+	free_audio_output_devices(devices, names, count);
+	combo_set_active_int(as->output_combo, selected);
+	return count > 0;
+}
+
 static void update_status(struct audio_settings *as)
 {
 	struct main_window *w = as->w;
@@ -168,12 +198,18 @@ static void update_status(struct audio_settings *as)
 	const char *note = NULL;
 	if(w->calibrate)
 		note = _("Audio settings are locked during calibration.");
-	else if(!w->controls_active)
-		note = _("Switch to the real-time tab to change audio settings.");
-	else if(!w->restart_audio)
+	else if(w->audio_message && !w->restart_audio)
 		note = w->audio_message;
+	else if(!w->controls_active)
+		note = _("Input settings are locked on snapshot tabs; live listening still uses the current input.");
 
 	gchar *text = note ? g_strconcat(summary, "\n", note, NULL) : g_strdup(summary);
+	if(w->listen_active) {
+		gchar *with_listening = g_strconcat(text, "\n",
+			_("Live listening is active. Use headphones to avoid acoustic feedback."), NULL);
+		g_free(text);
+		text = with_listening;
+	}
 	gtk_label_set_text(GTK_LABEL(as->status_label), text);
 	g_free(text);
 	g_free(summary);
@@ -182,14 +218,19 @@ static void update_status(struct audio_settings *as)
 static void refresh(struct audio_settings *as)
 {
 	int allowed = audio_change_allowed(as->w);
+	int monitor_allowed = monitor_change_allowed(as->w);
 	as->updating = 1;
 	fill_api_combo(as);
 	fill_device_combo(as);
 	fill_rate_combo(as);
+	int have_outputs = fill_output_combo(as);
+	gtk_range_set_value(GTK_RANGE(as->volume_scale), as->w->listen_volume * 100);
 	as->updating = 0;
 	gtk_widget_set_sensitive(as->api_combo, allowed);
 	gtk_widget_set_sensitive(as->device_combo, allowed);
 	gtk_widget_set_sensitive(as->rate_combo, allowed && as->w->audio_ok);
+	gtk_widget_set_sensitive(as->output_combo, monitor_allowed && have_outputs);
+	gtk_widget_set_sensitive(as->volume_scale, monitor_allowed);
 	update_status(as);
 }
 
@@ -232,6 +273,49 @@ static void handle_rate_changed(GtkComboBox *combo, struct audio_settings *as)
 	if(rate == w->nominal_sr)
 		return;
 	request_audio_restart(w, w->audio_api, w->audio_device, rate);
+}
+
+static void handle_output_changed(GtkComboBox *combo, struct audio_settings *as)
+{
+	UNUSED(combo);
+	struct main_window *w = as->w;
+	int device;
+	if(as->updating || !monitor_change_allowed(w) ||
+			!combo_active_int(as->output_combo, &device) ||
+			device == get_audio_output_device())
+		return;
+
+	int restart = w->listen_active;
+	if(restart) {
+		stop_audio_monitor();
+		w->listen_active = 0;
+	}
+	set_audio_output_device(device);
+	g_free(w->audio_output_device_name);
+	w->audio_output_device_name = g_strdup(get_audio_output_device_name());
+	save_on_change(w);
+
+	if(restart) {
+		char *message = NULL;
+		if(start_audio_monitor(device, w->listen_volume, &message)) {
+			w->audio_message = _("The selected output could not be opened; live listening is off.");
+			error("%s", message ? message : w->audio_message);
+			g_free(message);
+		} else {
+			w->listen_active = 1;
+			w->audio_message = NULL;
+		}
+	}
+	audio_settings_update(w);
+}
+
+static void handle_volume_changed(GtkRange *range, struct audio_settings *as)
+{
+	struct main_window *w = as->w;
+	if(as->updating)
+		return;
+	w->listen_volume = gtk_range_get_value(range) / 100;
+	set_audio_monitor_volume(w->listen_volume);
 }
 
 /* Input level in dBFS, from the RMS level measured in the audio callback */
@@ -330,18 +414,46 @@ void audio_settings_open(struct main_window *w)
 	gtk_label_set_xalign(GTK_LABEL(as->level_label), 1);
 	gtk_grid_attach(GTK_GRID(grid), as->level_label, 2, 3, 1, 1);
 
+	grid_label(grid, _("Output device"), 4);
+	as->output_combo = gtk_combo_box_text_new();
+	gtk_widget_set_hexpand(as->output_combo, TRUE);
+	gtk_widget_set_tooltip_text(as->output_combo,
+		_("Select the output explicitly. A missing output is not replaced automatically."));
+	gtk_grid_attach(GTK_GRID(grid), as->output_combo, 1, 4, 2, 1);
+
+	grid_label(grid, _("Listening volume (%)"), 5);
+	as->volume_scale = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, 0, 50, 1);
+	gtk_scale_set_draw_value(GTK_SCALE(as->volume_scale), TRUE);
+	gtk_scale_set_value_pos(GTK_SCALE(as->volume_scale), GTK_POS_RIGHT);
+	gtk_widget_set_hexpand(as->volume_scale, TRUE);
+	gtk_widget_set_tooltip_text(as->volume_scale,
+		_("Independent of input gain. Raising headphone volume does not improve the measurement signal."));
+	gtk_grid_attach(GTK_GRID(grid), as->volume_scale, 1, 5, 2, 1);
+
+	as->listen_help = gtk_label_new(
+		_("Use headphones; speakers can feed back into the microphone. Listen for clock ticks versus room noise, "
+		  "try different pickup positions and contact pressure, and notice knocks, cable rubbing, or possible clipping. "
+		  "Compare clipping with the input level meter. Listening volume does not change input gain, and the sound "
+		  "does not provide an automatic mechanical diagnosis."));
+	gtk_label_set_xalign(GTK_LABEL(as->listen_help), 0);
+	gtk_label_set_line_wrap(GTK_LABEL(as->listen_help), TRUE);
+	gtk_label_set_max_width_chars(GTK_LABEL(as->listen_help), 60);
+	gtk_grid_attach(GTK_GRID(grid), as->listen_help, 0, 6, 3, 1);
+
 	as->status_label = gtk_label_new("");
 	gtk_label_set_xalign(GTK_LABEL(as->status_label), 0);
 	gtk_label_set_line_wrap(GTK_LABEL(as->status_label), TRUE);
 	gtk_label_set_max_width_chars(GTK_LABEL(as->status_label), 50);
 	gtk_label_set_selectable(GTK_LABEL(as->status_label), TRUE);
-	gtk_grid_attach(GTK_GRID(grid), as->status_label, 0, 4, 3, 1);
+	gtk_grid_attach(GTK_GRID(grid), as->status_label, 0, 7, 3, 1);
 
 	refresh(as);
 
 	g_signal_connect(as->api_combo, "changed", G_CALLBACK(handle_api_changed), as);
 	g_signal_connect(as->device_combo, "changed", G_CALLBACK(handle_device_changed), as);
 	g_signal_connect(as->rate_combo, "changed", G_CALLBACK(handle_rate_changed), as);
+	g_signal_connect(as->output_combo, "changed", G_CALLBACK(handle_output_changed), as);
+	g_signal_connect(as->volume_scale, "value-changed", G_CALLBACK(handle_volume_changed), as);
 	g_signal_connect(as->dialog, "response", G_CALLBACK(handle_response), as);
 	g_signal_connect(as->dialog, "destroy", G_CALLBACK(handle_destroy), as);
 
@@ -355,6 +467,19 @@ void audio_settings_open(struct main_window *w)
 /* Show the current audio state in the top bar button and, if open, the dialog */
 void audio_settings_update(struct main_window *w)
 {
+	if(w->listen_button) {
+		w->listen_updating = 1;
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(w->listen_button), w->listen_active);
+		gtk_button_set_label(GTK_BUTTON(w->listen_button),
+			w->listen_active ? _("Listening LIVE") : _("Listen LIVE"));
+		if(w->listen_active)
+			gtk_style_context_add_class(gtk_widget_get_style_context(w->listen_button),
+				"suggested-action");
+		else
+			gtk_style_context_remove_class(gtk_widget_get_style_context(w->listen_button),
+				"suggested-action");
+		w->listen_updating = 0;
+	}
 	if(w->audio_button_label) {
 		gchar *summary = audio_summary(w);
 		gtk_label_set_text(GTK_LABEL(w->audio_button_label), summary);

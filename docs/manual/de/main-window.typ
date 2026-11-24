@@ -4,7 +4,7 @@
 #shot("main-window.png", [Das Hauptfenster bei der Messung einer Uhr mit 28800 bph.])
 Das Fenster besteht aus einer oberen Leiste, einer Reiterzeile, der
 Ergebnistabelle, links dem Gangdiagramm und rechts den Signalform-Anzeigen
-oder der Seite Verlauf.
+oder den Seiten Verlauf und Korrelationen.
 == Die obere Leiste
 Von links nach rechts:
 / Uhr: eine Liste gespeicherter Uhren. Die Auswahl einer Uhr setzt deren bph
@@ -26,9 +26,14 @@ Von links nach rechts:
 / Aktuelle Aufnahme: der Name des gewählten Aufnahme-Reiters, der bearbeitet
   werden kann.
 / Menü: #ui[Öffnen], #ui[Aktuelle Anzeige speichern],
-  #ui[Alle Aufnahmen speichern], #ui[Leichter Algorithmus],
-  #ui[Audioeinstellungen…], #ui[Kalibrierung starten], #ui[Benutzerhandbuch],
+  #ui[Alle Aufnahmen speichern],
+  #ui[Audioeinstellungen…], #ui[Algorithmuskonfiguration…], #ui[Kalibrierung starten], #ui[Benutzerhandbuch],
   #ui[Alle Aufnahmen schließen] und #ui[Beenden].
+
+Der Erkennungsablauf und die #ui[Algorithmuskonfiguration…] werden in
+@algorithm beschrieben; die vollständige Parameterreferenz steht in
+@algorithm-configuration.
+
 == Die Ergebnistabelle
 Die Tabelle oben in jedem Reiter zeigt:
 / RATE: die Gangabweichung in s/d, korrigiert um den Wert cal.
@@ -95,8 +100,24 @@ Die Seite #ui[Signalformen] rechts zeigt den gemittelten Klang der Schläge:
 getrennten Klicks der Hemmung.])
 Die Anzeigen für Tick und Tack haben unten eine ms-Skala und oben eine
 Amplitudenskala in Grad. Die blaue senkrechte Linie markiert die aus der
-Signalform gemessene Amplitude.
+Signalform gemessene Amplitude. Die Ansicht erweitert sich bei Bedarf nach
+links, um die konfigurierte Mindestamplitude einzubeziehen; die
+hervorgehobenen Fenster der vollen Periode werden
+entsprechend erweitert. Dies ändert nur die Darstellung, nicht die
+Amplitudenerkennung.
 Eine saubere Signalform mit scharfen, getrennten Klicks bedeutet ein gutes
 Signal. Eine flache oder unscharfe Signalform bedeutet, dass das Mikrofon die
 Uhr nicht gut aufnimmt.
-Die Seite #ui[Verlauf] wird in @trend beschrieben.
+Die Statuszeile unter den Signalformen bleibt auch leer sichtbar. Den
+vollständigen Text einer gekürzten Meldung zeigt ein Mauszeiger darüber.
+Wird der Schlag erkannt, aber die Amplitude kann nicht gemessen werden,
+meldet der Status unter den Signalformen "Amplitude nicht verfügbar". Gang
+und Abfallfehler bleiben verfügbar; der Abfallfehler wird nicht anhand der
+Hebungsimpulse verfeinert. Die Debug-Version zeigt zusätzlich den Grund für
+die Ablehnung der Amplitude.
+Wird eine stabile Periode gefunden, aber Tick und Tack lassen sich nicht
+trennen, wechselt die Anzeige automatisch zu "Nur Gang": Abfallfehler und
+Amplitude sind nicht verfügbar. Bis Tick und Tack wieder erkannt werden,
+werden keine neuen Signalformen, Papierstreifenereignisse oder Verlaufswerte
+erzeugt. Der bisherige Verlauf bleibt sichtbar.
+Die Seiten #ui[Verlauf] und #ui[Korrelationen] werden in @trend beschrieben.

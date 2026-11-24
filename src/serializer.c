@@ -367,6 +367,7 @@ static int serialize_trend(FILE *f, const struct trend *s)
 	SERIALIZE(int,cal);
 	SERIALIZE(int,nominal_sr);
 	SERIALIZE(int,is_light);
+	SERIALIZE(int,algorithm_custom);
 	SERIALIZE(int,full);
 	if(make_label(f, "elapsed")) return 1;
 	if(serialize_double(f, trend_elapsed(s))) return 1;
@@ -380,6 +381,7 @@ static int serialize_trend(FILE *f, const struct trend *s)
 	TREND_ARRAY("amp", amp, float);
 	TREND_ARRAY("be", be, float);
 	TREND_ARRAY("position", position, int);
+	TREND_ARRAY("settling", settling, int);
 #undef TREND_ARRAY
 	return serialize_struct_end(f);
 }
@@ -394,8 +396,8 @@ static int scan_trend(FILE *f, struct trend **trend)
 	struct trend *t = trend_new();
 	if(!t) return 1;
 	float *tm = NULL, *rate = NULL, *amp = NULL, *be = NULL;
-	int *position = NULL;
-	uint64_t n_t = 0, n_rate = 0, n_amp = 0, n_be = 0, n_position = 0;
+	int *position = NULL, *settling = NULL;
+	uint64_t n_t = 0, n_rate = 0, n_amp = 0, n_be = 0, n_position = 0, n_settling = 0;
 	double elapsed = 0;
 	int ok = 1;
 	for(;;) {
@@ -412,6 +414,7 @@ static int scan_trend(FILE *f, struct trend **trend)
 		TREND_SCAN("amp", amp, n_amp, float);
 		TREND_SCAN("be", be, n_be, float);
 		TREND_SCAN("position", position, n_position, int);
+		TREND_SCAN("settling", settling, n_settling, int);
 #undef TREND_SCAN
 #define TREND_FIELD(A, TYPE)							\
 		if(!strcmp(#A, l)) {						\
@@ -423,6 +426,7 @@ static int scan_trend(FILE *f, struct trend **trend)
 		TREND_FIELD(cal, int);
 		TREND_FIELD(nominal_sr, int);
 		TREND_FIELD(is_light, int);
+		TREND_FIELD(algorithm_custom, int);
 		TREND_FIELD(full, int);
 #undef TREND_FIELD
 		if(!strcmp("elapsed", l)) {
@@ -431,22 +435,24 @@ static int scan_trend(FILE *f, struct trend **trend)
 		}
 		if(eat_object(f)) goto error;
 	}
-	// All arrays must be there and have the same length
-	if(!tm || !rate || !amp || !be || !position ||
-			n_rate != n_t || n_amp != n_t || n_be != n_t || n_position != n_t)
+	// Older histories may omit amplitudes, positions and settling markers.
+	if(!tm || !rate || !be ||
+			n_rate != n_t || n_be != n_t || (amp && n_amp != n_t) ||
+			(position && n_position != n_t) ||
+			(settling && n_settling != n_t))
 		ok = 0;
-	if(ok && trend_set_samples(t, tm, rate, amp, be, position, (int)n_t, elapsed))
+	if(ok && trend_set_samples(t, tm, rate, amp, be, position, settling, (int)n_t, elapsed))
 		ok = 0;
 	if(!ok) {
 		debug("serializer: unusable trend, ignored\n");
 		trend_free(t);
 		t = NULL;
 	}
-	free(tm); free(rate); free(amp); free(be); free(position);
+	free(tm); free(rate); free(amp); free(be); free(position); free(settling);
 	*trend = t;
 	return 0;
 error:
-	free(tm); free(rate); free(amp); free(be); free(position);
+	free(tm); free(rate); free(amp); free(be); free(position); free(settling);
 	trend_free(t);
 	return 1;
 }
@@ -473,6 +479,7 @@ static int serialize_snapshot(FILE *f, struct snapshot *s, char *name, const str
 	SERIALIZE(double,pb->tic_pulse);
 	SERIALIZE(double,pb->toc_pulse);
 	SERIALIZE(int,is_old);
+	SERIALIZE(int,rate_only);
 	SERIALIZE(uint64_t,timestamp);
 	SERIALIZE(int,nominal_sr);
 	SERIALIZE(int,bph);
@@ -591,6 +598,7 @@ static int scan_snapshot(FILE *f, struct snapshot **s, char **name, struct trend
 		SCAN(double,pb->tic_pulse);
 		SCAN(double,pb->toc_pulse);
 		SCAN(int,is_old);
+		SCAN(int,rate_only);
 		SCAN(uint64_t,timestamp);
 		SCAN(int,nominal_sr);
 		SCAN(int,bph);
@@ -628,6 +636,9 @@ static int scan_snapshot(FILE *f, struct snapshot **s, char **name, struct trend
 	debug("serializer: checking events\n");
 	if((*s)->events_count && (*s)->events_wp >= (*s)->events_count) goto error;
 	if((*s)->signal > NSTEPS) (*s)->signal = NSTEPS;
+	if((*s)->rate_only != 0 && (*s)->rate_only != 1) goto error;
+	if((*s)->rate_only && !(*s)->is_old)
+		(*s)->detection_status = DETECTION_STATUS_RATE_ONLY;
 	if((*s)->audio_status < AUDIO_STATUS_UNAVAILABLE ||
 		(*s)->audio_status > AUDIO_STATUS_OK) goto error;
 	if((*s)->candidate_bph && ((*s)->candidate_bph < MIN_BPH ||
@@ -737,6 +748,78 @@ int write_file(FILE *f, struct snapshot **s, char **names, struct trend **trends
 		if(serialize_snapshot(f, s[i], names[i], trends ? trends[i] : NULL)) return 1;
 	if(serialize_struct_end(f)) return 1;
 	return 0;
+}
+
+static int csv_write_number(FILE *f, double value, char decimal)
+{
+	char number[64];
+	if(!g_ascii_formatd(number, sizeof(number), "%.3f", value))
+		return 1;
+	if(decimal != '.') {
+		for(char *p = number; *p; p++)
+			if(*p == '.') *p = decimal;
+	}
+	return fputs(number, f) == EOF;
+}
+
+int write_trend_csv(FILE *f, const struct trend *t, char separator, char decimal)
+{
+	const char *const headers[] = {
+		_("Elapsed time (s)"), _("Position (code)"), _("Rate (s/day)"),
+		_("Amplitude (degrees)"), _("Beat error (ms)"), _("Validity"),
+		_("Beat rate (bph)"), _("Lift angle (degrees)"), _("Calibration (s/day)"),
+		_("Sample rate (Hz)"), _("Algorithm")
+	};
+	static const char *const position_codes[POS_COUNT] = {
+		"", "DU", "DD", "CU", "CD", "CL", "CR"
+	};
+
+	if(!f || !t || t->count < 0 || t->count > TREND_MAX_SAMPLES ||
+			(t->count && !t->samples) ||
+			(separator != ',' && separator != ';') ||
+			(decimal != '.' && decimal != ',') ||
+			(separator == ',' && decimal != '.') ||
+			(separator == ';' && decimal != ','))
+		return 1;
+
+	if(fwrite("\xef\xbb\xbf", 1, 3, f) != 3)
+		return 1;
+	for(int i = 0; i < (int)(sizeof(headers) / sizeof(headers[0])); i++) {
+		if((i && fputc(separator, f) == EOF) || fputs(headers[i], f) == EOF)
+			return 1;
+	}
+	if(fputs("\r\n", f) == EOF)
+		return 1;
+
+	for(int i = 0; i < t->count; i++) {
+		const struct trend_sample *x = &t->samples[i];
+		if(x->position < POS_NONE || x->position >= POS_COUNT ||
+				!isfinite(x->t) || !isfinite(x->rate) ||
+				!isfinite(x->amp) || !isfinite(x->be))
+			return 1;
+
+		if(csv_write_number(f, x->t, decimal) || fputc(separator, f) == EOF ||
+				fputs(position_codes[x->position], f) == EOF ||
+				fputc(separator, f) == EOF ||
+				csv_write_number(f, x->rate, decimal) || fputc(separator, f) == EOF)
+			return 1;
+		if(x->amp > 0 && csv_write_number(f, x->amp, decimal))
+			return 1;
+		const char *algorithm_name = t->algorithm_custom ?
+				(t->is_light ? _("Light (custom)") : _("Full (custom)")) :
+				(t->is_light ? _("Light") : _("Full"));
+		if(fputc(separator, f) == EOF ||
+				csv_write_number(f, x->be, decimal) ||
+				fputc(separator, f) == EOF || fputs(x->settling ? _("Settling") : _("Valid"), f) == EOF ||
+				fputc(separator, f) == EOF ||
+				fprintf(f, "%d", t->bph) < 0 || fputc(separator, f) == EOF ||
+				csv_write_number(f, t->la, decimal) || fputc(separator, f) == EOF ||
+				csv_write_number(f, t->cal / 10.0, decimal) || fputc(separator, f) == EOF ||
+				fprintf(f, "%d", t->nominal_sr) < 0 || fputc(separator, f) == EOF ||
+				fprintf(f, "%s\r\n", algorithm_name) < 0)
+			return 1;
+	}
+	return ferror(f) ? 1 : 0;
 }
 
 int read_file(FILE *f, struct snapshot ***s, char ***names, struct trend ***trends, uint64_t *cnt)

@@ -26,6 +26,26 @@ different for a minute starts the recording over. For long recordings, set
 the beat rate by hand.
 Nothing is recorded during calibration.
 
+== Settling after a position change
+
+On the live Trend page, set #ui[Settling time (s)] (default 0, which disables
+it). The setting is saved between sessions and changes apply to
+the next countdown.
+
+Select the new position in the software *before* physically moving the
+watch. When changing from a named position to another position, including
+#ui[not set], the countdown begins immediately and runs even without a good
+signal. Returning to a previously used position starts it again. The first
+selection from #ui[not set] does not start a countdown. A position already
+selected when recording starts does not start one either. #ui[Reset] does
+not start or restart a countdown; an active one continues.
+
+Good-signal readings during the countdown are retained, shaded in the
+graphs, and marked #ui[Settling] in CSV exports. They are excluded from
+overall and per-position statistics, including positional error and graph
+averages. The *now* column still shows the latest reading. Snapshots save
+the settling markers; older application versions may ignore them.
+
 == Statistics since the start
 
 The table at the top shows, for rate (s/d), amplitude (°) and beat error
@@ -52,13 +72,62 @@ positional error means the watch is well adjusted.
 
 == Graphs
 
-At the bottom, two graphs share a time axis: the rate, with a dashed line at
-its average, and the amplitude. A vertical line with the position code (DU,
-DD, ...) marks each change of position. The controls below the page set:
+At the bottom, three graphs share a time axis: rate, amplitude and beat error.
+Each has a dashed line for its average when that average is within the visible
+range. The beat error graph picks its vertical range automatically. A vertical
+line with the position code (DU, DD, ...) marks each change of position. The
+controls below the page set:
 
 / Rate: the vertical range of the rate graph: #ui[Auto], ±10 s/d or
   ±50 s/d.
 / Show: the time shown: #ui[All], or the last 1, 6 or 24 hours.
+
+== Correlations
+
+The #ui[Correlations] page uses the same recorded readings. Its three scatter
+plots show amplitude → rate, beat error → rate and beat error → amplitude.
+Points are not joined, and a relationship does not establish a cause. The
+position selector shows all positions as separate series or one position at
+a time. Colours and symbols remain consistent across the plots. #ui[(not set)]
+is an unknown position, not an additional physical position.
+
+The #ui[Show] time selector and the axis ranges are shared with Trend,
+independently of the position filter. Values outside those ranges are shown
+at the edge. Hover over a point for the elapsed time, recorded position and
+available values. A reading without amplitude can still appear in the beat
+error → rate plot; zero rate and zero beat error are valid. Readings marked
+as settling are excluded, although they still contribute to Trend's axis
+ranges. Older files without settling markers cannot identify such readings.
+Rate-only readings are not recorded in Trend.
+
+Each reading retains the position selected when it was recorded. The history
+does not store the start of the detector's audio window, so readings whose
+window crosses a position change cannot be identified or excluded reliably.
+Older files without recorded positions are shown as #ui[(not set)]; files
+without Trend history cannot supply correlation points.
+
+== Exporting data
+
+Choose #ui[Export Trend as CSV] in the command menu to save the Trend data
+from the active tab. Time values are elapsed seconds from the start of the
+recording, not clock times. The file includes position codes and the
+measurement settings. Only readings with a good signal are recorded, so
+omitted periods appear as gaps; rows are marked valid or settling. Amplitude
+is empty when it was not available.
+
+The algorithm is marked #ui[Light (custom)] or #ui[Full (custom)] if any
+measurement parameter used in that mode differs from its default. Calibration
+parameters do not count, nor do noise suppression parameters in Light mode.
+Snapshots retain this information; older snapshots without it are exported as
+#ui[Light] or #ui[Full].
+
+Choose portable CSV (comma separator and decimal point) or, when the
+interface is in Spanish or German, localized CSV (semicolon separator and
+decimal comma). The selected format is saved and reused for later exports,
+including after restarting the program. Column names and descriptive values
+follow the interface language; position codes remain the standard codes.
+Both formats use UTF-8 with a byte order mark so Excel recognizes accented
+characters.
 
 == Measuring a power reserve
 
@@ -68,4 +137,4 @@ DD, ...) marks each change of position. The controls below the page set:
   falling as the mainspring unwinds, and the rate graph shows how the rate
   follows it.
 4. Take a snapshot and save it. The Trend data is saved with it.
-#note[*Before changing settings:* take a snapshot and save it if you need to keep the current Trend recording. Changing bph, lift angle, cal, audio input, sample rate, or Light algorithm resets the Trend data. For long recordings, enter the known bph instead of relying on automatic detection.]
+#note[*Before changing settings:* take a snapshot and save it if you need to keep the current Trend recording. Changing bph, lift angle, cal, audio input, sample rate, or algorithm settings resets the Trend data. For long recordings, enter the known bph instead of relying on automatic detection.]

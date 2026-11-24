@@ -69,9 +69,18 @@ void trend_reset(struct trend *t)
 	if(!t) return;
 	struct trend_sample *samples = t->samples;
 	int capacity = t->capacity;
+	gint64 settling_until_us = t->settling_until_us;
 	memset(t, 0, sizeof(*t));
 	t->samples = samples;	// keep the buffer for the next recording
 	t->capacity = capacity;
+	t->settling_until_us = settling_until_us;
+}
+
+void trend_start_settling(struct trend *t, int seconds)
+{
+	if(t && !t->frozen)
+		t->settling_until_us = seconds > 0 ?
+			g_get_monotonic_time() + (gint64)seconds * 1000000 : 0;
 }
 
 static void stats_add(struct trend_stats *s, double v)
@@ -96,6 +105,45 @@ double trend_stats_sd(const struct trend_stats *s)
 	return var > 0 ? sqrt(var) : 0;
 }
 
+void trend_get_plot_ranges(const struct trend *t, double t0, double t1,
+	double fixed_rate, struct trend_plot_ranges *ranges)
+{
+	double max_rate = 0, max_be = 0;
+	ranges->amp_min = 120;
+	ranges->amp_max = 360;
+	ranges->be_min = 0;
+	for(int i = 0; t && i < t->count; i++) {
+		const struct trend_sample *sample = &t->samples[i];
+		if(sample->amp > 0 && sample->amp < 120)
+			ranges->amp_min = 60;
+		if(sample->t < t0 || sample->t > t1)
+			continue;
+		max_rate = fmax(max_rate, fabs(sample->rate));
+		max_be = fmax(max_be, sample->be);
+	}
+
+	double rate_range = fixed_rate;
+	if(rate_range <= 0) {
+		static const double rate_ranges[] = {2, 5, 10, 20, 50, 100, 200, 500, 1000, 0};
+		rate_range = 1000;
+		for(int i = 0; rate_ranges[i]; i++)
+			if(max_rate <= rate_ranges[i]) {
+				rate_range = rate_ranges[i];
+				break;
+			}
+	}
+	ranges->rate_min = -rate_range;
+	ranges->rate_max = rate_range;
+
+	static const double be_ranges[] = {1, 2, 5, 10, 20, 50, 100, 0};
+	ranges->be_max = 100;
+	for(int i = 0; be_ranges[i]; i++)
+		if(max_be <= be_ranges[i]) {
+			ranges->be_max = be_ranges[i];
+			break;
+		}
+}
+
 /* Seconds since the recording started (until the snapshot, for a frozen copy) */
 double trend_elapsed(const struct trend *t)
 {
@@ -105,22 +153,25 @@ double trend_elapsed(const struct trend *t)
 }
 
 /* Fill t, a new trend, with readings from a file and freeze it. The settings
- * (bph, la, cal, nominal_sr, is_light, full) must already be set. Returns 1,
- * leaving t empty, if the data is not usable. */
+ * (bph, la, cal, nominal_sr, is_light, algorithm_custom, full) must already be set. Returns 1,
+ * leaving t empty, if the data is not usable. Missing positions and amplitudes
+ * are recorded as unknown and unavailable respectively. */
 int trend_set_samples(struct trend *t, const float *tm, const float *rate, const float *amp,
-	const float *be, const int *position, int count, double elapsed)
+	const float *be, const int *position, const int *settling, int count, double elapsed)
 {
 	if(count < 0 || count > TREND_MAX_SAMPLES || !isfinite(elapsed) || elapsed < 0)
 		return 1;
 	if(count && (t->bph < MIN_BPH || t->bph > MAX_BPH || t->la < MIN_LA || t->la > MAX_LA ||
-			t->cal < MIN_CAL || t->cal > MAX_CAL || t->nominal_sr <= 0))
+			t->cal < MIN_CAL || t->cal > MAX_CAL || t->nominal_sr <= 0 ||
+			(t->algorithm_custom != 0 && t->algorithm_custom != 1)))
 		return 1;
 	for(int i = 0; i < count; i++) {
 		if(!isfinite(tm[i]) || tm[i] < 0 || (i && tm[i] < tm[i-1]) ||
 				!isfinite(rate[i]) || fabs(rate[i]) > 9999 ||
-				!isfinite(amp[i]) || amp[i] < 0 || amp[i] > 360 ||
+				(amp && (!isfinite(amp[i]) || amp[i] < 0 || amp[i] > 360)) ||
 				!isfinite(be[i]) || be[i] < 0 || be[i] > 99.9 ||
-				position[i] < POS_NONE || position[i] >= POS_COUNT)
+				(position && (position[i] < POS_NONE || position[i] >= POS_COUNT)) ||
+				(settling && settling[i] != 0 && settling[i] != 1))
 			return 1;
 	}
 
@@ -143,9 +194,11 @@ int trend_set_samples(struct trend *t, const float *tm, const float *rate, const
 		struct trend_sample *x = &samples[i];
 		x->t = tm[i];
 		x->rate = rate[i];
-		x->amp = amp[i];
+		x->amp = amp ? amp[i] : 0;
 		x->be = be[i];
-		x->position = position[i];
+		x->position = position ? position[i] : POS_NONE;
+		x->settling = settling ? settling[i] : 0;
+		if(x->settling) continue;
 		stats_add(&t->rate, x->rate);
 		stats_add(&t->be, x->be);
 		stats_add(&t->pos_rate[x->position], x->rate);
@@ -172,7 +225,8 @@ void trend_update(struct trend *t, const struct snapshot *s, int position)
 	if(position < POS_NONE || position >= POS_COUNT)
 		position = POS_NONE;
 
-	if(!s->pb || s->is_old || s->guessed_bph <= 0 || !isfinite(s->rate) || !isfinite(s->be))
+	if(!s->pb || s->is_old || s->rate_only || s->guessed_bph <= 0 ||
+			!isfinite(s->rate) || !isfinite(s->be))
 		return;	// no good signal: a gap
 
 	gint64 now = g_get_monotonic_time();
@@ -227,6 +281,7 @@ void trend_update(struct trend *t, const struct snapshot *s, int position)
 		t->cal = s->cal;
 		t->nominal_sr = s->nominal_sr;
 		t->is_light = s->is_light;
+		t->algorithm_custom = algorithm_settings_custom(s->is_light);
 	}
 
 	struct trend_sample *x = &t->samples[t->count++];
@@ -235,8 +290,10 @@ void trend_update(struct trend *t, const struct snapshot *s, int position)
 	x->amp = s->amp;	// 0 = not available
 	x->be = s->be;
 	x->position = position;
+	x->settling = now < t->settling_until_us;
 	t->last_us = now;
 
+	if(x->settling) return;
 	stats_add(&t->rate, s->rate);
 	stats_add(&t->be, s->be);
 	stats_add(&t->pos_rate[position], s->rate);

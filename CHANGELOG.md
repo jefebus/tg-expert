@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.11.0
+
+Changes since 0.10.0:
+
+### Added
+
+- Live input listening through a selected audio output.
+- A beat-error graph alongside the rate and amplitude Trend graphs.
+- Trend export to portable or localized CSV, including recorded positions, validity and measurement settings.
+- A configurable settling period after a position change. 
+- Correlation scatter plots for rate, amplitude and beat error
+- An algorithm configuration dialog with defaults, advanced and expert controls.
+- A provisional calibration estimate that can be explicitly accepted when stopping calibration early.
+
+### Changed
+
+- Added more detailed feedback about measurement detection status.
+
+### Compatibility
+
+- Existing `.tgj` files remain supported. New Trend data may include settling markers and whether the algorithm was customized; older versions ignore these fields.
+
 ## 0.10.0
 
 Spanish and German localization, expanded documentation, and improvements to

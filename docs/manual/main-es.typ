@@ -25,5 +25,6 @@
 #include "es/calibration.typ"
 #include "es/files.typ"
 #include "es/swiss_lever.typ"
+#include "es/algorithm.typ"
 #include "es/troubleshooting.typ"
 #include "es/appendix.typ"

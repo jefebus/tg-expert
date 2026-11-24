@@ -52,10 +52,6 @@
 #define MANUAL_FILE_NAME "tg-expert-manual.pdf"
 #define MANUAL_URL "https://github.com/jefebus/tg-expert/releases/latest"
 
-#define FILTER_CUTOFF 3000
-
-#define CAL_DATA_SIZE 900
-
 #define FIRST_STEP 1
 #define FIRST_STEP_LIGHT 0
 
@@ -104,6 +100,30 @@
 #define UNUSED(X) (void)(X)
 
 /* algo.c */
+enum algorithm_parameter {
+	ALG_FILTER, ALG_NOISE_WINDOW, ALG_NOISE_SEGMENT, ALG_NOISE_THRESHOLD,
+	ALG_TAPER, ALG_LOBES, ALG_GUESS_SEARCH, ALG_HARMONIC, ALG_DOUBLE_TRIGGER,
+	ALG_PERIOD_REFINE, ALG_BE_SEARCH, ALG_TIC_SMOOTH, ALG_EVENT_SEARCH,
+	ALG_TRIM, ALG_AMP_SMOOTH, ALG_AMP_INITIAL, ALG_AMP_NOISE, ALG_AMP_LIMIT,
+	ALG_AMP_STEP, ALG_AMP_MIN, ALG_AMP_DIFFERENCE, ALG_PERIOD_LIMIT,
+	ALG_PERIOD_SIGMA, ALG_CAL_COUNT, ALG_CAL_EDGE, ALG_CAL_INTERVAL,
+	ALG_CAL_PRECISION, ALG_CAL_LOCK_LOW, ALG_CAL_LOCK_HIGH, ALG_COUNT
+};
+extern double algorithm_parameters[ALG_COUNT];
+
+enum detection_status {
+	DETECTION_STATUS_OK,
+	DETECTION_STATUS_NO_WAVEFORM,
+	DETECTION_STATUS_PERIOD_TOO_LONG,
+	DETECTION_STATUS_NO_BEAT,
+	DETECTION_STATUS_UNSTABLE,
+	DETECTION_STATUS_RATE_ONLY,
+	DETECTION_STATUS_AMPLITUDE_NOT_FOUND,
+	DETECTION_STATUS_AMPLITUDE_TOO_LOW,
+	DETECTION_STATUS_AMPLITUDE_TOO_HIGH,
+	DETECTION_STATUS_AMPLITUDE_INCONSISTENT
+};
+
 struct processing_buffers {
 	int sample_rate;
 	int sample_count;
@@ -117,6 +137,8 @@ struct processing_buffers {
 	int waveform_max_i;
 	int tic,toc;
 	int ready;
+	int period_ready;
+	enum detection_status detection_status;
 	uint64_t timestamp, last_tic, last_toc, events_from;
 	uint64_t *events;
 	unsigned char *events_tictoc;
@@ -138,6 +160,13 @@ struct calibration_data {
 	uint64_t *events;
 };
 
+struct calibration_estimate {
+	double calibration;
+	double uncertainty;
+	double duration;
+	int observations;
+};
+
 void setup_buffers(struct processing_buffers *b);
 void pb_destroy(struct processing_buffers *b);
 struct processing_buffers *pb_clone(struct processing_buffers *p);
@@ -145,6 +174,7 @@ void pb_destroy_clone(struct processing_buffers *p);
 void process(struct processing_buffers *p, int bph, double la, int light);
 void setup_cal_data(struct calibration_data *cd);
 void cal_data_destroy(struct calibration_data *cd);
+int estimate_calibration(const struct calibration_data *cd, struct calibration_estimate *estimate);
 int test_cal(struct processing_buffers *p);
 int process_cal(struct processing_buffers *p, struct calibration_data *cd);
 
@@ -166,6 +196,16 @@ void set_audio_api(int type);
 int get_audio_api(void);
 const char *get_audio_api_name(void);
 int get_default_audio_input_device(void);
+int list_audio_output_devices(int **devices, char ***names, int *count, int *default_device);
+void free_audio_output_devices(int *devices, char **names, int count);
+void set_audio_output_device_name(const char *name);
+const char *get_audio_output_device_name(void);
+int get_audio_output_device(void);
+void set_audio_output_device(int device);
+int start_audio_monitor(int device, double volume, char **error_message);
+void stop_audio_monitor(void);
+int audio_monitor_status(void);
+void set_audio_monitor_volume(double volume);
 void set_audio_input_device_name(const char *name);
 const char *get_audio_input_device_name(void);
 int list_supported_sample_rates(int device, int *rates, int max);
@@ -192,6 +232,7 @@ enum audio_input_status {
 struct snapshot {
 	struct processing_buffers *pb;
 	int is_old;
+	int rate_only;
 	uint64_t timestamp;
 	int is_light;
 
@@ -215,10 +256,15 @@ struct snapshot {
 
 	int signal;
 	int audio_status;
+	enum detection_status detection_status;
 
 	int cal_state;
 	int cal_percent;
 	int cal_result; // 0.1 s/d
+	int cal_estimate_available;
+	int cal_estimate_result; // 0.1 s/d
+	int cal_estimate_observations;
+	double cal_estimate_duration;
 
 	// data dependent on bph, la, cal
 	double sample_rate;
@@ -248,6 +294,7 @@ enum watch_position {
 
 struct computer {
 	pthread_t thread;
+	int thread_joined;
 	pthread_mutex_t mutex;
 	pthread_cond_t cond;
 
@@ -269,6 +316,7 @@ struct computer {
 
 struct snapshot *snapshot_clone(struct snapshot *s);
 void snapshot_destroy(struct snapshot *s);
+void computer_join(struct computer *c);
 void computer_destroy(struct computer *c);
 struct computer *start_computer(int nominal_sr, int bph, double la, int cal, int light);
 void lock_computer(struct computer *c);
@@ -278,6 +326,7 @@ void compute_results(struct snapshot *s);
 /* trend.c: long-term statistics of the live measurement */
 #define TREND_INTERVAL_S 2	// one reading every 2 s
 #define TREND_MAX_HOURS 100
+#define TREND_MAX_SETTLING_S 3600
 #define TREND_GUESS_CHANGE_S 60	// a guessed bph must differ this long to restart the trend
 #define TREND_MAX_SAMPLES (TREND_MAX_HOURS * 3600 / TREND_INTERVAL_S)
 
@@ -287,11 +336,18 @@ struct trend_sample {
 	float amp;	// deg, 0 = not available
 	float be;	// ms
 	signed char position;	// enum watch_position
+	unsigned char settling;
 };
 
 struct trend_stats {
 	int n;
 	double sum, sumsq, min, max;
+};
+
+struct trend_plot_ranges {
+	double rate_min, rate_max;
+	double amp_min, amp_max;
+	double be_min, be_max;
 };
 
 struct trend {
@@ -300,8 +356,9 @@ struct trend {
 	int full;	// TREND_MAX_SAMPLES reached: recording stopped
 	int frozen;	// copy kept by a snapshot tab
 	gint64 start_us, last_us, end_us;	// monotonic time; end_us only if frozen
+	gint64 settling_until_us;
 	// settings the readings were taken with
-	int bph, cal, nominal_sr, is_light;
+	int bph, cal, nominal_sr, is_light, algorithm_custom;
 	double la;
 	gint64 guess_mismatch_us;	// since when the guessed bph differs from bph, 0 if it does not
 	struct trend_stats rate, amp, be;
@@ -312,12 +369,15 @@ struct trend *trend_new(void);
 void trend_free(struct trend *t);
 struct trend *trend_clone(const struct trend *t);
 void trend_reset(struct trend *t);
+void trend_start_settling(struct trend *t, int seconds);
 void trend_update(struct trend *t, const struct snapshot *s, int position);
 int trend_set_samples(struct trend *t, const float *tm, const float *rate, const float *amp,
-	const float *be, const int *position, int count, double elapsed);
+	const float *be, const int *position, const int *settling, int count, double elapsed);
 double trend_elapsed(const struct trend *t);
 double trend_stats_mean(const struct trend_stats *s);
 double trend_stats_sd(const struct trend_stats *s);
+void trend_get_plot_ranges(const struct trend *t, double t0, double t1,
+	double fixed_rate, struct trend_plot_ranges *ranges);
 
 /* output_panel.c */
 struct output_panel {
@@ -332,6 +392,7 @@ struct output_panel {
 	GtkWidget *paperstrip_tick_spin;
 	GtkWidget *paperstrip_window_spin;
 	GtkWidget *right_stack; // "panels" (tic/toc/period) or "calibration" (instructions)
+	GtkWidget *calibration_estimate_label;
 	GtkWidget *output_frame;     // titled frames whose title depends on calibration
 	GtkWidget *paperstrip_frame;
 	double paperstrip_tick_seconds;
@@ -344,6 +405,17 @@ struct output_panel {
 	int trace_centered;          // the live trace was centred since it appeared
 	GtkWidget *right_switcher;   // chooses "panels" (waveforms) or "trend" in right_stack
 	GtkWidget *trend_drawing_area;
+	GtkWidget *trend_span_combo;
+	GtkWidget *correlation_span_combo;
+	GtkWidget *correlation_areas[3];
+	int correlation_position;   // -1 = all positions
+	GtkWidget *settling_spin;
+	GtkWidget *settling_status;
+	GtkWidget *detection_status_label;
+	enum detection_status shown_detection_status;
+	gint64 detection_status_until;
+	void (*settling_setting_changed)(void *, int);
+	void *settling_setting_data;
 	struct trend *trend;         // owned; NULL for snapshots loaded from a file
 	int trend_rate_range;        // s/d shown either side of 0, 0 = automatic
 	int trend_span_s;            // time shown, 0 = everything since the start
@@ -364,12 +436,20 @@ struct output_panel *init_output_panel(struct computer *comp, struct snapshot *s
 void op_set_paperstrip_settings(struct output_panel *op, double tick_seconds, double window_seconds);
 void op_set_paperstrip_settings_callback(struct output_panel *op,
 	void (*callback)(void *, double, double), void *data);
+void op_set_settling_setting(struct output_panel *op, int seconds,
+	void (*callback)(void *, int), void *data);
+void op_update_settling_status(struct output_panel *op);
 void redraw_op(struct output_panel *op);
 void op_set_snapshot(struct output_panel *op, struct snapshot *snst);
 void op_set_border(struct output_panel *op, int i);
 void op_destroy(struct output_panel *op);
 
 /* interface.c */
+enum csv_format {
+	CSV_FORMAT_PORTABLE,
+	CSV_FORMAT_LOCALIZED
+};
+
 struct main_window {
 	GtkApplication *app;
 
@@ -382,6 +462,10 @@ struct main_window {
 	GtkWidget *bph_combo_box;
 	GtkWidget *audio_button;	// shows the input in use, opens the audio settings
 	GtkWidget *audio_button_label;
+	GtkWidget *listen_button;
+	int listen_active;
+	int listen_updating;
+	int listen_warning_shown;
 	struct audio_settings *audio_settings;	// the audio settings dialog, NULL when closed
 	GtkWidget *la_spin_button;
 	GtkWidget *cal_spin_button;
@@ -394,9 +478,10 @@ struct main_window {
 	GtkWidget *cal_button; // "Start calibration" / "Stop calibration" menu item
 	GtkWidget *notebook;
 	GtkWidget *open_item;
-	GtkWidget *light_item;
+	GtkWidget *algorithm_item;
 	GtkWidget *save_item;
 	GtkWidget *save_all_item;
+	GtkWidget *export_item;
 	GtkWidget *close_all_item;
 	struct output_panel *active_panel;
 
@@ -408,15 +493,21 @@ struct main_window {
 	int zombie;
 	int controls_active;
 	int calibrate;
+	int calibration_stop_pending;
 	int bph;
 	int audio_device;
 	int audio_api;	// PaHostApiTypeId, or AUDIO_API_DEFAULT
+	gchar *audio_output_device_name;
+	double listen_volume;
 	double la; // deg
 	int cal; // 0.1 s/d
 	double paperstrip_tick_seconds;
 	double paperstrip_window_seconds;
+	int settling_seconds;
+	int csv_format;
 	int nominal_sr;
 	int restart_audio;
+	int restart_algorithm;
 	int pending_audio_device;
 	int pending_audio_rate;
 	int pending_audio_api;
@@ -432,6 +523,12 @@ struct main_window {
 	guint save_timeout;
 };
 
+void algorithm_settings_load(struct main_window *w);
+void algorithm_settings_open(struct main_window *w);
+int algorithm_settings_custom(int light);
+void algorithm_settings_prune_defaults(GKeyFile *config);
+void request_algorithm_restart(struct main_window *w, int light);
+
 extern int preset_bph[];
 
 #ifdef DEBUG
@@ -442,6 +539,11 @@ void print_debug(char *format,...);
 void error(char *format,...);
 void request_audio_restart(struct main_window *w, int api, int device, int rate);
 const char *watch_position_code(int pos);
+const char *watch_position_label(int pos);
+GtkWidget *correlations_create_page(struct output_panel *op);
+void correlations_queue_draw(struct output_panel *op);
+GtkWidget *op_create_trend_span_combo(struct output_panel *op);
+void format_duration(char *s, size_t n, double seconds);
 
 /* audio_settings.c */
 void audio_settings_open(struct main_window *w);
@@ -456,11 +558,15 @@ int audio_settings_is_open(struct main_window *w);
 	OP(light_algorithm, is_light, int) \
 	OP(audio_device, audio_device, int) \
 	OP(audio_api, audio_api, int) \
+	OP(listen_volume, listen_volume, double) \
+	OP(csv_format, csv_format, int) \
+	OP(settling_seconds, settling_seconds, int) \
 	OP(audio_rate, nominal_sr, int) \
 	OP(paperstrip_tick_seconds, paperstrip_tick_seconds, double) \
 	OP(paperstrip_window_seconds, paperstrip_window_seconds, double)
 
 #define AUDIO_DEVICE_NAME_KEY "audio_device_name"
+#define AUDIO_OUTPUT_DEVICE_NAME_KEY "audio_output_device_name"
 
 struct conf_data {
 #define DEF(NAME,PLACE,TYPE) TYPE PLACE;
@@ -469,6 +575,7 @@ struct conf_data {
 
 void load_config(struct main_window *w);
 void save_config(struct main_window *w);
+gboolean save_config_checked(struct main_window *w, GError **error);
 void save_on_change(struct main_window *w);
 void close_config(struct main_window *w);
 
@@ -483,4 +590,5 @@ void delete_watch(struct main_window *w, const char *name);
 /* serializer.c */
 /* trends[i] is the long-term trend of snapshot i, NULL if it has none */
 int write_file(FILE *f, struct snapshot **s, char **names, struct trend **trends, uint64_t cnt);
+int write_trend_csv(FILE *f, const struct trend *t, char separator, char decimal);
 int read_file(FILE *f, struct snapshot ***s, char ***names, struct trend ***trends, uint64_t *cnt);
