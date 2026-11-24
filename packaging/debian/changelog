@@ -1,3 +1,15 @@
+tg-expert (0.11.0-1) unstable; urgency=medium
+
+  * Add live audio listening, beat-error trends and correlation plots.
+  * Export Trend data to CSV and configure the settling period after position
+    changes.
+  * Add algorithm configuration controls and allow accepting a provisional
+    calibration estimate when stopping early.
+  * Provide more detailed measurement detection status feedback.
+    See CHANGELOG.md for the changes.
+
+ -- jefebus <jefebus@users.noreply.github.com>  Tue, 24 Nov 2026 13:39:03 +0100
+
 tg-expert (0.10.0-1) unstable; urgency=medium
 
   * Add Spanish and German interface translations and user manuals.
