@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tg-expert 0.10.0\n"
 "Report-Msgid-Bugs-To: https://github.com/jefebus/tg-expert/issues\n"
-"POT-Creation-Date: 2026-11-20 21:14+0100\n"
+"POT-Creation-Date: 2026-11-24 11:54+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1391,4 +1391,70 @@ msgstr ""
 
 #, c-format
 msgid "Elapsed: %s\nPosition: %s\nRate: %s\nAmplitude: %s\nBeat error: %s"
+msgstr ""
+
+msgid "Live listening requires an active input and a selected output device."
+msgstr ""
+
+msgid "The selected audio output is unavailable."
+msgstr ""
+
+msgid "The selected audio output does not support a usable sample rate."
+msgstr ""
+
+#, c-format
+msgid "Could not start live listening: %s"
+msgstr ""
+
+#, c-format
+msgid "%s (system default)"
+msgstr ""
+
+msgid "Input settings are locked on snapshot tabs; live listening still uses the current input."
+msgstr ""
+
+msgid "Live listening is active. Use headphones to avoid acoustic feedback."
+msgstr ""
+
+msgid "The selected output could not be opened; live listening is off."
+msgstr ""
+
+msgid "Output device"
+msgstr ""
+
+msgid "Select the output explicitly. A missing output is not replaced automatically."
+msgstr ""
+
+msgid "Listening volume (%)"
+msgstr ""
+
+msgid "Independent of input gain. Raising headphone volume does not improve the measurement signal."
+msgstr ""
+
+msgid ""
+"Use headphones; speakers can feed back into the microphone. Listen for clock ticks versus room noise, "
+"try different pickup positions and contact pressure, and notice knocks, cable rubbing, or possible clipping. "
+"Compare clipping with the input level meter. Listening volume does not change input gain, and the sound "
+"does not provide an automatic mechanical diagnosis."
+msgstr ""
+
+msgid "Listening LIVE"
+msgstr ""
+
+msgid "Listen LIVE"
+msgstr ""
+
+msgid "Use headphones for live listening. Speakers can feed back into the microphone; TG-Expert cannot detect whether headphones are connected."
+msgstr ""
+
+msgid "_Continue"
+msgstr ""
+
+msgid "Live listening could not be started."
+msgstr ""
+
+msgid "Live listening stopped because the selected output failed. Select an available output and activate listening again."
+msgstr ""
+
+msgid "Listen to the live input through headphones. Speakers can feed back into the microphone."
 msgstr ""

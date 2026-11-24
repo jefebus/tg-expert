@@ -196,6 +196,16 @@ void set_audio_api(int type);
 int get_audio_api(void);
 const char *get_audio_api_name(void);
 int get_default_audio_input_device(void);
+int list_audio_output_devices(int **devices, char ***names, int *count, int *default_device);
+void free_audio_output_devices(int *devices, char **names, int count);
+void set_audio_output_device_name(const char *name);
+const char *get_audio_output_device_name(void);
+int get_audio_output_device(void);
+void set_audio_output_device(int device);
+int start_audio_monitor(int device, double volume, char **error_message);
+void stop_audio_monitor(void);
+int audio_monitor_status(void);
+void set_audio_monitor_volume(double volume);
 void set_audio_input_device_name(const char *name);
 const char *get_audio_input_device_name(void);
 int list_supported_sample_rates(int device, int *rates, int max);
@@ -452,6 +462,10 @@ struct main_window {
 	GtkWidget *bph_combo_box;
 	GtkWidget *audio_button;	// shows the input in use, opens the audio settings
 	GtkWidget *audio_button_label;
+	GtkWidget *listen_button;
+	int listen_active;
+	int listen_updating;
+	int listen_warning_shown;
 	struct audio_settings *audio_settings;	// the audio settings dialog, NULL when closed
 	GtkWidget *la_spin_button;
 	GtkWidget *cal_spin_button;
@@ -483,6 +497,8 @@ struct main_window {
 	int bph;
 	int audio_device;
 	int audio_api;	// PaHostApiTypeId, or AUDIO_API_DEFAULT
+	gchar *audio_output_device_name;
+	double listen_volume;
 	double la; // deg
 	int cal; // 0.1 s/d
 	double paperstrip_tick_seconds;
@@ -542,6 +558,7 @@ int audio_settings_is_open(struct main_window *w);
 	OP(light_algorithm, is_light, int) \
 	OP(audio_device, audio_device, int) \
 	OP(audio_api, audio_api, int) \
+	OP(listen_volume, listen_volume, double) \
 	OP(csv_format, csv_format, int) \
 	OP(settling_seconds, settling_seconds, int) \
 	OP(audio_rate, nominal_sr, int) \
@@ -549,6 +566,7 @@ int audio_settings_is_open(struct main_window *w);
 	OP(paperstrip_window_seconds, paperstrip_window_seconds, double)
 
 #define AUDIO_DEVICE_NAME_KEY "audio_device_name"
+#define AUDIO_OUTPUT_DEVICE_NAME_KEY "audio_output_device_name"
 
 struct conf_data {
 #define DEF(NAME,PLACE,TYPE) TYPE PLACE;

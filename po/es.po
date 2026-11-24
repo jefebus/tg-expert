@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tg-expert\n"
 "Report-Msgid-Bugs-To: https://github.com/jefebus/tg-expert/issues\n"
-"POT-Creation-Date: 2026-11-20 21:14+0100\n"
+"POT-Creation-Date: 2026-11-24 11:54+0100\n"
 "PO-Revision-Date: 2026-11-15 20:00+0100\n"
 "Last-Translator: jefebus <jefebus@users.noreply.github.com>\n"
 "Language-Team: Spanish\n"
@@ -1688,3 +1688,93 @@ msgstr "_Aplicar estimación"
 #, c-format
 msgid "The correction was applied in memory but could not be saved:\n%s"
 msgstr "La corrección se aplicó en memoria, pero no se pudo guardar:\n%s"
+
+#: src/audio.c
+msgid "Live listening requires an active input and a selected output device."
+msgstr "La escucha en directo requiere una entrada activa y una salida seleccionada."
+
+#: src/audio.c
+msgid "The selected audio output is unavailable."
+msgstr "La salida de audio seleccionada no está disponible."
+
+#: src/audio.c
+msgid "The selected audio output does not support a usable sample rate."
+msgstr "La salida de audio seleccionada no admite una frecuencia de muestreo compatible."
+
+#, c-format
+#: src/audio.c
+msgid "Could not start live listening: %s"
+msgstr "No se pudo iniciar la escucha en directo: %s"
+
+#, c-format
+#: src/audio_settings.c
+msgid "%s (system default)"
+msgstr "%s (predeterminado del sistema)"
+
+#: src/audio_settings.c
+msgid "Input settings are locked on snapshot tabs; live listening still uses the current input."
+msgstr "Los ajustes de entrada se bloquean en las pestañas de capturas; la escucha sigue usando la entrada actual."
+
+#: src/audio_settings.c
+msgid "Live listening is active. Use headphones to avoid acoustic feedback."
+msgstr "La escucha en directo está activa. Use auriculares para evitar la realimentación acústica."
+
+#: src/audio_settings.c
+msgid "The selected output could not be opened; live listening is off."
+msgstr "No se pudo abrir la salida seleccionada; la escucha en directo está desactivada."
+
+#: src/audio_settings.c
+msgid "Output device"
+msgstr "Dispositivo de salida"
+
+#: src/audio_settings.c
+msgid "Select the output explicitly. A missing output is not replaced automatically."
+msgstr "Seleccione la salida explícitamente. Si desaparece, no se sustituirá automáticamente."
+
+#: src/audio_settings.c
+msgid "Listening volume (%)"
+msgstr "Volumen de escucha (%)"
+
+#: src/audio_settings.c
+msgid "Independent of input gain. Raising headphone volume does not improve the measurement signal."
+msgstr "Es independiente de la ganancia de entrada. Subir el volumen de los auriculares no mejora la señal de medida."
+
+#: src/audio_settings.c
+msgid ""
+"Use headphones; speakers can feed back into the microphone. Listen for clock ticks versus room noise, "
+"try different pickup positions and contact pressure, and notice knocks, cable rubbing, or possible clipping. "
+"Compare clipping with the input level meter. Listening volume does not change input gain, and the sound "
+"does not provide an automatic mechanical diagnosis."
+msgstr ""
+"Use auriculares: los altavoces pueden realimentar el micrófono. Compare los tics del reloj con el ruido de la sala, "
+"pruebe distintas posiciones y presiones de contacto y fíjese en golpes, roces del cable o posibles recortes. "
+"Contraste los recortes con el medidor del nivel de entrada. El volumen de escucha no cambia la ganancia de entrada "
+"y el sonido no permite diagnosticar automáticamente el mecanismo."
+
+#: src/audio_settings.c src/interface.c
+msgid "Listening LIVE"
+msgstr "Escuchando LIVE"
+
+#: src/audio_settings.c src/interface.c
+msgid "Listen LIVE"
+msgstr "Escuchar LIVE"
+
+#: src/interface.c
+msgid "Use headphones for live listening. Speakers can feed back into the microphone; TG-Expert cannot detect whether headphones are connected."
+msgstr "Use auriculares para la escucha en directo. Los altavoces pueden realimentar el micrófono; TG-Expert no puede detectar si hay auriculares conectados."
+
+#: src/interface.c
+msgid "_Continue"
+msgstr "_Continuar"
+
+#: src/interface.c
+msgid "Live listening could not be started."
+msgstr "No se pudo iniciar la escucha en directo."
+
+#: src/interface.c
+msgid "Live listening stopped because the selected output failed. Select an available output and activate listening again."
+msgstr "La escucha se detuvo porque falló la salida seleccionada. Elija una salida disponible y vuelva a activarla."
+
+#: src/interface.c
+msgid "Listen to the live input through headphones. Speakers can feed back into the microphone."
+msgstr "Escuche la entrada en directo con auriculares. Los altavoces pueden realimentar el micrófono."

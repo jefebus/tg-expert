@@ -382,6 +382,11 @@ void request_audio_restart(struct main_window *w, int api, int device, int rate)
 {
 	if(!w->controls_active || w->calibrate || w->calibration_stop_pending ||
 			w->restart_audio || w->restart_algorithm) return;
+	if(w->listen_active) {
+		stop_audio_monitor();
+		w->listen_active = 0;
+		audio_settings_update(w);
+	}
 	w->pending_audio_api = api;
 	w->pending_audio_device = device;
 	w->pending_audio_rate = rate;
@@ -436,6 +441,7 @@ static void on_shutdown(GApplication *app, void *p)
 		op_destroy(w->active_panel);
 		close_config(w);
 		g_free(w->audio_device_name);
+		g_free(w->audio_output_device_name);
 		free(w);
 	}
 	terminate_portaudio();
@@ -444,6 +450,7 @@ static void on_shutdown(GApplication *app, void *p)
 static void recompute(struct main_window *w);
 static void computer_callback(void *w);
 guint refresh(struct main_window *w);
+static gboolean watch_audio_monitor(struct main_window *w);
 
 static void remove_runtime_timers(struct main_window *w)
 {
@@ -634,6 +641,7 @@ static void recompute(struct main_window *w)
 
 static guint kick_computer(struct main_window *w)
 {
+	watch_audio_monitor(w);
 	op_update_settling_status(w->active_panel);
 	w->computer_timeout++;
 	if(w->calibrate && w->computer_timeout < 10) {
@@ -694,6 +702,8 @@ static void update_sensitivity(struct main_window *w)
 	gtk_widget_set_sensitive(w->bph_combo_box, settings);
 	gtk_widget_set_sensitive(w->la_spin_button, settings);
 	gtk_widget_set_sensitive(w->cal_spin_button, settings);
+	if(w->listen_button)
+		gtk_widget_set_sensitive(w->listen_button, w->audio_ok && !w->restart_audio);
 	// The audio settings dialog locks itself when audio cannot be changed
 	audio_settings_update(w);
 
@@ -721,6 +731,71 @@ static void handle_calibrate(GtkMenuItem *b, struct main_window *w)
 	w->calibrate = !w->calibrate;
 	update_sensitivity(w);
 	recompute(w);
+}
+
+static void handle_listen_toggled(GtkToggleButton *button, struct main_window *w)
+{
+	if(w->listen_updating)
+		return;
+	if(!gtk_toggle_button_get_active(button)) {
+		stop_audio_monitor();
+		w->listen_active = 0;
+		audio_settings_update(w);
+		return;
+	}
+	if(!w->listen_warning_shown) {
+		GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(w->window),
+			GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+			GTK_MESSAGE_WARNING, GTK_BUTTONS_NONE,
+			_("Use headphones for live listening. Speakers can feed back into the microphone; "
+			  "TG-Expert cannot detect whether headphones are connected."));
+		gtk_dialog_add_buttons(GTK_DIALOG(dialog),
+			_("_Cancel"), GTK_RESPONSE_CANCEL,
+			_("_Continue"), GTK_RESPONSE_ACCEPT,
+			NULL);
+		gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_CANCEL);
+		int response = gtk_dialog_run(GTK_DIALOG(dialog));
+		gtk_widget_destroy(dialog);
+		w->listen_warning_shown = 1;
+		if(response != GTK_RESPONSE_ACCEPT) {
+			w->listen_active = 0;
+			audio_settings_update(w);
+			return;
+		}
+	}
+
+	char *message = NULL;
+	if(!w->audio_ok || start_audio_monitor(get_audio_output_device(),
+			w->listen_volume, &message)) {
+		w->listen_active = 0;
+		w->audio_message = _("Live listening could not be started.");
+		audio_settings_update(w);
+		if(message) {
+			error("%s", message);
+			g_free(message);
+		} else
+			error("%s", w->audio_message);
+		return;
+	}
+	w->audio_message = NULL;
+	w->listen_active = 1;
+	audio_settings_update(w);
+}
+
+static gboolean watch_audio_monitor(struct main_window *w)
+{
+	if(!w->listen_active)
+		return !w->zombie;
+	int status = audio_monitor_status();
+	if(status == 1)
+		return TRUE;
+	stop_audio_monitor();
+	w->listen_active = 0;
+	w->audio_message = _("Live listening stopped because the selected output failed. "
+		"Select an available output and activate listening again.");
+	audio_settings_update(w);
+	error("%s", w->audio_message);
+	return !w->zombie;
 }
 
 static void format_calibration_value(int value, char *buffer, size_t size)
@@ -1688,6 +1763,12 @@ static void init_main_window(struct main_window *w)
 	gtk_box_pack_start(GTK_BOX(hbox), w->audio_button, FALSE, FALSE, 0);
 	g_signal_connect_swapped(w->audio_button, "clicked", G_CALLBACK(audio_settings_open), w);
 
+	w->listen_button = gtk_toggle_button_new_with_label(_("Listen LIVE"));
+	gtk_widget_set_tooltip_text(w->listen_button,
+		_("Listen to the live input through headphones. Speakers can feed back into the microphone."));
+	gtk_box_pack_start(GTK_BOX(hbox), w->listen_button, FALSE, FALSE, 0);
+	g_signal_connect(w->listen_button, "toggled", G_CALLBACK(handle_listen_toggled), w);
+
 	// Calibration label
 	label = gtk_label_new("cal");
 	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
@@ -1951,17 +2032,27 @@ static void start_interface(GApplication* app, void *p)
 	w->audio_api = AUDIO_API_DEFAULT;
 	w->pending_audio_api = AUDIO_API_DEFAULT;
 	w->audio_device_name = NULL;
+	w->audio_output_device_name = NULL;
+	w->listen_volume = 0.15;
+	w->listen_active = 0;
+	w->listen_updating = 0;
+	w->listen_warning_shown = 0;
 	w->audio_message = NULL;
 	w->audio_ok = 0;
 	w->audio_button = NULL;
 	w->audio_button_label = NULL;
+	w->listen_button = NULL;
 	w->audio_settings = NULL;
 	w->watch_updating = 0;
 	w->position_updating = 0;
 	w->live_position = POS_NONE;
 
 	load_config(w);
+	set_audio_output_device_name(w->audio_output_device_name);
 	algorithm_settings_load(w);
+	if(!isfinite(w->listen_volume) || w->listen_volume < 0 || w->listen_volume > 0.5)
+		w->listen_volume = 0.15;
+	set_audio_monitor_volume(w->listen_volume);
 	if(w->settling_seconds < 0 || w->settling_seconds > TREND_MAX_SETTLING_S)
 		w->settling_seconds = 0;
 	if(w->csv_format != CSV_FORMAT_PORTABLE && w->csv_format != CSV_FORMAT_LOCALIZED)
@@ -1994,6 +2085,10 @@ static void start_interface(GApplication* app, void *p)
 		audio_failed = open_audio(AUDIO_DEVICE_DEFAULT, rate, &real_sr);
 	}
 	set_audio_input_device_name(NULL);
+	if(!w->audio_output_device_name && get_audio_output_device() >= 0) {
+		set_audio_output_device(get_audio_output_device());
+		w->audio_output_device_name = g_strdup(get_audio_output_device_name());
+	}
 	set_audio_errors_quiet(0);
 
 	w->audio_ok = !audio_failed;

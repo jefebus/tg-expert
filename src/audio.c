@@ -35,6 +35,131 @@ static int pa_init_count = 0;
 static int stream_open = 0;	// an input stream is running on selected_input_device
 static char *preferred_device_name = NULL;	// device to look up by name when none is selected
 
+#define MONITOR_RING_CAPACITY ((guint)(MAX_SAMPLE_RATE * 2))
+static float monitor_ring[MONITOR_RING_CAPACITY];
+static volatile gint monitor_head;
+static volatile gint monitor_tail;
+static volatile gint monitor_active;
+static volatile gint monitor_failed;
+static volatile gint monitor_volume;
+static volatile gint monitor_generation;
+static PaStream *monitor_stream;
+static char *preferred_monitor_name;
+static double monitor_source_rate;
+static double monitor_output_rate;
+static double monitor_phase;
+static double monitor_gain;
+static int monitor_primed;
+static int monitor_channels;
+
+static gchar *audio_output_key(PaDeviceIndex device)
+{
+	const PaDeviceInfo *di = Pa_GetDeviceInfo(device);
+	const PaHostApiInfo *hi = di ? Pa_GetHostApiInfo(di->hostApi) : NULL;
+	if(!di || !hi)
+		return NULL;
+	return g_strdup_printf("%s | %s", hi->name ? hi->name : "", di->name ? di->name : "");
+}
+
+static PaDeviceIndex find_audio_output(const char *name)
+{
+	if(!name || pa_init_count <= 0)
+		return paNoDevice;
+	for(PaDeviceIndex i = 0; i < Pa_GetDeviceCount(); i++) {
+		const PaDeviceInfo *di = Pa_GetDeviceInfo(i);
+		if(!di || di->maxOutputChannels <= 0)
+			continue;
+		gchar *key = audio_output_key(i);
+		int matches = key && !strcmp(key, name);
+		g_free(key);
+		if(matches)
+			return i;
+	}
+	return paNoDevice;
+}
+
+static int monitor_callback(const void *input_buffer, void *output_buffer,
+	unsigned long frame_count, const PaStreamCallbackTimeInfo *time_info,
+	PaStreamCallbackFlags status_flags, void *data)
+{
+	UNUSED(input_buffer);
+	UNUSED(time_info);
+	UNUSED(status_flags);
+	UNUSED(data);
+	float *output = output_buffer;
+	if(!output) {
+		g_atomic_int_set(&monitor_failed, 1);
+		return paAbort;
+	}
+
+	unsigned head = (unsigned)g_atomic_int_get(&monitor_head);
+	unsigned tail = (unsigned)g_atomic_int_get(&monitor_tail);
+	unsigned available = head - tail;
+	unsigned target = (unsigned)(monitor_source_rate / 20.0);
+	if(target < 2)
+		target = 2;
+	gboolean active = g_atomic_int_get(&monitor_active);
+	if(active && available >= target)
+		monitor_primed = 1;
+
+	/* Occupancy feedback compensates clock drift between independent devices. */
+	double correction = monitor_primed ?
+		((double)available - target) / target * 0.0005 : 0;
+	if(correction > 0.005) correction = 0.005;
+	if(correction < -0.005) correction = -0.005;
+	double step = monitor_output_rate > 0 ?
+		monitor_source_rate / monitor_output_rate * (1 + correction) : 1;
+	double volume = (double)g_atomic_int_get(&monitor_volume) / 10000;
+	double ramp = monitor_output_rate > 0 ? 1 / (monitor_output_rate * 0.02) : 1;
+
+	for(unsigned long i = 0; i < frame_count; i++) {
+		float sample = 0;
+		head = (unsigned)g_atomic_int_get(&monitor_head);
+		available = head - tail;
+		if(active && monitor_primed && available >= 2) {
+			float a = monitor_ring[tail % MONITOR_RING_CAPACITY];
+			float b = monitor_ring[(tail + 1) % MONITOR_RING_CAPACITY];
+			if(a > 1) a = 1;
+			if(a < -1) a = -1;
+			if(b > 1) b = 1;
+			if(b < -1) b = -1;
+			sample = (float)(a + (b - a) * monitor_phase);
+			monitor_phase += step;
+			unsigned consumed = (unsigned)monitor_phase;
+			if(consumed >= available) {
+				consumed = available - 1;
+				monitor_phase = 0;
+			}
+			if(consumed) {
+				tail += consumed;
+				monitor_phase -= consumed;
+			}
+		} else if(active) {
+			monitor_primed = 0;
+			monitor_phase = 0;
+		}
+
+		double target_gain = active && monitor_primed ? volume : 0;
+		if(monitor_gain < target_gain) {
+			monitor_gain += ramp;
+			if(monitor_gain > target_gain) monitor_gain = target_gain;
+		} else if(monitor_gain > target_gain) {
+			monitor_gain -= ramp;
+			if(monitor_gain < target_gain) monitor_gain = target_gain;
+		}
+		float value = (float)(sample * monitor_gain);
+		for(int channel = 0; channel < monitor_channels; channel++)
+			output[i * monitor_channels + channel] = value;
+	}
+	g_atomic_int_set(&monitor_tail, (gint)tail);
+
+	if(!active && monitor_gain <= 0.0001) {
+		g_atomic_int_set(&monitor_failed, 0);
+		return paComplete;
+	}
+	return paContinue;
+}
+
 /* Report an audio error, unless the caller collects errors and reports one itself */
 static void audio_error(const char *format, ...)
 {
@@ -87,7 +212,7 @@ static int paudio_callback(const void *input_buffer,
 	const struct callback_info *info = data;
 	unsigned wp = write_pointer;
 	double level_sum = 0;
-	for(i = 0; i < frame_count; i++) {
+	for(i = 0; input_samples && i < frame_count; i++) {
 		double frame_sum = 0;
 		for(int channel = 0; channel < info->channels; channel++)
 			frame_sum += input_samples[i * info->channels + channel] *
@@ -95,6 +220,25 @@ static int paudio_callback(const void *input_buffer,
 		level_sum += frame_sum / info->channels;
 	}
 	float current_level = frame_count ? sqrt(level_sum / frame_count) : 0;
+	gint monitor_write_generation = g_atomic_int_get(&monitor_generation);
+	gboolean monitor_write = input_samples && g_atomic_int_get(&monitor_active);
+	unsigned monitor_new_head = 0;
+	if(monitor_write) {
+		unsigned head = (unsigned)g_atomic_int_get(&monitor_head);
+		unsigned tail = (unsigned)g_atomic_int_get(&monitor_tail);
+		unsigned used = head - tail;
+		unsigned room = used < MONITOR_RING_CAPACITY ? MONITOR_RING_CAPACITY - used : 0;
+		/* The ring is bounded; drop new frames on overflow rather than delaying capture. */
+		unsigned copy_frames = MIN((unsigned long)room, frame_count);
+		monitor_new_head = head + copy_frames;
+		for(unsigned i = 0; i < copy_frames; i++) {
+			double sample = 0;
+			for(int channel = 0; channel < info->channels; channel++)
+				sample += input_samples[i * info->channels + channel];
+			monitor_ring[(head + i) % MONITOR_RING_CAPACITY] =
+				(float)(sample / info->channels);
+		}
+	}
 
 	if (info->light) {
 		static bool even = true;
@@ -102,7 +246,12 @@ static int paudio_callback(const void *input_buffer,
 		 * just drop the sample rate if the sound hardware supports it.
 		 * This would also avoid the aliasing effects that this simple
 		 * decimation without a low-pass filter causes.  */
-		if(info->channels == 1) {
+		if(!input_samples) {
+			for(i = even ? 0 : 1; i < frame_count; i += 2) {
+				pa_buffers[wp++] = 0;
+				if(wp >= PA_BUFF_SIZE) wp -= PA_BUFF_SIZE;
+			}
+		} else if(info->channels == 1) {
 			for(i = even ? 0 : 1; i < frame_count; i += 2) {
 				pa_buffers[wp++] = input_samples[i];
 				if (wp >= PA_BUFF_SIZE) wp -= PA_BUFF_SIZE;
@@ -118,7 +267,11 @@ static int paudio_callback(const void *input_buffer,
 		if(frame_count % 2) even = !even;
 	} else {
 		const unsigned len = MIN(frame_count, PA_BUFF_SIZE - wp);
-		if(info->channels == 1) {
+		if(!input_samples) {
+			memset(pa_buffers + wp, 0, len * sizeof(*pa_buffers));
+			if(len < frame_count)
+				memset(pa_buffers, 0, (frame_count - len) * sizeof(*pa_buffers));
+		} else if(info->channels == 1) {
 			memcpy(pa_buffers + wp, input_samples, len * sizeof(*pa_buffers));
 			if(len < frame_count)
 				memcpy(pa_buffers, input_samples + len, (frame_count - len) * sizeof(*pa_buffers));
@@ -132,6 +285,9 @@ static int paudio_callback(const void *input_buffer,
 		wp = (wp + frame_count) % PA_BUFF_SIZE;
 	}
 	pthread_mutex_lock(&audio_mutex);
+	if(monitor_write && g_atomic_int_get(&monitor_active) &&
+			monitor_write_generation == g_atomic_int_get(&monitor_generation))
+		g_atomic_int_set(&monitor_head, (gint)monitor_new_head);
 	write_pointer = wp;
 	timestamp += frame_count;
 	input_level = 0.8f * input_level + 0.2f * current_level;
@@ -300,6 +456,7 @@ int start_portaudio(int *nominal_sample_rate, double *real_sample_rate)
 	const PaStreamInfo *info = Pa_GetStreamInfo(stream);
 	*nominal_sample_rate = selected_sample_rate;
 	*real_sample_rate = info->sampleRate;
+	monitor_source_rate = info->sampleRate;
 	selected_input_device = input_device;
 	stream_open = 1;
 	{
@@ -385,6 +542,220 @@ void free_audio_input_devices(int *devices, char **names, int count)
 		free(names[i]);
 	free(names);
 	free(devices);
+}
+
+int list_audio_output_devices(int **devices, char ***names, int *count, int *default_device)
+{
+	if(!devices || !names || !count || !default_device)
+		return 1;
+	*devices = NULL;
+	*names = NULL;
+	*count = 0;
+	*default_device = paNoDevice;
+	int ndevices = pa_init_count > 0 ? Pa_GetDeviceCount() : 0;
+	if(ndevices < 0)
+		return 1;
+	int *devs = malloc(ndevices * sizeof(*devs));
+	char **dev_names = malloc(ndevices * sizeof(*dev_names));
+	if(!devs || !dev_names) {
+		free(devs);
+		free(dev_names);
+		return 1;
+	}
+
+	PaDeviceIndex system_default = Pa_GetDefaultOutputDevice();
+	int used = 0;
+	for(PaDeviceIndex i = 0; i < ndevices; i++) {
+		const PaDeviceInfo *di = Pa_GetDeviceInfo(i);
+		const PaHostApiInfo *hi = di ? Pa_GetHostApiInfo(di->hostApi) : NULL;
+		if(!di || !hi || di->maxOutputChannels <= 0)
+			continue;
+		devs[used] = i;
+		dev_names[used] = g_strdup_printf("%s | %s",
+			hi->name ? hi->name : _("Unknown audio system"),
+			di->name ? di->name : _("Unknown device"));
+		if(!dev_names[used]) {
+			for(int j = 0; j < used; j++)
+				g_free(dev_names[j]);
+			free(devs);
+			free(dev_names);
+			return 1;
+		}
+		if(i == system_default)
+			*default_device = i;
+		used++;
+	}
+	if(!used) {
+		free(devs);
+		free(dev_names);
+		return 1;
+	}
+	*devices = devs;
+	*names = dev_names;
+	*count = used;
+	return 0;
+}
+
+void free_audio_output_devices(int *devices, char **names, int count)
+{
+	for(int i = 0; i < count; i++)
+		g_free(names[i]);
+	free(names);
+	free(devices);
+}
+
+void set_audio_output_device_name(const char *name)
+{
+	g_free(preferred_monitor_name);
+	preferred_monitor_name = name && *name ? g_strdup(name) : NULL;
+}
+
+const char *get_audio_output_device_name(void)
+{
+	return preferred_monitor_name;
+}
+
+int get_audio_output_device(void)
+{
+	if(pa_init_count <= 0)
+		return AUDIO_DEVICE_DEFAULT;
+	PaDeviceIndex device = preferred_monitor_name ?
+		find_audio_output(preferred_monitor_name) : paNoDevice;
+	if(preferred_monitor_name)
+		return device == paNoDevice ? AUDIO_DEVICE_DEFAULT : (int)device;
+	device = Pa_GetDefaultOutputDevice();
+	return device == paNoDevice ? AUDIO_DEVICE_DEFAULT : (int)device;
+}
+
+void set_audio_output_device(int device)
+{
+	if(pa_init_count <= 0 || device < 0 || device >= Pa_GetDeviceCount())
+		return;
+	const PaDeviceInfo *di = Pa_GetDeviceInfo((PaDeviceIndex)device);
+	if(!di || di->maxOutputChannels <= 0)
+		return;
+	gchar *name = audio_output_key((PaDeviceIndex)device);
+	set_audio_output_device_name(name);
+	g_free(name);
+}
+
+int start_audio_monitor(int device, double volume, char **error_message)
+{
+	if(error_message)
+		*error_message = NULL;
+	if(monitor_stream)
+		stop_audio_monitor();
+	if(pa_init_count <= 0 || !stream_open || device < 0 || device >= Pa_GetDeviceCount()) {
+		if(error_message)
+			*error_message = g_strdup(_("Live listening requires an active input and a selected output device."));
+		return 1;
+	}
+	const PaDeviceInfo *di = Pa_GetDeviceInfo((PaDeviceIndex)device);
+	if(!di || di->maxOutputChannels <= 0) {
+		if(error_message)
+			*error_message = g_strdup(_("The selected audio output is unavailable."));
+		return 1;
+	}
+
+	PaStreamParameters output;
+	output.device = (PaDeviceIndex)device;
+	monitor_channels = di->maxOutputChannels > 2 ? 2 : di->maxOutputChannels;
+	output.channelCount = monitor_channels;
+	output.sampleFormat = paFloat32;
+	output.suggestedLatency = di->defaultHighOutputLatency;
+	output.hostApiSpecificStreamInfo = NULL;
+
+	double rates[] = {di->defaultSampleRate, 48000, 44100, 32000, 22050};
+	double output_rate = 0;
+	for(unsigned i = 0; i < sizeof(rates) / sizeof(rates[0]); i++) {
+		double rate = rates[i];
+		if(rate <= 0 || (i && rate == rates[0]))
+			continue;
+		if(Pa_IsFormatSupported(NULL, &output, rate) == paFormatIsSupported) {
+			output_rate = rate;
+			break;
+		}
+	}
+	if(output_rate <= 0) {
+		if(error_message)
+			*error_message = g_strdup(_("The selected audio output does not support a usable sample rate."));
+		return 1;
+	}
+
+	PaStream *stream = NULL;
+	PaError err = Pa_OpenStream(&stream, NULL, &output, output_rate,
+		paFramesPerBufferUnspecified, paNoFlag, monitor_callback, NULL);
+	if(err == paNoError) {
+		g_atomic_int_inc(&monitor_generation);
+		pthread_mutex_lock(&audio_mutex);
+		g_atomic_int_set(&monitor_head, 0);
+		g_atomic_int_set(&monitor_tail, 0);
+		pthread_mutex_unlock(&audio_mutex);
+		monitor_output_rate = output_rate;
+		monitor_phase = 0;
+		monitor_gain = 0;
+		monitor_primed = 0;
+		g_atomic_int_set(&monitor_volume, (gint)(fmax(0, fmin(volume, 0.5)) * 10000));
+		g_atomic_int_set(&monitor_failed, 0);
+		g_atomic_int_set(&monitor_active, 1);
+		err = Pa_StartStream(stream);
+	}
+	if(err != paNoError) {
+		g_atomic_int_set(&monitor_active, 0);
+		if(stream)
+			Pa_CloseStream(stream);
+		if(error_message)
+			*error_message = g_strdup_printf(_("Could not start live listening: %s"),
+				Pa_GetErrorText(err));
+		return 1;
+	}
+	monitor_stream = stream;
+	return 0;
+}
+
+void stop_audio_monitor(void)
+{
+	g_atomic_int_set(&monitor_active, 0);
+	g_atomic_int_inc(&monitor_generation);
+	if(monitor_stream) {
+		PaError err = Pa_StopStream(monitor_stream);
+		if(err != paNoError && err != paStreamIsStopped)
+			debug("Audio monitor: stop failed: %s\n", Pa_GetErrorText(err));
+		err = Pa_CloseStream(monitor_stream);
+		if(err != paNoError)
+			debug("Audio monitor: close failed: %s\n", Pa_GetErrorText(err));
+		monitor_stream = NULL;
+	}
+	if(audio_mutex_initialized) {
+		pthread_mutex_lock(&audio_mutex);
+		unsigned head = (unsigned)g_atomic_int_get(&monitor_head);
+		g_atomic_int_set(&monitor_tail, (gint)head);
+		pthread_mutex_unlock(&audio_mutex);
+	}
+	g_atomic_int_set(&monitor_failed, 0);
+	monitor_primed = 0;
+	monitor_phase = 0;
+	monitor_gain = 0;
+}
+
+int audio_monitor_status(void)
+{
+	if(!monitor_stream)
+		return 0;
+	if(g_atomic_int_get(&monitor_failed))
+		return -1;
+	PaError active = Pa_IsStreamActive(monitor_stream);
+	if(active == 1)
+		return 1;
+	return active < 0 ? -1 : 0;
+}
+
+void set_audio_monitor_volume(double volume)
+{
+	if(!isfinite(volume))
+		volume = 0.15;
+	g_atomic_int_set(&monitor_volume,
+		(gint)(fmax(0, fmin(volume, 0.5)) * 10000));
 }
 
 int list_audio_apis(int **types, char ***names, int *count, int *current_type)
@@ -561,6 +932,7 @@ float get_audio_level(void)
 int terminate_portaudio()
 {
 	debug("Closing portaudio\n");
+	stop_audio_monitor();
 	stream_open = 0;
 	if(pa_init_count <= 0)
 		return 0;

@@ -45,6 +45,26 @@ Turn off audio "enhancements" in the operating system: noise suppression,
 automatic gain control and echo cancellation change the signal and disturb
 the measurement.
 
+== Live listening
+
+Choose #ui[Listen LIVE] to hear the current microphone input through the
+selected output. Use headphones: TG-Expert cannot detect whether headphones
+are physically connected, and speakers can feed back into the microphone.
+Listening follows the live input even while a snapshot tab is selected; it
+never plays snapshot or historical audio.
+
+Choose the output and adjust its independent listening volume in #ui[Audio
+settings]. The volume is deliberately limited and does not change input gain
+or improve the signal used for measurement. If the selected output disappears,
+listening stops and must be reactivated after choosing an available output.
+Some systems can switch one physical jack between headphones and speakers
+without changing its device identity, which the program cannot detect.
+
+Listen for the clock ticks relative to room noise, compare different pickup
+positions and contact pressure, and notice knocks or cable rubbing. Possible
+clipping should also be checked against the input level meter. Listening is
+only a setup aid; it does not automatically diagnose the movement.
+
 == Noise
 
 - Work in a quiet room. Switch off fans, speakers and noisy devices nearby.

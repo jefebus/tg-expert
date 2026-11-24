@@ -83,6 +83,11 @@ void load_config(struct main_window *w)
 		g_free(w->audio_device_name);
 		w->audio_device_name = name;
 	}
+	name = g_key_file_get_string(w->config_file, "tg", AUDIO_OUTPUT_DEVICE_NAME_KEY, NULL);
+	if(name) {
+		g_free(w->audio_output_device_name);
+		w->audio_output_device_name = name;
+	}
 }
 
 /* Whether the saved input device name differs from the current one */
@@ -90,6 +95,15 @@ static int audio_device_name_changed(struct main_window *w)
 {
 	gchar *saved = g_key_file_get_string(w->config_file, "tg", AUDIO_DEVICE_NAME_KEY, NULL);
 	int changed = g_strcmp0(saved, w->audio_device_name) != 0;
+	g_free(saved);
+	return changed;
+}
+
+static int audio_output_device_name_changed(struct main_window *w)
+{
+	gchar *saved = g_key_file_get_string(w->config_file, "tg",
+		AUDIO_OUTPUT_DEVICE_NAME_KEY, NULL);
+	int changed = g_strcmp0(saved, w->audio_output_device_name) != 0;
 	g_free(saved);
 	return changed;
 }
@@ -107,6 +121,9 @@ gboolean save_config_checked(struct main_window *w, GError **error)
 	CONFIG_FIELDS(SAVE);
 	if(w->audio_device_name)
 		g_key_file_set_string(w->config_file, "tg", AUDIO_DEVICE_NAME_KEY, w->audio_device_name);
+	if(w->audio_output_device_name)
+		g_key_file_set_string(w->config_file, "tg", AUDIO_OUTPUT_DEVICE_NAME_KEY,
+			w->audio_output_device_name);
 
 	if(!g_key_file_save_to_file(w->config_file, w->config_file_name, error))
 		return FALSE;
@@ -138,6 +155,8 @@ void save_on_change(struct main_window *w)
 	CONFIG_FIELDS(CHANGED);
 
 	if(w->audio_device_name && audio_device_name_changed(w))
+		save_config(w);
+	if(w->audio_output_device_name && audio_output_device_name_changed(w))
 		save_config(w);
 }
 

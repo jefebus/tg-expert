@@ -34,6 +34,25 @@ Raumgeräusche und kann die Schläge übersteuern.
 Audio-"Verbesserungen" des Betriebssystems abschalten: Rauschunterdrückung,
 automatische Verstärkungsregelung und Echounterdrückung verändern das Signal
 und stören die Messung.
+== Live-Abhören
+Mit #ui[LIVE abhören] hören Sie das aktuelle Mikrofonsignal über den
+ausgewählten Ausgang. Verwenden Sie Kopfhörer: tg-expert kann nicht erkennen,
+ob sie physisch angeschlossen sind, und Lautsprecher können eine akustische
+Rückkopplung ins Mikrofon verursachen. Das Abhören folgt dem Live-Eingang auch
+bei ausgewähltem Snapshot-Tab; Snapshot- oder historische Audiodaten werden
+nicht abgespielt.
+Wählen Sie den Ausgang und stellen Sie die unabhängige Abhörlautstärke unter
+#ui[Audioeinstellungen] ein. Die Lautstärke ist vorsichtig begrenzt und ändert
+weder Eingangsverstärkung noch das Messsignal. Fällt der ausgewählte Ausgang
+aus, wird das Abhören beendet und muss nach Auswahl eines verfügbaren Ausgangs
+erneut aktiviert werden. Manche Systeme schalten dieselbe physische Buchse
+zwischen Kopfhörern und Lautsprechern um, ohne die Gerätekennung zu ändern;
+das kann das Programm nicht erkennen.
+Achten Sie auf die Uhrticks im Verhältnis zum Raumgeräusch, probieren Sie
+andere Positionen und Anpressdrücke aus und hören Sie auf Stöße oder
+Kabelreiben. Mögliche Übersteuerung auch mit der Eingangspegelanzeige prüfen.
+Das Abhören hilft nur beim Einrichten und diagnostiziert das Uhrwerk nicht
+automatisch.
 == Störgeräusche
 - In einem ruhigen Raum arbeiten. Lüfter, Lautsprecher und laute Geräte in
   der Nähe ausschalten.
