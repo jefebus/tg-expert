@@ -1093,7 +1093,7 @@ static void compute_amplitude(struct processing_buffers *p, double la)
 		j = floor(fmod((k ? p->tic : p->toc) + p->period/8, p->period));
 		for(i = 0; i < p->period/8; i++) {
 			if(smooth_wf[j] > max) max = smooth_wf[j];
-			if(++j > p->period) j = 0;
+			if(++j >= wf_size) j = 0;
 		}
 	}
 	double glob_max = vmax(smooth_wf, 0, ceil(p->period), NULL);
@@ -1120,14 +1120,14 @@ static void compute_amplitude(struct processing_buffers *p, double la)
 			for(i = 0; i < p->period/8; i++) {
 				/* The first crossing marks the detectable onset of the composite lift sound, normally near unlocking. */
 				if(smooth_wf[j] > threshold) break;
-				if(++j > p->period) j = 0;
+				if(++j >= wf_size) j = 0;
 			}
 			for(; i < p->period/8; i++) {
 				double x = smooth_wf[j];
 				/* Follow the rising envelope to a stable local maximum. */
 				if(x > max) max = x;
 				else break;
-				if(++j > p->period) j = 0;
+				if(++j >= wf_size) j = 0;
 			}
 			if(i < p->period/8) {
 				/* Convert the detected boundary into tic or toc lift time in samples. */
