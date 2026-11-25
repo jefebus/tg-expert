@@ -8,8 +8,8 @@ lleva a los ajustes de audio.
 == El diálogo de ajustes de audio
 Ábralo con #ui[Ajustes de audio…] en el menú #ui[Ajustes], o haciendo clic en el botón de audio de la barra
 superior, que muestra la entrada que se está usando.
-#shot("audio-settings.png", [El diálogo de ajustes de audio. La línea situada
-bajo el medidor de nivel muestra la entrada en uso.], width: 55%)
+#shot("audio-settings.png", [El diálogo de ajustes de audio. La línea cercana
+al final muestra la entrada en uso.], width: 55%)
 / Sistema de audio: el sistema de sonido usado para grabar y escuchar en
   directo. En Windows son MME, DirectSound, WASAPI y WDM-KS. En Linux, ALSA y
   JACK si se está ejecutando. Al elegir otro sistema de audio se selecciona

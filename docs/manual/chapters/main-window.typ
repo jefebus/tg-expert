@@ -23,14 +23,16 @@ From left to right:
   calibration, and it can also be typed in.
 / Position: the watch position (dial up, dial down, crown up, crown down,
   crown left, crown right, or not set).
-/ Take Snapshot: keeps the current measurement in a new tab. The shortcut is
-  Ctrl+Space.
+/ Record / Pause: starts and ends a run, a period of continuous recording
+  (see @runs).
+/ Take Snapshot: keeps the current measurement in a new tab, without
+  stopping the recording. Only while recording. The shortcut is Ctrl+Space.
 / Current snapshot: the name of the selected snapshot tab, which can be
   edited.
 The menu bar at the top of the window has four menus:
 
 / File: #ui[New session], #ui[Open session…], #ui[Save], #ui[Save as…],
-  #ui[Export data…] and #ui[Quit].
+  #ui[Export data…], #ui[Export report…] (see @files) and #ui[Quit].
 / Settings: #ui[Audio settings…] and #ui[Algorithm configuration…].
 / Tools: #ui[Start calibration] (#ui[Stop calibration] while calibrating) and
   #ui[Project and notes panel], which shows or hides that panel.
@@ -39,10 +41,11 @@ The menu bar at the top of the window has four menus:
 
 Keyboard shortcuts, shown next to the menu entries: Ctrl+N new session,
 Ctrl+O open session, Ctrl+S save, Ctrl+Shift+S save as, Ctrl+E export data,
+Ctrl+P export report,
 Ctrl+Q quit, F1 user manual, and Ctrl+Space to take a snapshot. A shortcut
 only works while its entry is available (for example, not while calibrating).
 
-== Project and notes panel
+== Project and notes panel <notes-panel>
 It floats over the right part of the tabs and covers them only partly, so
 that most of the graphs stay in view while you write. It is hidden at first:
 #ui[Project and notes panel] in the #ui[Tools] menu shows or hides it, and its
@@ -55,9 +58,18 @@ The program remembers whether it was shown and its width. It has two pages:
   until it is valid), in the foldable #ui[Identification] group; the watch
   of the session, which is the one chosen in the saved watches list and is
   not edited here; and the #ui[General notes].
-/ Snapshot: the notes of the snapshot in the selected tab, with its title.
-  Each snapshot has its own notes, empty at first. On the real-time tab there
-  is no snapshot, and the page says so.
+/ Measurement: the notes of the run or snapshot in the selected tab, with
+  its title (#ui[Notes of: Run 2], #ui[Notes of: 2.3 (DU)]). Each run and
+  each snapshot has its own notes, empty at first. On the real-time tab,
+  while recording, they are the notes of the run being recorded
+  (#ui[Notes of: Run 3 (in progress)]); they go with the run to its tab on
+  #ui[Pause]. While paused no run is being recorded, and the page says so.
+
+#shot("notes_project.png", [The Project page, with identification details and
+general notes.], width: 60%)
+
+#shot("notes_measurement.png", [The Measurement page, with notes for a
+snapshot.], width: 65%)
 
 What you type changes the session at once (there is no Apply button) and is
 saved with it. Notes are plain text, up to 64 KiB each.
@@ -113,7 +125,7 @@ The other lines, as listed in the legend at the bottom:
   steady.
 
 #shot("paper-strip.png", [The paperstrip with its controls. Tic and toc form
-two close lines, and the amplitude falls from about 300° to 250°.],
+two close lines, with the amplitude history shown alongside.],
 width: 45%)
 
 The buttons below the strip:

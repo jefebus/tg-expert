@@ -44,13 +44,15 @@ minute after turning the watch, so the readings can settle.
 == Snapshots
 
 #ui[Take Snapshot] (Ctrl+Space) keeps the current measurement in a new tab.
-The tab is named after the selected watch and shows the position. A snapshot
-keeps the results table, the paperstrip, the waveforms and the Trend page as
-they were.
+The tab is titled with the run and the snapshot number, and the position:
+#ui[2.3 (DU)] is the third snapshot of run 2, dial up (see @runs). A
+snapshot keeps the results table, the paperstrip and the waveforms as they
+were; the Trend belongs to the run, which goes on recording.
 
 In a snapshot tab:
 
-- the name can be changed in the #ui[Current snapshot] field;
+- a name can be added in the #ui[Current snapshot] field; it is shown after
+  the number;
 - the position can be changed in the top bar;
 - the tab is closed with the × in its title.
 

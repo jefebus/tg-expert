@@ -21,14 +21,18 @@ Von links nach rechts:
   Kalibrierung eingetragen und kann auch von Hand eingegeben werden.
 / Lage: die Lage der Uhr (Zifferblatt oben, Zifferblatt unten, Krone oben,
   Krone unten, Krone links, Krone rechts oder nicht gesetzt).
-/ Messung festhalten: behält die aktuelle Messung in einem neuen Reiter. Das
+/ Aufzeichnen / Pause: beginnt und beendet einen Abschnitt, eine Zeit
+  ununterbrochener Aufzeichnung (siehe @runs).
+/ Messung festhalten: behält die aktuelle Messung in einem neuen Reiter, ohne
+  die Aufzeichnung zu unterbrechen. Nur während der Aufzeichnung. Das
   Tastenkürzel ist Strg+Leertaste.
 / Aktuelle Aufnahme: der Name des gewählten Aufnahme-Reiters, der bearbeitet
   werden kann.
 Die Menüleiste am oberen Fensterrand hat vier Menüs:
 
 / Datei: #ui[Neue Sitzung], #ui[Sitzung öffnen…], #ui[Speichern],
-  #ui[Speichern unter…], #ui[Daten exportieren…] und #ui[Beenden].
+  #ui[Speichern unter…], #ui[Daten exportieren…], #ui[Bericht exportieren…]
+  (siehe @files) und #ui[Beenden].
 / Einstellungen: #ui[Audioeinstellungen…] und #ui[Algorithmuskonfiguration…].
 / Werkzeuge: #ui[Kalibrierung starten] (#ui[Kalibrierung beenden] während der
   Kalibrierung) und #ui[Projekt- und Notizbereich], der diesen Bereich ein- oder
@@ -38,11 +42,11 @@ Die Menüleiste am oberen Fensterrand hat vier Menüs:
 
 Tastenkürzel, neben den Menüeinträgen angezeigt: Strg+N neue Sitzung, Strg+O
 Sitzung öffnen, Strg+S speichern, Strg+Umschalt+S speichern unter, Strg+E
-Daten exportieren, Strg+Q beenden, F1 Benutzerhandbuch und Strg+Leertaste für
+Daten exportieren, Strg+P Bericht exportieren, Strg+Q beenden, F1 Benutzerhandbuch und Strg+Leertaste für
 eine Aufnahme. Ein Kürzel wirkt nur, solange sein Eintrag verfügbar ist (zum
 Beispiel nicht während der Kalibrierung).
 
-== Projekt- und Notizbereich
+== Projekt- und Notizbereich <notes-panel>
 Er schwebt über dem rechten Teil der Reiter und verdeckt sie nur teilweise,
 damit der größte Teil der Diagramme beim Schreiben sichtbar bleibt. Anfangs
 ist er ausgeblendet: #ui[Projekt- und Notizbereich] im Menü #ui[Werkzeuge]
@@ -58,9 +62,19 @@ Seiten:
   einklappbaren Gruppe #ui[Angaben]; die Uhr der Sitzung, also die in der
   Liste der gespeicherten Uhren gewählte, die hier nicht bearbeitet wird; und
   die #ui[Allgemeinen Notizen].
-/ Aufnahme: die Notizen der Aufnahme im gewählten Reiter, mit ihrem Titel.
-  Jede Aufnahme hat eigene, zunächst leere Notizen. Im Echtzeit-Reiter gibt es
-  keine Aufnahme, und die Seite zeigt das an.
+/ Messung: die Notizen des Abschnitts oder der Aufnahme im gewählten Reiter,
+  mit ihrem Titel (#ui[Notizen zu: Abschnitt 2], #ui[Notizen zu: 2.3 (DU)]).
+  Jeder Abschnitt und jede Aufnahme hat eigene, zunächst leere Notizen. Im
+  Echtzeit-Reiter sind es während der Aufzeichnung die Notizen des laufenden
+  Abschnitts (#ui[Notizen zu: Abschnitt 3 (läuft)]); sie gehen bei #ui[Pause]
+  mit dem Abschnitt in seinen Reiter. In der Pause wird kein Abschnitt
+  aufgezeichnet, und die Seite zeigt das an.
+
+#shot("notes_project.png", [Die Seite Projekt mit den Angaben zur Identifikation
+und den allgemeinen Notizen.], width: 60%)
+
+#shot("notes_measurement.png", [Die Seite Messung mit den Notizen zu einer
+Aufnahme.], width: 65%)
 
 Eingaben ändern die Sitzung sofort (es gibt keine Schaltfläche Übernehmen) und
 werden mit ihr gespeichert. Notizen sind reiner Text, bis zu 64 KiB je Notiz.
@@ -110,8 +124,8 @@ Die weiteren Linien, wie in der Legende unten aufgeführt:
   gemessenen Gangabweichung, geglättet über etwa 10 Sekunden. Verlaufen die
   Punkte parallel dazu, ist die Gangabweichung stabil.
 #shot("paper-strip.png", [Das Gangdiagramm mit seinen Bedienelementen. Tick und
-Tack bilden zwei nahe beieinander liegende Linien, und die Amplitude sinkt von
-etwa 300° auf 250°.],
+Tack bilden zwei nahe beieinander liegende Linien, daneben der
+Amplitudenverlauf.],
 width: 45%)
 Die Schaltflächen unter dem Diagramm:
 / < und >: verschieben das Diagramm um eine Rasterteilung.

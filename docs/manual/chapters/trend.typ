@@ -6,8 +6,8 @@ The rate of a watch changes as the mainspring unwinds and as the watch moves
 between positions. The #ui[Trend] page records the measurement over hours, so
 that these changes become visible.
 
-#shot("trend.png", [The Trend page after measuring in three positions: dial
-up, dial down and crown up.])
+#shot("trend.png", [The Trend page with statistics and graphs of the recorded
+readings.])
 
 == Recording
 
@@ -92,6 +92,9 @@ Points are not joined, and a relationship does not establish a cause. The
 position selector shows all positions as separate series or one position at
 a time. Colours and symbols remain consistent across the plots. #ui[(not set)]
 is an unknown position, not an additional physical position.
+
+#shot("correlations.png", [The Correlations page with its three scatter plots
+and position filter.])
 
 The #ui[Show] time selector and the axis ranges are shared with Trend,
 independently of the position filter. Values outside those ranges are shown

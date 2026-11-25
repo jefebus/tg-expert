@@ -1,6 +1,10 @@
 .*
 !.gitignore
 !.valgrind.supp
+!.vscode/
+.vscode/*
+!.vscode/settings.json
+*.pdf
 tmp/**
 
 # Object files
@@ -22,6 +26,9 @@ tg-expert
 tg-expert-dbg
 tg-expert-prf
 tg-expert-vlg
+# test programs built by "make test" (on Linux, without .exe)
+/tests/*
+!/tests/*.c
 
 # autotools
 Makefile

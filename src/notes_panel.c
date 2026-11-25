@@ -22,7 +22,8 @@
  *  - Project: name, job reference, owner, last-service date (foldable), the
  *    watch of the session (shown, not edited: it is the one chosen in the
  *    saved watches list) and the general notes;
- *  - Snapshot: the notes of the snapshot shown in the selected tab.
+ *  - Measurement: the notes of the run or snapshot shown in the selected
+ *    tab; on the real-time tab, those of the run being recorded.
  * Editing changes the session at once (no Apply). Programmatic updates of
  * the widgets never change the session. */
 
@@ -50,12 +51,13 @@ struct notes_panel {
 	GtkWidget *watch_label;
 	GtkWidget *project_view;
 	GtkTextBuffer *project_buffer;
-	GtkWidget *snapshot_stack;	// "none" or "notes"
-	GtkWidget *snapshot_title;
-	GtkWidget *snapshot_view;
-	GtkTextBuffer *snapshot_buffer;
+	GtkWidget *measurement_stack;	// "none" or "notes"
+	GtkWidget *none_label;		// why there are no notes to write
+	GtkWidget *measurement_title;
+	GtkWidget *measurement_view;
+	GtkTextBuffer *measurement_buffer;
 	GtkWidget *toggle;	// check menu item, or NULL
-	struct output_panel *op;	// snapshot whose notes are shown, NULL if none
+	char **target;		// the notes shown (of a run or snapshot), NULL if none
 	int updating;	// the widgets are being filled from the session
 	int width;	// px, chosen by dragging the grip at the left edge
 	int dragging;
@@ -153,11 +155,11 @@ static void handle_project_notes_changed(GtkTextBuffer *b, struct notes_panel *n
 	g_free(text);
 }
 
-static void handle_snapshot_notes_changed(GtkTextBuffer *b, struct notes_panel *np)
+static void handle_measurement_notes_changed(GtkTextBuffer *b, struct notes_panel *np)
 {
-	if(np->updating || !np->op) return;
+	if(np->updating || !np->target) return;
 	char *text = buffer_text(b);
-	if(set_text_field(&np->op->snst->notes, text))
+	if(set_text_field(np->target, text))
 		session_mark_changed(np->w);
 	g_free(text);
 }
@@ -398,25 +400,28 @@ struct notes_panel *notes_panel_new(struct main_window *w)
 		G_CALLBACK(handle_project_notes_changed), np);
 	gtk_box_pack_start(GTK_BOX(general), scrolled(np->project_view), TRUE, TRUE, 0);
 
-	// Snapshot page: the notes of the selected snapshot, or a hint
-	np->snapshot_stack = gtk_stack_new();
-	/* "Snapshot" is the same text as the default snapshot tab title */
-	gtk_stack_add_titled(GTK_STACK(np->stack), np->snapshot_stack, "snapshot", _("Snapshot"));
-	GtkWidget *none = left_label(_("Select a snapshot tab to write its notes."));
-	gtk_widget_set_valign(none, GTK_ALIGN_START);
-	gtk_widget_set_sensitive(none, FALSE);
-	gtk_stack_add_named(GTK_STACK(np->snapshot_stack), none, "none");
+	// Measurement page: the notes of the run or snapshot of the selected tab
+	// (on the real-time tab, of the run being recorded), or why there are none
+	np->measurement_stack = gtk_stack_new();
+	/* TRANSLATORS: page of the notes panel with the notes of the selected
+	 * run or snapshot. Short */
+	gtk_stack_add_titled(GTK_STACK(np->stack), np->measurement_stack, "measurement", _("Measurement"));
+	np->none_label = left_label("");
+	gtk_label_set_line_wrap(GTK_LABEL(np->none_label), TRUE);
+	gtk_widget_set_valign(np->none_label, GTK_ALIGN_START);
+	gtk_widget_set_sensitive(np->none_label, FALSE);
+	gtk_stack_add_named(GTK_STACK(np->measurement_stack), np->none_label, "none");
 	GtkWidget *notes = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
-	np->snapshot_title = left_label("");
-	gtk_label_set_ellipsize(GTK_LABEL(np->snapshot_title), PANGO_ELLIPSIZE_END);
-	gtk_box_pack_start(GTK_BOX(notes), np->snapshot_title, FALSE, FALSE, 0);
-	np->snapshot_view = notes_view(&np->snapshot_buffer,
-		G_CALLBACK(handle_snapshot_notes_changed), np);
-	gtk_box_pack_start(GTK_BOX(notes), scrolled(np->snapshot_view), TRUE, TRUE, 0);
-	gtk_stack_add_named(GTK_STACK(np->snapshot_stack), notes, "notes");
+	np->measurement_title = left_label("");
+	gtk_label_set_ellipsize(GTK_LABEL(np->measurement_title), PANGO_ELLIPSIZE_END);
+	gtk_box_pack_start(GTK_BOX(notes), np->measurement_title, FALSE, FALSE, 0);
+	np->measurement_view = notes_view(&np->measurement_buffer,
+		G_CALLBACK(handle_measurement_notes_changed), np);
+	gtk_box_pack_start(GTK_BOX(notes), scrolled(np->measurement_view), TRUE, TRUE, 0);
+	gtk_stack_add_named(GTK_STACK(np->measurement_stack), notes, "notes");
 
 	gtk_widget_show_all(np->box);
-	gtk_stack_set_visible_child_name(GTK_STACK(np->snapshot_stack), "none");
+	notes_panel_show_measurement(np, NULL, NULL, NULL);
 	gtk_stack_set_visible_child_name(GTK_STACK(np->stack), "project");
 	notes_panel_show_project(np);
 	return np;
@@ -454,30 +459,37 @@ void notes_panel_show_project(struct notes_panel *np)
 	notes_panel_show_watch(np);
 }
 
-void notes_panel_show_snapshot(struct notes_panel *np, struct output_panel *op, const char *title)
+void notes_panel_show_measurement(struct notes_panel *np, char **target, const char *title,
+	const char *none)
 {
 	if(!np) return;
-	if(!op) {
-		np->op = NULL;
-		set_buffer(np, np->snapshot_buffer, NULL);
-		gtk_stack_set_visible_child_name(GTK_STACK(np->snapshot_stack), "none");
+	if(!target) {
+		np->target = NULL;
+		set_buffer(np, np->measurement_buffer, NULL);
+		gtk_label_set_text(GTK_LABEL(np->none_label),
+			none ? none : _("Select a run or snapshot tab to write its notes."));
+		gtk_stack_set_visible_child_name(GTK_STACK(np->measurement_stack), "none");
 		return;
 	}
-	/* TRANSLATORS: title of the snapshot notes; %s is the tab title */
+	/* TRANSLATORS: title of the notes of a run or snapshot; %s is its title,
+	 * such as "Run 2", "2.3 (DU)" or "Run 3 (in progress)" */
 	gchar *text = g_strdup_printf(_("Notes of: %s"), title ? title : _("Snapshot"));
-	gtk_label_set_text(GTK_LABEL(np->snapshot_title), text);
+	gtk_label_set_text(GTK_LABEL(np->measurement_title), text);
 	g_free(text);
-	if(np->op != op) { // another snapshot: its own notes (a rename keeps the text)
-		np->op = op;
-		set_buffer(np, np->snapshot_buffer, op->snst->notes);
-	}
-	gtk_stack_set_visible_child_name(GTK_STACK(np->snapshot_stack), "notes");
+	// Another measurement, or its notes changed elsewhere (a run that ended
+	// took them): show its own. A rename keeps the text and the cursor.
+	char *now = buffer_text(np->measurement_buffer);
+	if(np->target != target || g_strcmp0(now, *target ? *target : ""))
+		set_buffer(np, np->measurement_buffer, *target);
+	g_free(now);
+	np->target = target;
+	gtk_stack_set_visible_child_name(GTK_STACK(np->measurement_stack), "notes");
 }
 
-void notes_panel_forget(struct notes_panel *np, struct output_panel *op)
+void notes_panel_forget(struct notes_panel *np, char **target)
 {
-	if(np && np->op == op)
-		notes_panel_show_snapshot(np, NULL, NULL);
+	if(np && np->target == target)
+		notes_panel_show_measurement(np, NULL, NULL, NULL);
 }
 
 void notes_panel_attach_toggle(struct notes_panel *np, GtkWidget *check_item)

@@ -61,9 +61,12 @@ share\icons\Adwaita\symbolic\actions\document-save-symbolic.svg
 share\icons\Adwaita\symbolic\actions\edit-delete-symbolic.svg
 share\icons\Adwaita\symbolic\actions\list-add-symbolic.svg
 share\icons\Adwaita\symbolic\actions\media-eject-symbolic.svg
+share\icons\Adwaita\symbolic\actions\media-playback-pause-symbolic.svg
+share\icons\Adwaita\symbolic\actions\media-record-symbolic.svg
 share\icons\Adwaita\symbolic\actions\open-menu-symbolic.svg
 share\icons\Adwaita\symbolic\actions\value-decrease-symbolic.svg
 share\icons\Adwaita\symbolic\actions\value-increase-symbolic.svg
+share\icons\Adwaita\symbolic\devices\camera-photo-symbolic.svg
 share\icons\Adwaita\symbolic\devices\drive-harddisk-symbolic.svg
 share\icons\Adwaita\symbolic\places\folder-documents-symbolic.svg
 share\icons\Adwaita\symbolic\places\folder-download-symbolic.svg

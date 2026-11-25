@@ -382,6 +382,10 @@ struct computer *start_computer(int nominal_sr, int bph, double la, int cal, int
 	s->timestamp = 0;
 	s->notes = NULL;
 	s->saved_state = 0;
+	s->run = 0;
+	s->run_start = 0;
+	s->snap = 0;
+	s->wall_time = 0;
 	s->nominal_sr = nominal_sr;
 	s->pb = NULL;
 	s->is_old = 1;

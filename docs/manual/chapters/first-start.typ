@@ -11,8 +11,8 @@ could be opened.] with a button to the audio settings.
 Open it with #ui[Audio settings…] in the #ui[Settings] menu, or by clicking the audio button in the top bar, which shows the
 input currently in use.
 
-#shot("audio-settings.png", [The audio settings dialog. The line below the
-level meter shows the input in use.], width: 55%)
+#shot("audio-settings.png", [The audio settings dialog. The line near the
+bottom shows the input in use.], width: 55%)
 
 / Audio system: the sound system used for recording and live listening. On
   Windows these are MME, DirectSound, WASAPI and WDM-KS. On Linux, ALSA, and

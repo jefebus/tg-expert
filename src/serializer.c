@@ -644,14 +644,37 @@ static int serialize_snapshot(FILE *f, struct snapshot *s, char *name, const str
 {
 	if(serialize_union_begin(f, "realtime-snapshot")) return 1;
 	if(serialize_struct_begin(f)) return 1;
-	if(name) {
+	if(s->saved_state) {
+		/* A run is titled by its number, and the name given by the user (if
+		 * any) goes in the optional "run_name". "name" holds the whole title
+		 * ("Run 2 name"), shown by older programs and ignored when reading. */
+		char *title = s->run > 0 ? g_strdup_printf(_("Run %d"), s->run) : g_strdup(_("Run"));
+		if(name) {
+			char *t = g_strdup_printf("%s %s", title, name);
+			g_free(title);
+			title = t;
+		}
+		int failed = make_label(f, "name") || serialize_string(f, title);
+		g_free(title);
+		if(failed) return 1;
+		if(name) {
+			if(make_label(f, "run_name")) return 1;
+			if(serialize_string(f, name)) return 1;
+		}
+	} else if(name) {
 		if(make_label(f, "name")) return 1;
 		if(serialize_string(f, name)) return 1;
 	}
 	if(s->saved_state) { // optional, older versions skip it and show a snapshot
 		if(make_label(f, "role")) return 1;
-		if(serialize_string(f, "saved-state")) return 1;
+		if(serialize_string(f, "run")) return 1;
 	}
+	if(s->run > 0) // optional: the run, or the run a snapshot was taken in
+		SERIALIZE(int,run);
+	if(s->saved_state && s->run_start > 0)
+		SERIALIZE(int64_t,run_start);
+	if(!s->saved_state && s->snap > 0) // optional: the M of snapshot "N.M"
+		SERIALIZE(int,snap);
 	if(s->notes && *s->notes) { // optional, older versions skip it
 		if(!project_text_valid(s->notes, PROJECT_NOTES_MAX)) return 1;
 		if(make_label(f, "notes")) return 1;
@@ -673,6 +696,8 @@ static int serialize_snapshot(FILE *f, struct snapshot *s, char *name, const str
 	SERIALIZE(int,is_old);
 	SERIALIZE(int,rate_only);
 	SERIALIZE(uint64_t,timestamp);
+	if(s->wall_time > 0) // optional, older versions skip it
+		SERIALIZE(int64_t,wall_time);
 	SERIALIZE(int,nominal_sr);
 	SERIALIZE(int,bph);
 	SERIALIZE(double,la);
@@ -727,6 +752,7 @@ static int scan_snapshot(FILE *f, struct snapshot **s, char **name, struct trend
 	(*s)->pb = malloc(sizeof(struct processing_buffers));
 	memset((*s)->pb, 0, sizeof(struct processing_buffers));
 	*name = NULL;
+	char *run_name = NULL;	// the name a user gave a run
 	int have_notes = 0;
 	int have_role = 0;
 
@@ -739,6 +765,10 @@ static int scan_snapshot(FILE *f, struct snapshot **s, char **name, struct trend
 		if(!strcmp("name", l)) {
 			debug("serializer: scanning name\n");
 			if(scan_string(f, name, 0, NULL)) goto error;
+			continue;
+		}
+		if(!strcmp("run_name", l)) {
+			if(run_name || scan_string(f, &run_name, 0, NULL)) goto error;
 			continue;
 		}
 		if(!strcmp("notes", l)) {
@@ -754,7 +784,8 @@ static int scan_snapshot(FILE *f, struct snapshot **s, char **name, struct trend
 			if(have_role) goto error;
 			have_role = 1;
 			if(scan_text(f, &role, LABEL_SIZE)) goto error;
-			(*s)->saved_state = role && !strcmp(role, "saved-state");
+			// "saved-state": written before runs existed, it is a run too
+			(*s)->saved_state = role && (!strcmp(role, "run") || !strcmp(role, "saved-state"));
 			free(role);
 			continue;
 		}
@@ -811,6 +842,10 @@ static int scan_snapshot(FILE *f, struct snapshot **s, char **name, struct trend
 		SCAN(int,is_old);
 		SCAN(int,rate_only);
 		SCAN(uint64_t,timestamp);
+		SCAN(int64_t,wall_time);
+		SCAN(int,run);
+		SCAN(int64_t,run_start);
+		SCAN(int,snap);
 		SCAN(int,nominal_sr);
 		SCAN(int,bph);
 		SCAN(double,la);
@@ -836,6 +871,24 @@ static int scan_snapshot(FILE *f, struct snapshot **s, char **name, struct trend
 	if((*s)->pb->period <= 0 || (*s)->pb->sample_count < ceil((*s)->pb->period)) goto error;
 	debug("serializer: checking timestamp\n");
 	if(!(*s)->timestamp) goto error;
+	// A wall-clock time that cannot be real is dropped, the snapshot is kept
+	if((*s)->wall_time < 0 || (*s)->wall_time > (int64_t)253402300799) // 9999-12-31
+		(*s)->wall_time = 0;
+	if((*s)->run_start < 0 || (*s)->run_start > (int64_t)253402300799)
+		(*s)->run_start = 0;
+	if((*s)->run < 0)
+		(*s)->run = 0;
+	if((*s)->snap < 0 || (*s)->saved_state)
+		(*s)->snap = 0;
+	// A run's name is the one its user gave it, without the "Run 2" that
+	// "name" holds for older programs; runs without one have no name
+	if((*s)->saved_state) {
+		free(*name);
+		*name = run_name && *run_name ? run_name : NULL;
+		if(!*name) free(run_name);
+	} else
+		free(run_name);
+	run_name = NULL;
 	debug("serializer: checking nominal_sr\n");
 	if(!(*s)->nominal_sr) goto error;
 	debug("serializer: checking bph\n");
@@ -892,6 +945,7 @@ static int scan_snapshot(FILE *f, struct snapshot **s, char **name, struct trend
 error:
 	trend_free(*trend);
 	*trend = NULL;
+	free(run_name);
 	free(*name);
 	free((*s)->notes);
 	free((*s)->pb->waveform);

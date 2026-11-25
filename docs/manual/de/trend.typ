@@ -4,8 +4,8 @@
 Die Gangabweichung einer Uhr ändert sich, wenn sich die Zugfeder entspannt
 und wenn die Uhr zwischen Lagen wechselt. Die Seite #ui[Verlauf] zeichnet die
 Messung über Stunden auf, sodass diese Änderungen sichtbar werden.
-#shot("trend.png", [Die Seite Verlauf nach einer Messung in drei Lagen:
-Zifferblatt oben, Zifferblatt unten und Krone oben.])
+#shot("trend.png", [Die Seite Verlauf mit Statistiken und Diagrammen der
+aufgezeichneten Messwerte.])
 == Aufzeichnung
 Alle 2 Sekunden, solange das Signal gut ist, zeichnet das Programm
 Gangabweichung, Amplitude und Abfallfehler mit der gewählten Lage auf.
@@ -85,6 +85,9 @@ verbunden; ein Zusammenhang beweist keine Ursache. Der Lagenfilter zeigt alle
 Lagen als getrennte Reihen oder eine einzelne Lage. Farben und Symbole sind
 in allen Diagrammen gleich. #ui[(nicht gesetzt)] bezeichnet eine unbekannte,
 keine weitere physische Lage.
+
+#shot("correlations.png", [Die Seite Korrelationen mit ihren drei
+Streudiagrammen und dem Lagenfilter.])
 
 Der Zeitraum #ui[Zeige] und die Achsenbereiche werden unabhängig vom
 Lagenfilter mit Verlauf geteilt. Werte außerhalb dieser Bereiche erscheinen

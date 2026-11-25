@@ -13,10 +13,17 @@ tg_expert_SOURCES = src/algo.c \
 		   src/config.c \
 		   src/correlations.c \
 		   src/interface.c \
+		   src/notes_panel.c \
 		   src/output_panel.c \
+		   src/paperstrip_render.c \
+		   src/render.c \
+		   src/report.c \
+		   src/report_dialog.c \
 		   src/serializer.c \
 		   src/session.c \
 		   src/trend.c \
+		   src/trend_render.c \
+		   src/waveform_render.c \
 		   src/tg.h
 
 tg_expert_dbg_SOURCES = $(tg_expert_SOURCES)
@@ -24,6 +31,7 @@ tg_expert_prf_SOURCES = $(tg_expert_SOURCES)
 tg_expert_vlg_SOURCES = $(tg_expert_SOURCES)
 
 LIBS = $(GTK_LIBS) \
+       $(CAIRO_PDF_LIBS) \
        $(GTHREAD_LIBS) \
        $(PORTAUDIO_LIBS) \
        $(FFTW_LIBS) \
@@ -35,6 +43,7 @@ AM_CPPFLAGS = -DPROGRAM_NAME=\"Tg\ Expert\" -DVERSION=\"$(PACKAGE_VERSION)\" \
 tg_expert_dbg_CPPFLAGS = $(AM_CPPFLAGS) -DDEBUG
 
 AM_CFLAGS = $(GTK_CFLAGS) \
+	    $(CAIRO_PDF_CFLAGS) \
 	    $(GTHREAD_CFLAGS) \
 	    $(PORTAUDIO_CFLAGS) \
 	    $(FFTW_CFLAGS)
@@ -135,9 +144,76 @@ EXTRA_DIST = autogen.sh \
 .rc.o:
 	$(WINDRES) $< -O coff -o $@
 
-test: tg-expert-dbg$(EXEEXT)
-	./tg-expert-dbg$(EXEEXT) test
-.PHONY: test
+# Test programs in tests/, each with its own main(). "make test" builds them
+# and the debug build; "make test-run" also runs them all, then the built-in
+# tests of the debug build ("tg-expert-dbg test"), and fails if any fails.
+# Some include the source file they test (#include "../src/x.c"), so that
+# file is not linked again; tests/stubs.c and tests/stubs_output.c stand in
+# for the parts of interface.c and output_panel.c they do not link.
+EXTRA_PROGRAMS += tests/algorithm_settings \
+		  tests/algorithm_trim \
+		  tests/calibration_fallback \
+		  tests/correlations \
+		  tests/detection_status \
+		  tests/rate_only \
+		  tests/render_preview \
+		  tests/serializer_metadata \
+		  tests/session_file \
+		  tests/trend_be_ranges
+
+tests_algorithm_settings_SOURCES = tests/algorithm_settings.c
+tests_algorithm_trim_SOURCES = tests/algorithm_trim.c
+tests_calibration_fallback_SOURCES = tests/calibration_fallback.c tests/stubs.c \
+		  src/algo.c src/algorithm_settings.c src/audio.c
+tests_correlations_SOURCES = tests/correlations.c tests/stubs.c tests/stubs_output.c \
+		  src/algorithm_settings.c src/render.c src/trend.c
+tests_detection_status_SOURCES = tests/detection_status.c tests/stubs.c \
+		  src/algo.c src/algorithm_settings.c src/audio.c src/computer.c \
+		  src/correlations.c src/paperstrip_render.c src/render.c src/trend.c \
+		  src/trend_render.c src/waveform_render.c
+tests_rate_only_SOURCES = tests/rate_only.c tests/stubs.c \
+		  src/algo.c src/algorithm_settings.c src/audio.c src/serializer.c src/trend.c
+tests_render_preview_SOURCES = tests/render_preview.c \
+		  src/correlations.c src/paperstrip_render.c src/render.c src/report.c \
+		  src/serializer.c src/session.c src/trend.c src/trend_render.c \
+		  src/waveform_render.c
+tests_serializer_metadata_SOURCES = tests/serializer_metadata.c tests/stubs.c \
+		  src/algo.c src/algorithm_settings.c src/audio.c src/serializer.c src/trend.c
+tests_session_file_SOURCES = tests/session_file.c
+tests_trend_be_ranges_SOURCES = tests/trend_be_ranges.c tests/stubs.c \
+		  src/algorithm_settings.c src/trend.c
+
+# Run without arguments; render_preview is run apart, it writes two PDFs
+TEST_RUN = tests/algorithm_settings$(EXEEXT) \
+	   tests/algorithm_trim$(EXEEXT) \
+	   tests/calibration_fallback$(EXEEXT) \
+	   tests/correlations$(EXEEXT) \
+	   tests/detection_status$(EXEEXT) \
+	   tests/rate_only$(EXEEXT) \
+	   tests/serializer_metadata$(EXEEXT) \
+	   tests/session_file$(EXEEXT) \
+	   tests/trend_be_ranges$(EXEEXT)
+# Not "..._PROGRAMS": automake would take it for programs to install
+TEST_BUILD = $(TEST_RUN) tests/render_preview$(EXEEXT)
+MOSTLYCLEANFILES += render-preview.pdf report-preview.pdf
+
+test: $(TEST_BUILD) tg-expert-dbg$(EXEEXT)
+
+test-run: test
+	@failed=""; \
+	for t in $(TEST_RUN); do \
+		echo "== $$t"; \
+		./$$t || failed="$$failed $$t"; \
+	done; \
+	echo "== tests/render_preview$(EXEEXT) (writes render-preview.pdf and report-preview.pdf)"; \
+	./tests/render_preview$(EXEEXT) render-preview.pdf || failed="$$failed tests/render_preview$(EXEEXT)"; \
+	echo "== tg-expert-dbg test"; \
+	./tg-expert-dbg$(EXEEXT) test || failed="$$failed tg-expert-dbg"; \
+	if test -n "$$failed"; then \
+		echo "FAILED:$$failed"; exit 1; \
+	fi; \
+	echo "All tests passed"
+.PHONY: test test-run
 
 valgrind: tg-expert-vlg
 	valgrind --leak-check=full -v --num-callers=99 --suppressions=.valgrind.supp ./$^

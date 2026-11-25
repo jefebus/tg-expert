@@ -3,7 +3,14 @@
 ## Dependencies
 
 Runtime and build: GTK+ 3, GLib 2.0, PortAudio, FFTW3 (single precision,
-`fftw3f`), pthread, libm.
+`fftw3f`), pthread, libm. The PDF report also needs Cairo with its PDF
+backend (`cairo-pdf`) and PangoCairo (`pangocairo`). Both come with GTK 3 in
+every package list below; `configure` checks for them and stops if the PDF
+backend is missing.
+
+The report uses the DejaVu Sans font, like the manual, when it is
+installed, and the system's sans-serif font otherwise. The Windows installer
+does not include it.
 
 Tools: a C99 compiler, autoconf, automake, libtool, make, pkg-config, git.
 
@@ -72,7 +79,58 @@ This produces `tg-expert` (`tg-expert.exe` on Windows). Other targets:
 - `make tg-expert-dbg`: debug build.
 - `make tg-expert-prf`: profiling build.
 - `make tg-expert-vlg`, `make valgrind`: build and run under Valgrind.
-- `make test`: run the built-in tests with the debug build.
+- `make test`: build the test programs in `tests/` and the debug build.
+- `make test-run`: build and run them all, then the built-in tests of the
+  debug build (`./tg-expert-dbg test`). It names the ones that failed and
+  exits with an error if any did.
+
+## Test programs
+
+`tests/` holds small programs, each with its own `main`. `make test` builds
+them as `tests/<name>` and `make test-run` runs them from the build folder.
+They print nothing when they pass, and `line N: ...` or an assertion when a
+check fails. `tests/render_preview` writes `render-preview.pdf` and
+`report-preview.pdf` in the folder it runs in. `tests/detection_status`
+opens GTK, so it needs a desktop session. `tests/stubs.c` provides the few
+functions of `interface.c` that the analysis code calls, and
+`tests/stubs_output.c` those of `output_panel.c` that `correlations.c` calls.
+
+A single test can also be built by hand, for example:
+
+```sh
+# Project metadata, notes, "Saved state" and date of snapshots in .tgj files
+gcc -g -DPROGRAM_NAME='"Tg Expert"' -DVERSION='"test"' -o serializer_metadata \
+    tests/serializer_metadata.c tests/stubs.c \
+    src/algo.c src/algorithm_settings.c src/audio.c src/serializer.c src/trend.c \
+    $(pkg-config --cflags --libs gtk+-3.0 portaudio-2.0 fftw3f) -lm -lpthread
+./serializer_metadata
+
+# Proposed file names and safe replacement of a file
+gcc -g -DPROGRAM_NAME='"Tg Expert"' -DVERSION='"test"' -o session_file \
+    tests/session_file.c $(pkg-config --cflags --libs gtk+-3.0)
+./session_file
+
+# The graphs in the three themes and a PDF report of synthetic data:
+# writes render-preview.pdf and report-preview.pdf (add "mono" as a second
+# argument for a monochrome report)
+gcc -g -DPROGRAM_NAME='"Tg Expert"' -DVERSION='"test"' -o render_preview \
+    tests/render_preview.c src/render.c src/correlations.c \
+    src/trend.c src/trend_render.c src/waveform_render.c src/paperstrip_render.c \
+    src/report.c src/session.c src/serializer.c \
+    $(pkg-config --cflags --libs gtk+-3.0 cairo-pdf pangocairo) -lm
+./render_preview render-preview.pdf
+```
+
+Write the `-D` options as above, each in its own quotes: kept in a shell
+variable, the space in `"Tg Expert"` splits them.
+
+To find a crash, run the debug build under gdb (`pacman -S
+mingw-w64-x86_64-gdb` in MSYS2):
+
+```sh
+make tg-expert-dbg
+gdb -batch -ex run -ex bt --args ./tg-expert-dbg
+```
 - `make install`: install the program, man page, desktop and MIME files.
 - `make dist`: create the source tarball.
 

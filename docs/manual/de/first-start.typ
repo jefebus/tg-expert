@@ -8,8 +8,8 @@ Audioeinstellungen.
 == Der Dialog Audioeinstellungen
 Er wird über #ui[Audioeinstellungen…] im Menü #ui[Einstellungen] geöffnet oder über die Audio-Schaltfläche in der
 oberen Leiste, die den aktuell verwendeten Eingang anzeigt.
-#shot("audio-settings.png", [Der Dialog Audioeinstellungen. Die Zeile unter
-der Pegelanzeige zeigt den verwendeten Eingang.], width: 55%)
+#shot("audio-settings.png", [Der Dialog Audioeinstellungen. Die Zeile nahe dem
+unteren Rand zeigt den verwendeten Eingang.], width: 55%)
 / Audiosystem: das Soundsystem für Aufnahme und Live-Abhören. Unter Windows
   sind das MME, DirectSound, WASAPI und WDM-KS. Unter Linux ALSA und, falls
   es läuft, JACK. Bei einem Wechsel des Audiosystems werden dessen

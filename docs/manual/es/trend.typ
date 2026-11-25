@@ -4,8 +4,8 @@
 La marcha de un reloj cambia a medida que se desarma el muelle real y cuando
 el reloj cambia de posición. La página #ui[Tendencia] registra la medición a
 lo largo de horas, para que estos cambios se hagan visibles.
-#shot("trend.png", [La página de tendencia tras medir en tres posiciones:
-esfera arriba, esfera abajo y corona arriba.])
+#shot("trend.png", [La página Tendencia con estadísticas y gráficas de las
+lecturas registradas.])
 == Registro
 Cada 2 segundos, mientras la señal es buena, el programa registra la marcha, la
 amplitud y el error de batido, junto con la posición seleccionada. Los
@@ -87,6 +87,9 @@ demuestra causalidad. El selector muestra todas las posiciones como series
 separadas o una sola posición. Los colores y símbolos son iguales en las tres
 gráficas. #ui[(sin definir)] indica una posición desconocida, no otra posición
 física.
+
+#shot("correlations.png", [La página Correlaciones con sus tres diagramas de
+dispersión y el filtro de posición.])
 
 El selector #ui[Mostrar] y los rangos de los ejes se comparten con Tendencia,
 independientemente del filtro de posición. Los valores fuera de esos rangos

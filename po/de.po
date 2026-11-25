@@ -1927,9 +1927,6 @@ msgstr "Die Uhr der Sitzung: die in der Liste der gespeicherten Uhren gewählte.
 msgid "General notes"
 msgstr "Allgemeine Notizen"
 
-msgid "Select a snapshot tab to write its notes."
-msgstr "Wählen Sie einen Aufnahme-Reiter, um seine Notizen zu schreiben."
-
 #. TRANSLATORS: title of the snapshot notes; %s is the tab title
 #, c-format
 msgid "Notes of: %s"
@@ -1943,3 +1940,298 @@ msgstr "Projekt- und Notizbereich"
 
 msgid "Drag to change the width of the panel"
 msgstr "Ziehen, um die Breite des Bereichs zu ändern"
+
+#. TRANSLATORS: correlation graph: number of readings beyond the scales,
+#. * which are not drawn. Short, shown above the plot at the right
+#, c-format
+msgid "Off scale: %d"
+msgstr "Außerhalb der Skala: %d"
+
+#. TRANSLATORS: legend of the waveform graphs: the sound of a whole period (tic and toc). Short
+msgid "full period"
+msgstr "ganze Periode"
+
+#. TRANSLATORS: legend of the waveform graphs: the line at the detected lift pulse. Short
+msgid "lift pulse"
+msgstr "Hebungsimpuls"
+
+#. TRANSLATORS: legend of the waveform graphs: the amplitude scale in degrees at the top. Short
+msgid "amplitude scale (deg)"
+msgstr "Amplitudenskala (Grad)"
+
+#. TRANSLATORS: footer of every page of the PDF report, at the left:
+#. * program name, version, and date and time of the export
+#, c-format
+msgid "Generated with %s %s · %s"
+msgstr "Erstellt mit %s %s · %s"
+
+#. TRANSLATORS: footer of every page of the PDF report, at the right
+#, c-format
+msgid "page %d of %d"
+msgstr "Seite %d von %d"
+
+#. TRANSLATORS: title of the PDF report when the project has no name
+msgid "Timegrapher report"
+msgstr "Zeitwaagen-Bericht"
+
+#. TRANSLATORS: under the header of the PDF report
+msgid "Measurement report made with a timegrapher. It is not a certificate of conformity with any standard."
+msgstr "Messbericht, erstellt mit einer Zeitwaage. Er ist kein Konformitätszertifikat nach irgendeiner Norm."
+
+#. TRANSLATORS: heading of the notes in the PDF report
+msgid "Notes"
+msgstr "Notizen"
+
+#. TRANSLATORS: heading of the PDF report: the long-term statistics and
+#. * graphs of a recording, as on the Trend page
+msgid "Trends"
+msgstr "Verlauf"
+
+#. TRANSLATORS: PDF report: the watch position of a snapshot
+#, c-format
+msgid "Position: %s"
+msgstr "Lage: %s"
+
+#. TRANSLATORS: PDF report, under the readings of a snapshot
+msgid "The reading was not current when this was taken: there was no valid signal."
+msgstr "Der Messwert war bei der Aufnahme nicht aktuell: Es gab kein gültiges Signal."
+
+#. TRANSLATORS: PDF report, under the heading of the current state
+msgid "The real-time tab, frozen when the report was exported."
+msgstr "Der Echtzeit-Reiter, eingefroren beim Export des Berichts."
+
+#. TRANSLATORS: PDF report, under the heading of a "Saved state"
+msgid "State of the real-time tab when the session was saved."
+msgstr "Stand des Echtzeit-Reiters beim Speichern der Sitzung."
+
+msgid "Current state"
+msgstr "Aktueller Stand"
+
+msgid "Export report"
+msgstr "Bericht exportieren"
+
+#. TRANSLATORS: button of the Export report dialog
+msgid "_Export"
+msgstr "_Exportieren"
+
+#. TRANSLATORS: Export report dialog: the parts of the report
+msgid "Contents"
+msgstr "Inhalt"
+
+#. TRANSLATORS: Export report dialog: the block with the Trend page contents
+msgid "Trends: statistics, graphs and correlations"
+msgstr "Verlauf: Statistik, Diagramme und Korrelationen"
+
+#. TRANSLATORS: Export report dialog
+msgid "Current state: the real-time tab, frozen when exporting"
+msgstr "Aktueller Stand: der Echtzeit-Reiter, beim Export eingefroren"
+
+msgid "Not available: there is no valid measurement on the real-time tab, or it is calibrating."
+msgstr "Nicht verfügbar: Im Echtzeit-Reiter gibt es keine gültige Messung, oder es wird kalibriert."
+
+#. TRANSLATORS: Export report dialog: the snapshot pages
+msgid "Snapshots"
+msgstr "Aufnahmen"
+
+#. TRANSLATORS: Export report dialog: colour, owner
+msgid "Options"
+msgstr "Optionen"
+
+#. TRANSLATORS: Export report dialog: graphs in colour
+msgid "Colour"
+msgstr "Farbe"
+
+#. TRANSLATORS: Export report dialog: graphs in black and grey, for printing
+msgid "Monochrome"
+msgstr "Schwarzweiß"
+
+#. TRANSLATORS: Export report dialog; unchecked by default
+msgid "Include the owner"
+msgstr "Eigentümer aufnehmen"
+
+msgid "This build cannot write PDF files: the Cairo PDF backend is not available."
+msgstr "Diese Version kann keine PDF-Dateien schreiben: Das PDF-Backend von Cairo ist nicht verfügbar."
+
+msgid "The report could not be written. The previous file, if any, was not changed."
+msgstr "Der Bericht konnte nicht geschrieben werden. Eine vorhandene Datei wurde nicht verändert."
+
+msgid "Export report…"
+msgstr "Bericht exportieren…"
+
+msgid "Write a PDF report of the session."
+msgstr "Einen PDF-Bericht der Sitzung schreiben."
+
+#. TRANSLATORS: PDF report: when a snapshot was taken (date and local time)
+#, c-format
+msgid "Taken: %s"
+msgstr "Zeitpunkt: %s"
+
+#. TRANSLATORS: under the program name in the header of every page of the PDF report
+msgid "Timegrapher measurement report"
+msgstr "Messbericht der Zeitwaage"
+
+#. TRANSLATORS: PDF report, in the panel with the project details: when it was made
+msgid "Report date"
+msgstr "Berichtsdatum"
+
+#. TRANSLATORS: title of a run (a period of continuous recording, from
+#. * Record to Pause), with its number. Short (tab title)
+#, c-format
+msgid "Run %d"
+msgstr "Abschnitt %d"
+
+msgid "Run"
+msgstr "Abschnitt"
+
+#. TRANSLATORS: button: stop recording the current run. Short
+msgid "Pause"
+msgstr "Pause"
+
+#. TRANSLATORS: button: start recording a new run. Short
+msgid "Record"
+msgstr "Aufzeichnen"
+
+msgid ""
+"Stop recording.\n"
+"The run ends and is\n"
+"kept in its own tab."
+msgstr ""
+"Beendet die Aufzeichnung.\n"
+"Der Abschnitt endet und\n"
+"bleibt in seinem Reiter."
+
+msgid ""
+"Start recording a\n"
+"new run. Its Trend\n"
+"starts from zero."
+msgstr ""
+"Beginnt einen neuen\n"
+"Abschnitt. Sein Verlauf\n"
+"beginnt bei null."
+
+msgid "paused"
+msgstr "pausiert"
+
+#. TRANSLATORS: Trend page of the real-time tab when not recording
+msgid "Paused"
+msgstr "Pausiert"
+
+msgid "Press Record to start a new run."
+msgstr "Klicken Sie auf Aufzeichnen, um einen neuen Abschnitt zu beginnen."
+
+#. TRANSLATORS: notice when a new run starts; %s is a duration such as 3:10:00
+#, c-format
+msgid "The last run ended %s ago. The new run is a separate measurement: its Trend starts from zero."
+msgstr "Der letzte Abschnitt endete vor %s. Der neue Abschnitt ist eine eigene Messung: Sein Verlauf beginnt bei null."
+
+#. TRANSLATORS: PDF report, under the heading of a run
+msgid "End of the run: the real-time tab when it was paused, or when the session was saved."
+msgstr "Ende des Abschnitts: der Echtzeit-Reiter beim Pausieren oder beim Speichern der Sitzung."
+
+#. TRANSLATORS: PDF report: when a run started and ended (date and local time)
+#, c-format
+msgid "From %s to %s"
+msgstr "Von %s bis %s"
+
+#. TRANSLATORS: the run being recorded, in the notes panel; %s is "Run 2"
+#, c-format
+msgid "%s (in progress)"
+msgstr "%s (läuft)"
+
+msgid "Paused: no run is being recorded. Select a run or snapshot tab to write its notes, or press Record."
+msgstr "Pausiert: Es wird kein Abschnitt aufgezeichnet. Wählen Sie einen Abschnitts- oder Aufnahme-Reiter, um seine Notizen zu schreiben, oder drücken Sie Aufzeichnen."
+
+#. TRANSLATORS: page of the notes panel with the notes of the selected
+#. * run or snapshot. Short
+msgid "Measurement"
+msgstr "Messung"
+
+msgid "Select a run or snapshot tab to write its notes."
+msgstr "Wählen Sie einen Abschnitts- oder Aufnahme-Reiter, um seine Notizen zu schreiben."
+
+#. TRANSLATORS: PDF report: the time the trends of a run cover; %s is a
+#. * duration such as 1:32:10
+#, c-format
+msgid "Interval: the whole run, 0:00 to %s."
+msgstr "Zeitraum: der ganze Abschnitt, 0:00 bis %s."
+
+#. TRANSLATORS: PDF report: heading of the snapshots of older
+#. * files, which do not say in which run they were taken
+msgid "Other snapshots"
+msgstr "Weitere Aufnahmen"
+
+msgid "Snapshots of files written before runs: it is not known in which run they were taken."
+msgstr "Aufnahmen aus Dateien von vor den Abschnitten: Es ist nicht bekannt, in welchem Abschnitt sie gemacht wurden."
+
+#. TRANSLATORS: PDF report: heading of the table of the runs on the first page
+msgid "Runs"
+msgstr "Abschnitte"
+
+#. TRANSLATORS: PDF report, heads of the table of the runs. Short
+msgid "Period"
+msgstr "Zeitraum"
+
+msgid "Duration"
+msgstr "Dauer"
+
+msgid "Positions"
+msgstr "Lagen"
+
+msgid "Mean rate"
+msgstr "Mittl. Gangabw."
+
+msgid "Mean amp."
+msgstr "Mittl. Amplitude"
+
+msgid "Mean B.E."
+msgstr "Mittl. Abfallfehler"
+
+#. TRANSLATORS: PDF report, under the table of the runs, after a dot
+#. * that marks a run in the table
+msgid "The run being recorded when the report was exported."
+msgstr "Der Abschnitt, der beim Export des Berichts aufgezeichnet wurde."
+
+#. TRANSLATORS: PDF report, under the heading of the final state of the run being recorded
+msgid "The real-time tab when the report was exported; the run goes on."
+msgstr "Der Echtzeit-Reiter beim Export des Berichts; der Abschnitt läuft weiter."
+
+#. TRANSLATORS: Export report dialog: the Trend page contents of a run
+msgid "This run has no Trend readings."
+msgstr "Dieser Abschnitt enthält keine Verlaufsmesswerte."
+
+#. TRANSLATORS: Export report dialog: the real-time tab at the end of a
+#. * run. Checked by default only for runs without snapshots
+msgid "State when exporting"
+msgstr "Stand beim Export"
+
+msgid "Final state"
+msgstr "Endstand"
+
+msgid "There is no measurement with a waveform in this run."
+msgstr "Dieser Abschnitt enthält keine Messung mit Wellenform."
+
+#. TRANSLATORS: PDF report: heading of the last state of a run; %s is
+#. * "Run 2" or "Run 3 (in progress)"
+#, c-format
+msgid "%s: state when exporting"
+msgstr "%s: Stand beim Export"
+
+#, c-format
+msgid "%s: final state"
+msgstr "%s: Endstand"
+
+msgid "There are no runs in the session."
+msgstr "Die Sitzung enthält keine Abschnitte."
+
+#. TRANSLATORS: Export report dialog: snapshots of files written
+#. * before runs, which do not say in which run they were taken
+msgid "Other snapshots (older files)"
+msgstr "Weitere Aufnahmen (ältere Dateien)"
+
+#. TRANSLATORS: Export report dialog: the table of the runs on the first page
+msgid "Table of the runs on the first page"
+msgstr "Tabelle der Abschnitte auf der ersten Seite"
+
+#. TRANSLATORS: label of the name field on a run tab
+msgid "Current run:"
+msgstr "Aktueller Abschnitt:"

@@ -10,6 +10,9 @@ AC_CHECK_LIB([m], [sqrt], [], [AC_MSG_ERROR([libm not found])])
 PKG_CHECK_MODULES([GTK], [gtk+-3.0 glib-2.0])
 PKG_CHECK_MODULES([PORTAUDIO], [portaudio-2.0])
 PKG_CHECK_MODULES([FFTW], [fftw3f])
+# The PDF report (TG-16) is written with Cairo's PDF backend and PangoCairo.
+# Both come with GTK 3; checked here so that a Cairo without PDF is reported.
+PKG_CHECK_MODULES([CAIRO_PDF], [cairo-pdf pangocairo])
 
 AC_CHECK_TOOL([WINDRES], [windres])
 AC_PATH_PROG([TYPST], [typst])

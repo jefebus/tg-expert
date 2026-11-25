@@ -21,14 +21,17 @@ De izquierda a derecha:
 / Posición: la posición del reloj (esfera arriba, esfera abajo, corona
   arriba, corona abajo, corona a la izquierda, corona a la derecha, o sin
   definir).
-/ Capturar medición: conserva la medición actual en una pestaña nueva. El
-  atajo es Ctrl+Espacio.
+/ Grabar / Pausar: empieza y termina un tramo, un periodo de grabación
+  continua (véase @runs).
+/ Capturar medición: conserva la medición actual en una pestaña nueva, sin
+  detener la grabación. Solo mientras se graba. El atajo es Ctrl+Espacio.
 / Captura actual: el nombre de la pestaña de captura seleccionada, que puede
   editarse.
 La barra de menús, en la parte superior de la ventana, tiene cuatro menús:
 
 / Archivo: #ui[Nueva sesión], #ui[Abrir sesión…], #ui[Guardar], #ui[Guardar
-  como…], #ui[Exportar datos…] y #ui[Salir].
+  como…], #ui[Exportar datos…], #ui[Exportar informe…] (véase @files) y
+  #ui[Salir].
 / Ajustes: #ui[Ajustes de audio…] y #ui[Configuración del algoritmo…].
 / Herramientas: #ui[Iniciar calibración] (#ui[Detener calibración] durante la
   calibración) y #ui[Panel de proyecto y notas], que muestra u oculta ese
@@ -38,11 +41,11 @@ La barra de menús, en la parte superior de la ventana, tiene cuatro menús:
 
 Atajos de teclado, indicados junto a las entradas del menú: Ctrl+N nueva
 sesión, Ctrl+O abrir sesión, Ctrl+S guardar, Ctrl+Mayús+S guardar como,
-Ctrl+E exportar datos, Ctrl+Q salir, F1 manual de usuario y Ctrl+Espacio para
+Ctrl+E exportar datos, Ctrl+P exportar informe, Ctrl+Q salir, F1 manual de usuario y Ctrl+Espacio para
 hacer una captura. Un atajo solo funciona cuando su entrada está disponible
 (por ejemplo, no durante la calibración).
 
-== Panel de proyecto y notas
+== Panel de proyecto y notas <notes-panel>
 Flota sobre la parte derecha de las pestañas y solo las tapa en parte, para
 que la mayor parte de las gráficas siga a la vista mientras escribe. Al
 principio está oculto: #ui[Panel de proyecto y notas] en el menú
@@ -56,9 +59,18 @@ recuerda si estaba visible y su anchura. Tiene dos páginas:
   válida se muestra en rojo y no se guarda hasta que sea válida), en el grupo
   plegable #ui[Identificación]; el reloj de la sesión, que es el elegido en la
   lista de relojes guardados y no se edita aquí; y las #ui[Notas generales].
-/ Captura: las notas de la captura de la pestaña seleccionada, con su título.
-  Cada captura tiene sus propias notas, vacías al principio. En la pestaña de
-  tiempo real no hay captura, y la página lo indica.
+/ Medición: las notas del tramo o de la captura de la pestaña seleccionada,
+  con su título (#ui[Notas de: Tramo 2], #ui[Notas de: 2.3 (DU)]). Cada tramo
+  y cada captura tiene sus propias notas, vacías al principio. En la pestaña
+  de tiempo real, mientras se graba, son las notas del tramo en curso
+  (#ui[Notas de: Tramo 3 (en curso)]); pasan con el tramo a su pestaña al
+  pulsar #ui[Pausar]. En pausa no se graba ningún tramo, y la página lo indica.
+
+#shot("notes_project.png", [La página Proyecto, con los datos de identificación
+y las notas generales.], width: 60%)
+
+#shot("notes_measurement.png", [La página Medición, con las notas de una
+captura.], width: 65%)
 
 Lo que escribe cambia la sesión al momento (no hay botón Aplicar) y se guarda
 con ella. Las notas son texto sin formato, de hasta 64 KiB cada una.
@@ -109,7 +121,7 @@ Las demás líneas, tal como figuran en la leyenda de la parte inferior:
   medida, suavizada durante unos 10 segundos. Cuando los puntos corren
   paralelos a ellas, la marcha es constante.
 #shot("paper-strip.png", [El diagrama de marcha con sus controles. El tic y el
-toc forman dos líneas próximas, y la amplitud baja de unos 300° a 250°.],
+toc forman dos líneas próximas, junto al historial de amplitud.],
 width: 45%)
 Los botones situados bajo el diagrama:
 / < y >: desplazan el diagrama una división de la cuadrícula.

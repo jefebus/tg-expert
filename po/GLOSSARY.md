@@ -14,6 +14,8 @@ Keep them consistent.
 | Position | Posición | Lage |
 | Snapshot | Captura | Aufnahme |
 | Trend | Tendencia | Verlauf |
+| Run (Record to Pause) | Tramo | Abschnitt |
+| Record / Pause | Grabar / Pausar | Aufzeichnen / Pause |
 | Calibration | Calibración | Kalibrierung |
 
 ## Kept in English in every language

@@ -49,8 +49,9 @@ char *session_sanitize_filename_part(const char *text)
 		if((guchar)*p < 0x20 || (guchar)*p == 0x7f || strchr("\\/:*?\"<>|", *p))
 			*p = '_';
 	size_t length = strlen(s);
-	while(length && (s[length - 1] == ' ' || s[length - 1] == '.'))
-		s[--length] = '_';
+	// Trailing dots and spaces become '_' (the length stays: "..." is "___")
+	for(size_t i = length; i > 0 && (s[i - 1] == ' ' || s[i - 1] == '.'); i--)
+		s[i - 1] = '_';
 	if(!length || !g_utf8_validate(s, -1, NULL)) {
 		g_free(s);
 		return NULL;
@@ -58,15 +59,21 @@ char *session_sanitize_filename_part(const char *text)
 	return s;
 }
 
-/* "YYYY-MM-DD name.tgj", or "YYYY-MM-DD.tgj" without a usable name.
- * date is "YYYY-MM-DD" (today, local time). Free with g_free(). */
-char *session_suggest_filename(const char *date, const char *name)
+/* "YYYY-MM-DD name<ext>", or "YYYY-MM-DD<ext>" without a usable name.
+ * date is "YYYY-MM-DD" (today, local time), ext e.g. ".pdf". Free with g_free(). */
+char *session_suggest_filename_ext(const char *date, const char *name, const char *ext)
 {
 	char *safe = session_sanitize_filename_part(name);
-	char *s = safe ? g_strdup_printf("%s %s.tgj", date, safe) :
-		g_strdup_printf("%s.tgj", date);
+	char *s = safe ? g_strdup_printf("%s %s%s", date, safe, ext) :
+		g_strdup_printf("%s%s", date, ext);
 	g_free(safe);
 	return s;
+}
+
+/* The same for a session file (.tgj) */
+char *session_suggest_filename(const char *date, const char *name)
+{
+	return session_suggest_filename_ext(date, name, ".tgj");
 }
 
 static int flush_to_disk(FILE *f)

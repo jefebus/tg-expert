@@ -58,7 +58,7 @@ With default algorithm settings, calibration takes about 15 minutes (900 ticks).
 Other algorithm settings can change the duration. Repeat it once to confirm
 the result. Two runs should agree within a few tenths of a second per day.
 
-#shot("calibration.png", [Calibration in progress, at 5 %. The paperstrip
+#shot("calibration.png", [Calibration waiting for a steady signal. The paperstrip
 shows the reference ticks, and the right side shows the instructions.])
 
 == How long it lasts

@@ -87,6 +87,7 @@ static void show_position(struct main_window *w, int pos);
 static int session_watch_change_allowed(struct main_window *w, const char *name);
 static int session_confirm_discard(struct main_window *w);
 static void notes_refresh_snapshot(struct main_window *w);
+static gchar *run_title(int run);
 
 static void handle_bph_change(GtkComboBox *b, struct main_window *w)
 {
@@ -448,6 +449,9 @@ static void on_shutdown(GApplication *app, void *p)
 		if(w->computer)
 			computer_destroy(w->computer);
 		op_destroy(w->active_panel);
+		if(w->last_live)
+			snapshot_destroy(w->last_live);
+		free(w->run_notes);
 		project_metadata_free(&w->project);
 		g_free(w->session_path);
 		notes_panel_free(w->notes);
@@ -731,12 +735,16 @@ static void update_sensitivity(struct main_window *w)
 	// Other menu entries are locked while calibrating (Quit stays available)
 	gtk_widget_set_sensitive(w->new_session_item, !calibration_locked);
 	gtk_widget_set_sensitive(w->open_item, !calibration_locked);
+	if(w->record_button)
+		gtk_widget_set_sensitive(w->record_button, !calibration_locked);
 	gtk_widget_set_sensitive(w->algorithm_item, !calibration_locked && !w->restart_audio && !w->restart_algorithm);
 	gtk_widget_set_sensitive(w->save_item, !calibration_locked);
 	gtk_widget_set_sensitive(w->save_as_item, !calibration_locked);
 	if(w->export_item)
 		gtk_widget_set_sensitive(w->export_item,
 			menu_item_wanted(w->export_item) && !calibration_locked);
+	if(w->report_item)
+		gtk_widget_set_sensitive(w->report_item, !calibration_locked);
 }
 
 static void handle_calibrate(GtkMenuItem *b, struct main_window *w)
@@ -888,9 +896,11 @@ static void controls_active(struct main_window *w, int active)
 	update_sensitivity(w);
 	if(active) {
 		gtk_widget_show(w->snapshot_button);
+		if(w->record_button) gtk_widget_show(w->record_button);
 		gtk_widget_hide(w->snapshot_name);
 	} else {
 		gtk_widget_hide(w->snapshot_button);
+		if(w->record_button) gtk_widget_hide(w->record_button);
 		gtk_widget_show(w->snapshot_name);
 	}
 }
@@ -910,8 +920,22 @@ static void notes_refresh_snapshot(struct main_window *w)
 	int p = gtk_notebook_get_current_page(GTK_NOTEBOOK(w->notebook));
 	GtkWidget *panel = p >= 0 ? gtk_notebook_get_nth_page(GTK_NOTEBOOK(w->notebook), p) : NULL;
 	struct output_panel *op = panel ? g_object_get_data(G_OBJECT(panel), "op-pointer") : NULL;
-	GtkLabel *label = op ? g_object_get_data(G_OBJECT(panel), "tab-label") : NULL;
-	notes_panel_show_snapshot(w->notes, op, label ? gtk_label_get_text(label) : NULL);
+	if(op) {
+		GtkLabel *label = g_object_get_data(G_OBJECT(panel), "tab-label");
+		notes_panel_show_measurement(w->notes, &op->snst->notes,
+			label ? gtk_label_get_text(label) : NULL, NULL);
+	} else if(w->recording) {
+		// The real-time tab: the notes of the run being recorded, which go
+		// with it to its tab on Pause and into the file on Save
+		gchar *run = run_title(w->run_number);
+		/* TRANSLATORS: the run being recorded, in the notes panel; %s is "Run 2" */
+		gchar *title = g_strdup_printf(_("%s (in progress)"), run);
+		notes_panel_show_measurement(w->notes, &w->run_notes, title, NULL);
+		g_free(title);
+		g_free(run);
+	} else
+		notes_panel_show_measurement(w->notes, NULL, NULL,
+			_("Paused: no run is being recorded. Select a run or snapshot tab to write its notes, or press Record."));
 }
 
 static void handle_tab_changed(GtkNotebook *nbk, GtkWidget *panel, guint x, struct main_window *w)
@@ -924,11 +948,15 @@ static void handle_tab_changed(GtkNotebook *nbk, GtkWidget *panel, guint x, stru
 
 	controls_active(w, !op);
 
-	// Measurements loaded from a session file keep their position; any snapshot
-	// can be renamed, except the saved state, whose title comes from its role
+	// Measurements loaded from a session file, and closed runs, keep their
+	// position; any run or snapshot can be named (after its number)
 	int from_file = op && GPOINTER_TO_INT(g_object_get_data(G_OBJECT(panel), "from-file"));
-	gtk_widget_set_sensitive(w->snapshot_name_entry, !op || !op->snst->saved_state);
 	gtk_widget_set_sensitive(w->snapshot_position_combo, !from_file);
+	GtkWidget *name_label = g_object_get_data(G_OBJECT(w->snapshot_name_entry), "name-label");
+	if(name_label && op)
+		gtk_label_set_text(GTK_LABEL(name_label), op->snst->saved_state ?
+			/* TRANSLATORS: label of the name field on a run tab */
+			_("Current run:") : _("Current snapshot:"));
 
 	int bph, cal;
 	double la;
@@ -972,7 +1000,7 @@ static void handle_tab_closed(GtkNotebook *nbk, GtkWidget *panel, guint x, struc
 	struct output_panel *op = g_object_get_data(G_OBJECT(panel), "op-pointer");
 	if(op) {
 		if(!w->zombie) // when closing, the panel is being destroyed too
-			notes_panel_forget(w->notes, op);
+			notes_panel_forget(w->notes, &op->snst->notes);
 		op_destroy(op);
 	}
 	free(g_object_get_data(G_OBJECT(panel), "tab-name"));
@@ -1024,27 +1052,57 @@ const char *watch_position_label(int pos)
 	return _(position_labels[pos]);
 }
 
-/* Tab title: "<name or Snapshot>" plus " (<position>)" when a position is set */
+/* "Run 2", or "Run" when the number is not known. Free with g_free(). */
+static gchar *run_title(int run)
+{
+	/* TRANSLATORS: title of a run (a period of continuous recording, from
+	 * Record to Pause), with its number. Short (tab title) */
+	return run > 0 ? g_strdup_printf(_("Run %d"), run) : g_strdup(_("Run"));
+}
+
+/* Title of a run or snapshot, as its tab shows it: "Run 2" for a run, "2.3"
+ * or "2.3 <name>" for the third snapshot of run 2, plus " (<position>)" when
+ * a position is set. Snapshots of older files, without numbers, keep their
+ * name ("Snapshot" if none). Free with g_free(). */
+gchar *measurement_title(const struct snapshot *s, const char *name)
+{
+	gchar *base;
+	if(s->saved_state) {
+		// A run is titled by its number, then the name given to it
+		base = run_title(s->run);
+		if(name) {
+			gchar *t = g_strdup_printf("%s %s", base, name);
+			g_free(base);
+			base = t;
+		}
+	} else if(s->run > 0 && s->snap > 0)
+		base = name ? g_strdup_printf("%d.%d %s", s->run, s->snap, name)
+			: g_strdup_printf("%d.%d", s->run, s->snap);
+	else
+		/* TRANSLATORS: default title of a snapshot tab, short (tab title) */
+		base = g_strdup(name ? name : _("Snapshot"));
+	int pos = s->position;
+	if(pos > POS_NONE && pos < POS_COUNT) {
+		gchar *text = g_strdup_printf("%s (%s)", base, position_codes[pos]);
+		g_free(base);
+		return text;
+	}
+	return base;
+}
+
 static void update_tab_label(GtkWidget *panel)
 {
 	GtkLabel *label = g_object_get_data(G_OBJECT(panel), "tab-label");
 	struct output_panel *op = g_object_get_data(G_OBJECT(panel), "op-pointer");
 	if(!label || !op) return;
 
-	const char *name = g_object_get_data(G_OBJECT(panel), "tab-name");
-	/* TRANSLATORS: title of the tab with what the real-time tab showed when the
-	 * session was saved. Short (tab title) */
-	if(op->snst->saved_state) name = _("Saved state");
-	/* TRANSLATORS: default title of a snapshot tab, short (tab title) */
-	if(!name) name = _("Snapshot");
-	int pos = op->snst->position;
-
-	if(pos > POS_NONE && pos < POS_COUNT) {
-		gchar *text = g_strdup_printf("%s (%s)", name, position_codes[pos]);
-		gtk_label_set_text(label, text);
-		g_free(text);
-	} else
-		gtk_label_set_text(label, name);
+	gchar *text = measurement_title(op->snst, g_object_get_data(G_OBJECT(panel), "tab-name"));
+	gtk_label_set_text(label, text);
+	g_free(text);
+	// A snapshot says which run it was taken in
+	gchar *tip = !op->snst->saved_state && op->snst->run > 0 ? run_title(op->snst->run) : NULL;
+	gtk_widget_set_tooltip_text(GTK_WIDGET(label), tip);
+	g_free(tip);
 }
 
 static void handle_name_change(GtkEntry *e, struct main_window *w)
@@ -1054,7 +1112,6 @@ static void handle_name_change(GtkEntry *e, struct main_window *w)
 	if(!g_object_get_data(G_OBJECT(panel), "op-pointer")) return; // real-time tab
 	if(w->session_updating) return; // the entry is only showing the name
 	struct output_panel *op = g_object_get_data(G_OBJECT(panel), "op-pointer");
-	if(op->snst->saved_state) return; // titled by its role, not by a name
 	char *old = g_object_get_data(G_OBJECT(panel), "tab-name");
 	char *name = (char *)gtk_entry_get_text(e);
 	name = blank_string(name) ? NULL : strdup(name);
@@ -1186,10 +1243,19 @@ static GtkWidget *make_tab_label(char *name, struct output_panel *panel_to_close
 
 	/* TRANSLATORS: tab titles, short. "Real time" is the live measurement tab, "Snapshot" a kept measurement */
 	const char *nm = panel_to_close ? name ? name : _("Snapshot") : _("Real time");
+	GtkWidget *icon = NULL;
+	if(panel_to_close) {
+		// A camera on snapshot tabs, so that they stand apart from runs
+		// (update_tab_label() hides it on runs)
+		icon = gtk_image_new_from_icon_name("camera-photo-symbolic", GTK_ICON_SIZE_MENU);
+		gtk_widget_set_margin_start(icon, 4);
+		gtk_box_pack_start(GTK_BOX(hbox), icon, FALSE, FALSE, 0);
+	}
 	GtkWidget *label = gtk_label_new(nm);
 	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 5);
 
 	if(panel_to_close) {
+		g_object_set_data(G_OBJECT(panel_to_close->panel), "tab-icon", icon);
 #ifdef WIN_XP
 		GtkWidget *image = image_from_file("window-close.png");
 #else
@@ -1208,6 +1274,8 @@ static GtkWidget *make_tab_label(char *name, struct output_panel *panel_to_close
 	}
 
 	gtk_widget_show_all(hbox);
+	if(icon && panel_to_close->snst->saved_state)
+		gtk_widget_hide(icon);	// runs have no camera
 
 	return hbox;
 }
@@ -1240,22 +1308,92 @@ static struct output_panel *add_new_tab(struct snapshot *s, char *name, struct m
 	gtk_notebook_set_show_tabs(GTK_NOTEBOOK(w->notebook), TRUE);
 	gtk_notebook_set_show_border(GTK_NOTEBOOK(w->notebook), TRUE);
 	gtk_notebook_append_page(GTK_NOTEBOOK(w->notebook), op->panel, label);
-	gtk_notebook_set_tab_reorderable(GTK_NOTEBOOK(w->notebook), op->panel, TRUE);
+	// The order is kept by tabs_reorder(): not by dragging
+	gtk_notebook_set_tab_reorderable(GTK_NOTEBOOK(w->notebook), op->panel, FALSE);
 	return op;
+}
+
+/* Order of the tabs after the real-time tab: the newest run first, each
+ * run followed by its snapshots, newest first. The snapshots of the run
+ * being recorded have the highest number, so they come first. Older files
+ * without run numbers: at the end, in their order. */
+struct tab_order {
+	GtkWidget *tab;
+	const struct snapshot *s;
+	int index;
+};
+
+static int tab_order_compare(const void *pa, const void *pb)
+{
+	const struct tab_order *a = pa, *b = pb;
+	int ra = a->s->run > 0 ? a->s->run : -1, rb = b->s->run > 0 ? b->s->run : -1;
+	if(ra != rb) return ra > rb ? -1 : 1;
+	if(ra > 0 && a->s->saved_state != b->s->saved_state)
+		return a->s->saved_state ? -1 : 1;	// the run before its snapshots
+	if(ra > 0 && a->s->snap != b->s->snap && a->s->snap > 0 && b->s->snap > 0)
+		return a->s->snap > b->s->snap ? -1 : 1;
+	if(ra > 0 && a->s->wall_time != b->s->wall_time && a->s->wall_time && b->s->wall_time)
+		return a->s->wall_time > b->s->wall_time ? -1 : 1;
+	return a->index - b->index;	// otherwise as they were
+}
+
+static void tabs_reorder(struct main_window *w)
+{
+	int pages = gtk_notebook_get_n_pages(GTK_NOTEBOOK(w->notebook));
+	struct tab_order *t = g_new0(struct tab_order, pages + 1);
+	int n = 0;
+	for(int i = 0; i < pages; i++) {
+		GtkWidget *tab = gtk_notebook_get_nth_page(GTK_NOTEBOOK(w->notebook), i);
+		struct output_panel *op = g_object_get_data(G_OBJECT(tab), "op-pointer");
+		if(!op) continue;	// the real-time tab stays the first one
+		t[n].tab = tab;
+		t[n].s = op->snst;
+		t[n].index = i;
+		n++;
+	}
+	qsort(t, n, sizeof(*t), tab_order_compare);
+	gtk_notebook_reorder_child(GTK_NOTEBOOK(w->notebook), w->active_panel->panel, 0);
+	for(int i = 0; i < n; i++)
+		gtk_notebook_reorder_child(GTK_NOTEBOOK(w->notebook), t[i].tab, i + 1);
+	g_free(t);
+}
+
+/* The number of the next snapshot of a run: one after the highest taken in
+ * it. Closing a snapshot does not renumber the others. */
+static int next_snap_number(struct main_window *w, int run)
+{
+	int max = 0, pages = gtk_notebook_get_n_pages(GTK_NOTEBOOK(w->notebook));
+	for(int i = 0; i < pages; i++) {
+		GtkWidget *tab = gtk_notebook_get_nth_page(GTK_NOTEBOOK(w->notebook), i);
+		struct output_panel *op = g_object_get_data(G_OBJECT(tab), "op-pointer");
+		if(op && !op->snst->saved_state && op->snst->run == run && op->snst->snap > max)
+			max = op->snst->snap;
+	}
+	if(run == w->run_number && w->run_last_snap > max)
+		max = w->run_last_snap;	// also the closed ones
+	w->run_last_snap = max + 1;
+	return max + 1;
 }
 
 static void handle_snapshot(GtkButton *b, struct main_window *w)
 {
 	UNUSED(b);
-	if(w->active_snapshot->calibrate) return;
+	if(w->active_snapshot->calibrate || !w->recording) return;
 	struct snapshot *s = snapshot_clone(w->active_snapshot);
 	s->timestamp = get_timestamp(s->is_light);
+	s->wall_time = g_get_real_time() / G_USEC_PER_SEC; // when it was taken
 	s->audio_status = w->active_panel->audio_status;
 	s->position = w->live_position; // can still be changed on the snapshot tab
-	// Name the snapshot after the selected watch, if any ("Snapshot" otherwise)
-	struct output_panel *op = add_new_tab(s, (char *)selected_watch(w), w);
-	// The snapshot keeps the long-term statistics as they are now
-	op->trend = trend_clone(w->active_panel->trend);
+	s->run = w->run_number;
+	s->snap = next_snap_number(w, s->run);
+	// Titled by its numbers ("2.3"); the user may add a name
+	struct output_panel *op = add_new_tab(s, NULL, w);
+	// A snapshot is the moment: waveforms and paper strip. The recording goes
+	// on, so its Trend belongs to the run, not to the snapshot.
+	op->trend = NULL;
+	op_update_trend_pages(op);
+	update_tab_label(op->panel);
+	tabs_reorder(w);
 	update_export_item(w);
 	session_mark_changed(w);
 }
@@ -1431,7 +1569,7 @@ static FILE *choose_file_for_save_with_options(struct main_window *w, const char
 }
 
 /* A save dialog that returns the chosen path (UTF-8) instead of opening it */
-static char *choose_path_for_save(struct main_window *w, const char *title,
+char *choose_path_for_save(struct main_window *w, const char *title,
 	const char *suggestion, const char *extension)
 {
 	GtkWidget *dialog = gtk_file_chooser_dialog_new(title,
@@ -1461,15 +1599,15 @@ static char *choose_path_for_save(struct main_window *w, const char *title,
 
 /* ---- The session ----
  *
- * One document: the project metadata (with the watch label), the snapshot
- * tabs and, when saved, what the real-time tab shows ("Saved state").
- * Save writes all of it, whichever tab is shown. Opening a session replaces
- * the current one and lets it go on: new snapshots are added, while the
- * measurements loaded from the file (tab data "from-file") are kept as they
- * are. Each save writes one new "Saved state" with the current real-time
- * data; the ones loaded from the file stay, so an interrupted recording
- * keeps what was saved before. Nothing here changes the saved watches, the
- * calibration or any other setting of the configuration file. */
+ * One document: the project metadata (with the watch label), the runs and
+ * the snapshots (TG-34). A run is a period of continuous recording, from
+ * Record to Pause; Pause turns it into a tab, and Save writes the one in
+ * progress as well (with the same number each time). Snapshots keep the
+ * moment and do not stop the recording. The program and New session start
+ * recording; an opened session is paused, and Record starts its next run:
+ * runs are never joined. Loaded measurements and closed runs (tab data
+ * "from-file") are kept as they are. Nothing here changes the saved
+ * watches, the calibration or any other setting of the configuration file. */
 
 static int session_snapshot_count(struct main_window *w)
 {
@@ -1568,21 +1706,182 @@ static void session_message(struct main_window *w, GtkMessageType type,
 	gtk_widget_destroy(d);
 }
 
-/* What the real-time tab shows, as the "Saved state" entry, or NULL when
- * there is nothing to keep (no waveform yet, or calibrating) */
-static struct snapshot *session_live_state(struct main_window *w)
+/* The current run as a run entry: the real-time tab as it is now, or as it
+ * last was with a waveform. NULL when there is nothing to keep (not
+ * recording, or no waveform during the whole run). */
+struct snapshot *session_current_run(struct main_window *w)
 {
+	if(!w->recording) return NULL;
 	struct snapshot *a = w->active_snapshot;
-	if(!a || a->calibrate || !a->pb) return NULL;
-	struct snapshot *s = snapshot_clone(a);
+	int now_ok = a && a->pb && !a->calibrate && !a->is_old;
+	struct snapshot *base = now_ok ? a : w->last_live;
+	if(!base && a && a->pb && !a->calibrate)
+		base = a;	// a stale reading, still better than nothing
+	if(!base) return NULL;
+	struct snapshot *s = snapshot_clone(base);
 	if(!s->timestamp)
 		s->timestamp = get_timestamp(s->is_light);
+	s->wall_time = g_get_real_time() / G_USEC_PER_SEC; // when the run ends (or is saved)
 	s->audio_status = w->active_panel->audio_status;
 	s->position = w->live_position;
 	s->saved_state = 1;
+	s->run = w->run_number;
+	s->run_start = w->run_start;
 	free(s->notes);
-	s->notes = NULL;
+	s->notes = w->run_notes ? strdup(w->run_notes) : NULL;	// the run's notes
 	return s;
+}
+
+/* The tab of a run or snapshot whose measurement is kept as it is: its
+ * position cannot change and it cannot be closed */
+static void tab_keep(struct output_panel *op)
+{
+	g_object_set_data(G_OBJECT(op->panel), "from-file", GINT_TO_POINTER(1));
+	GtkWidget *close = g_object_get_data(G_OBJECT(op->panel), "tab-close");
+	if(close)
+		gtk_widget_hide(close);
+}
+
+/* The number of the next run: one after the highest in the session */
+static int next_run_number(struct main_window *w)
+{
+	int max = 0, pages = gtk_notebook_get_n_pages(GTK_NOTEBOOK(w->notebook));
+	for(int i = 0; i < pages; i++) {
+		GtkWidget *tab = gtk_notebook_get_nth_page(GTK_NOTEBOOK(w->notebook), i);
+		struct output_panel *op = g_object_get_data(G_OBJECT(tab), "op-pointer");
+		if(op && op->snst->saved_state && op->snst->run > max)
+			max = op->snst->run;
+	}
+	return max + 1;
+}
+
+/* When the last closed run ended, 0 if unknown */
+static int64_t last_run_end(struct main_window *w)
+{
+	int64_t end = 0;
+	int pages = gtk_notebook_get_n_pages(GTK_NOTEBOOK(w->notebook));
+	for(int i = 0; i < pages; i++) {
+		GtkWidget *tab = gtk_notebook_get_nth_page(GTK_NOTEBOOK(w->notebook), i);
+		struct output_panel *op = g_object_get_data(G_OBJECT(tab), "op-pointer");
+		if(op && op->snst->saved_state && op->snst->wall_time > end)
+			end = op->snst->wall_time;
+	}
+	return end;
+}
+
+/* The Record / Pause button and the title of the real-time tab */
+static void record_update(struct main_window *w)
+{
+	if(w->record_button) {
+		gtk_button_set_label(GTK_BUTTON(w->record_button),
+			/* TRANSLATORS: button: stop recording the current run. Short */
+			w->recording ? _("Pause") :
+			/* TRANSLATORS: button: start recording a new run. Short */
+			_("Record"));
+		GtkWidget *image = gtk_image_new_from_icon_name(w->recording ?
+			"media-playback-pause-symbolic" : "media-record-symbolic", GTK_ICON_SIZE_BUTTON);
+		gtk_button_set_image(GTK_BUTTON(w->record_button), image);
+		gtk_button_set_always_show_image(GTK_BUTTON(w->record_button), TRUE);
+		gtk_widget_set_tooltip_text(w->record_button, w->recording ?
+			_("Stop recording.\n"
+			"The run ends and is\n"
+			"kept in its own tab.") :
+			_("Start recording a\n"
+			"new run. Its Trend\n"
+			"starts from zero."));
+	}
+	if(w->live_tab_label) {
+		/* TRANSLATORS: title of the real-time tab: "Real time ● Run 2" while
+		 * recording, "Real time ❚❚ paused" while not */
+		gchar *run = run_title(w->run_number);
+		gchar *text = w->recording ?
+			g_strdup_printf("%s \xE2\x97\x8F %s", _("Real time"), run) :
+			g_strdup_printf("%s \xE2\x9D\x9A\xE2\x9D\x9A %s", _("Real time"), _("paused"));
+		gtk_label_set_text(GTK_LABEL(w->live_tab_label), text);
+		g_free(text);
+		g_free(run);
+	}
+	w->active_panel->paused = !w->recording;
+	gtk_widget_queue_draw(w->active_panel->trend_drawing_area);
+	correlations_queue_draw(w->active_panel);
+}
+
+/* Start recording a new run: its Trend starts from zero */
+static void run_start_new(struct main_window *w, int number)
+{
+	w->recording = 1;
+	w->run_number = number;
+	w->run_start = g_get_real_time() / G_USEC_PER_SEC;
+	w->run_last_snap = 0;
+	// w->run_notes is kept: empty after a Pause that closed a run, or the
+	// notes written in a run that had nothing to keep, which are not lost
+	if(w->last_live) {
+		snapshot_destroy(w->last_live);
+		w->last_live = NULL;
+	}
+	w->last_live_us = 0;
+	trend_reset(w->active_panel->trend);
+	trend_start_settling(w->active_panel->trend, w->settling_seconds);
+	op_update_settling_status(w->active_panel);
+	record_update(w);
+	update_export_item(w);
+	notes_refresh_snapshot(w);
+}
+
+/* Pause: the current run ends and goes to its own tab, kept as it is. A
+ * run without any waveform has nothing to keep and leaves no tab. */
+static void run_close(struct main_window *w)
+{
+	struct snapshot *s = session_current_run(w);
+	if(s) {
+		struct output_panel *op = add_new_tab(s, NULL, w);
+		op->trend = trend_clone(w->active_panel->trend);
+		op_update_trend_pages(op);
+		tab_keep(op);
+		update_tab_label(op->panel);
+		tabs_reorder(w);
+		session_mark_changed(w);
+		// Its notes went with it to its tab
+		free(w->run_notes);
+		w->run_notes = NULL;
+	}
+	w->recording = 0;
+	if(w->last_live) {
+		snapshot_destroy(w->last_live);
+		w->last_live = NULL;
+	}
+	trend_reset(w->active_panel->trend);
+	op_update_settling_status(w->active_panel);
+	record_update(w);
+	update_export_item(w);
+	gtk_widget_set_sensitive(w->snapshot_button, FALSE);
+	notes_refresh_snapshot(w);
+}
+
+static void handle_record(GtkButton *b, struct main_window *w)
+{
+	UNUSED(b);
+	if(w->calibrate || w->calibration_stop_pending) return;
+	if(w->recording) {
+		run_close(w);
+		return;
+	}
+	// A new run; after a long break, say how long it was: the runs are
+	// separate measurements and are not joined
+	int64_t end = last_run_end(w);
+	run_start_new(w, next_run_number(w));
+	int64_t gap = w->run_start - end;
+	if(end > 0 && gap > 600 && w->session_bar) {
+		char d[32];
+		format_duration(d, sizeof(d), (double)gap);
+		/* TRANSLATORS: notice when a new run starts; %s is a duration such as 3:10:00 */
+		gchar *text = g_strdup_printf(_("The last run ended %s ago. The new run is a separate measurement: its Trend starts from zero."), d);
+		gtk_info_bar_set_message_type(GTK_INFO_BAR(w->session_bar), GTK_MESSAGE_INFO);
+		gtk_label_set_text(GTK_LABEL(w->session_bar_label), text);
+		gtk_widget_set_visible(w->session_bar_use, FALSE);
+		gtk_widget_show(w->session_bar);
+		g_free(text);
+	}
 }
 
 struct session_contents {
@@ -1610,19 +1909,21 @@ static int session_write(struct main_window *w, const char *path)
 	for(int i = 0; i < pages; i++) {
 		GtkWidget *tab = gtk_notebook_get_nth_page(GTK_NOTEBOOK(w->notebook), i);
 		struct output_panel *op = g_object_get_data(G_OBJECT(tab), "op-pointer");
-		if(!op) continue; // the real-time tab, written last as "Saved state"
+		if(!op) continue; // the real-time tab: the current run, written last
 		s[n] = op->snst;
 		trends[n] = op->trend;
-		names[n++] = g_object_get_data(G_OBJECT(tab), "tab-name");
+		names[n] = g_object_get_data(G_OBJECT(tab), "tab-name");
+		n++;
 	}
-	// The data is copied here, in the GUI thread, so it is coherent even
-	// while the measurement goes on
-	struct snapshot *live = session_live_state(w);
+	// The run in progress, copied here in the GUI thread so that it is
+	// coherent while the measurement goes on. Saving again writes it again
+	// with the same number: it is not duplicated.
+	struct snapshot *live = session_current_run(w);
 	if(live) {
 		s[n] = live;
 		trends[n] = w->active_panel->trend;
-		// Older programs show this name, newer ones the role
-		names[n++] = (char *)_("Saved state");
+		// It has no name yet: the file gets its title ("Run 3") for older programs
+		names[n++] = NULL;
 	}
 	struct session_contents c = {s, names, trends, n, &w->project};
 	int failed = session_write_file_safely(path, session_writer, &c);
@@ -1795,7 +2096,14 @@ static void session_clear(struct main_window *w)
 	notes_panel_show_project(w->notes);
 	g_free(w->session_path);
 	w->session_path = NULL;
-	// The live readings so far belong to the previous session
+	// The live readings and notes so far belong to the previous session
+	free(w->run_notes);
+	w->run_notes = NULL;
+	w->run_last_snap = 0;
+	if(w->last_live) {
+		snapshot_destroy(w->last_live);
+		w->last_live = NULL;
+	}
 	trend_reset(w->active_panel->trend);
 	trend_start_settling(w->active_panel->trend, w->settling_seconds);
 	op_update_settling_status(w->active_panel);
@@ -1804,11 +2112,13 @@ static void session_clear(struct main_window *w)
 	gtk_widget_queue_draw(w->notebook);
 }
 
+/* A new session records at once, as when the program starts */
 static int session_new(struct main_window *w)
 {
 	if(!session_confirm_discard(w)) return 0;
 	session_clear(w);
 	session_set_watch_label(w, selected_watch(w));
+	run_start_new(w, 1);
 	session_mark_saved(w);
 	return 1;
 }
@@ -1846,13 +2156,32 @@ static int session_open(struct main_window *w, const char *path)
 	int have_ref = cnt > 0;
 	int ref_bph = cnt ? s[cnt - 1]->bph : 0;
 	double ref_la = cnt ? s[cnt - 1]->la : 0;
+	// Runs without a number (files of 0.11.x before runs) are numbered in order
+	int next = 1;
+	for(uint64_t i = 0; i < cnt; i++)
+		if(s[i]->saved_state && s[i]->run >= next)
+			next = s[i]->run + 1;
+	for(uint64_t i = 0; i < cnt; i++)
+		if(s[i]->saved_state && s[i]->run <= 0)
+			s[i]->run = next++;
+	// Snapshots of a run without a number (files before "snap") are numbered
+	// in the order they were taken, which is their order in the file
 	for(uint64_t i = 0; i < cnt; i++) {
-		struct output_panel *op = add_new_tab(s[i], names[i] ? names[i] : base, w);
-		op->trend = trends[i]; // NULL for files saved without one
-		g_object_set_data(G_OBJECT(op->panel), "from-file", GINT_TO_POINTER(1));
-		GtkWidget *close = g_object_get_data(G_OBJECT(op->panel), "tab-close");
-		if(close)
-			gtk_widget_hide(close); // measurements in the file are kept
+		if(s[i]->saved_state || s[i]->run <= 0 || s[i]->snap > 0) continue;
+		int max = 0;
+		for(uint64_t j = 0; j < cnt; j++)
+			if(!s[j]->saved_state && s[j]->run == s[i]->run && s[j]->snap > max)
+				max = s[j]->snap;
+		s[i]->snap = max + 1;
+	}
+	for(uint64_t i = 0; i < cnt; i++) {
+		// A snapshot without a name or numbers (older files) is named after the file
+		int numbered = s[i]->saved_state || (s[i]->run > 0 && s[i]->snap > 0);
+		struct output_panel *op = add_new_tab(s[i], names[i] ? names[i] : numbered ? NULL : base, w);
+		// Runs have a Trend; snapshots of older files may have one too, kept
+		op->trend = trends[i];
+		op_update_trend_pages(op);
+		tab_keep(op); // measurements in the file are kept
 		update_tab_label(op->panel);
 		free(names[i]);
 	}
@@ -1860,8 +2189,14 @@ static int session_open(struct main_window *w, const char *path)
 	free(names);
 	free(trends);
 	g_free(base);
+	tabs_reorder(w);
 	w->session_path = g_strdup(path);
 	w->session_updating--;
+	// An opened session is paused: Record starts its next run
+	w->recording = 0;
+	w->run_number = next_run_number(w);
+	record_update(w);
+	notes_refresh_snapshot(w);
 	add_recent_file(path);
 	update_export_item(w);
 	session_mark_saved(w);
@@ -2129,25 +2464,53 @@ static GtkWidget *menu_bar_add(GtkWidget *menu_bar, const char *label)
  * installed there (make install, the Windows installer); otherwise from the
  * hicolor folders of the data directories, or from the source tree in debug
  * builds started there. Free with g_object_unref(). */
-static GdkPixbuf *program_icon(int size)
+/* The folder of the executable (on Windows the installation folder, or the
+ * folder above bin/), or NULL. Free with g_free(). */
+static gchar *program_folder(void)
+{
+#ifdef _WIN32
+	return g_win32_get_package_installation_directory_of_module(NULL);
+#else
+	gchar *exe = g_file_read_link("/proc/self/exe", NULL);
+	gchar *dir = exe ? g_path_get_dirname(exe) : NULL;
+	g_free(exe);
+	return dir;
+#endif
+}
+
+GdkPixbuf *program_icon(int size)
 {
 	GdkPixbuf *p = gtk_icon_theme_load_icon(gtk_icon_theme_get_default(),
 		ICON_NAME, size, 0, NULL);
 	if(p) return p;
 	gchar *rel = g_strdup_printf("%dx%d/apps/" ICON_NAME ".png", size, size);
+	// Installed: share/icons/hicolor under the system data folders
 	const gchar * const *dirs = g_get_system_data_dirs();
 	for(int i = 0; !p && dirs[i]; i++) {
 		gchar *path = g_build_filename(dirs[i], "icons", "hicolor", rel, NULL);
 		p = gdk_pixbuf_new_from_file(path, NULL);
 		g_free(path);
 	}
-#ifdef DEBUG
+	// Next to the executable: share/icons/hicolor (as the Windows installer
+	// lays it out), or icons/ (the source tree, for a program built there)
+	gchar *base = program_folder();
+	if(!p && base) {
+		gchar *path = g_build_filename(base, "share", "icons", "hicolor", rel, NULL);
+		p = gdk_pixbuf_new_from_file(path, NULL);
+		g_free(path);
+	}
+	if(!p && base) {
+		gchar *path = g_build_filename(base, "icons", rel, NULL);
+		p = gdk_pixbuf_new_from_file(path, NULL);
+		g_free(path);
+	}
+	g_free(base);
+	// The current folder, when started from the source tree
 	if(!p) {
 		gchar *path = g_build_filename("icons", rel, NULL);
 		p = gdk_pixbuf_new_from_file(path, NULL);
 		g_free(path);
 	}
-#endif
 	g_free(rel);
 	return p;
 }
@@ -2343,6 +2706,11 @@ static void init_main_window(struct main_window *w)
 	gtk_box_pack_start(GTK_BOX(hbox), w->snapshot_position_combo, FALSE, FALSE, 0);
 	g_signal_connect(w->snapshot_position_combo, "changed", G_CALLBACK(handle_position_change), w);
 
+	// Record / Pause: the session is recorded in runs (no keyboard shortcut)
+	w->record_button = gtk_button_new_with_label("");
+	gtk_box_pack_start(GTK_BOX(hbox), w->record_button, FALSE, FALSE, 0);
+	g_signal_connect(w->record_button, "clicked", G_CALLBACK(handle_record), w);
+
 	// Snapshot button
 	w->snapshot_button = gtk_button_new_with_label(_("Take Snapshot"));
 	gtk_widget_set_tooltip_text(w->snapshot_button,
@@ -2363,6 +2731,7 @@ static void init_main_window(struct main_window *w)
 	gtk_box_pack_start(GTK_BOX(w->snapshot_name), w->snapshot_name_entry, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(hbox), w->snapshot_name, FALSE, FALSE, 0);
 	g_signal_connect(w->snapshot_name_entry, "changed", G_CALLBACK(handle_name_change), w);
+	g_object_set_data(G_OBJECT(w->snapshot_name_entry), "name-label", name_label); // "Current run:" on runs
 
 	// Menu bar: File, Settings, Tools, Help
 	GtkWidget *file_menu = menu_bar_add(menu_bar, _("_File"));
@@ -2370,8 +2739,8 @@ static void init_main_window(struct main_window *w)
 	GtkWidget *tools_menu = menu_bar_add(menu_bar, _("_Tools"));
 	GtkWidget *help_menu = menu_bar_add(menu_bar, _("_Help"));
 
-	// File: the session (one document with the project, the snapshots and the
-	// saved state), the data export and Quit
+	// File: the session (one document with the project, the runs and the
+	// snapshots), the data export and Quit
 	w->new_session_item = gtk_menu_item_new_with_label(_("New session"));
 	gtk_menu_shell_append(GTK_MENU_SHELL(file_menu), w->new_session_item);
 	g_signal_connect(w->new_session_item, "activate", G_CALLBACK(handle_new_session), w);
@@ -2406,6 +2775,14 @@ static void init_main_window(struct main_window *w)
 	gtk_widget_add_accelerator(w->export_item, "activate", accel,
 		GDK_KEY_e, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
 	set_menu_item_enabled(w, w->export_item, FALSE);
+
+	// The PDF report of the session (TG-16)
+	w->report_item = gtk_menu_item_new_with_label(_("Export report…"));
+	gtk_widget_set_tooltip_text(w->report_item, _("Write a PDF report of the session."));
+	gtk_menu_shell_append(GTK_MENU_SHELL(file_menu), w->report_item);
+	g_signal_connect_swapped(w->report_item, "activate", G_CALLBACK(report_dialog_open), w);
+	gtk_widget_add_accelerator(w->report_item, "activate", accel,
+		GDK_KEY_p, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
 
 	gtk_menu_shell_append(GTK_MENU_SHELL(file_menu), gtk_separator_menu_item_new());
 
@@ -2495,8 +2872,11 @@ static void init_main_window(struct main_window *w)
 
 	// The main tab
 	GtkWidget *tab_label = make_tab_label(NULL, NULL);
+	// Its title shows whether a run is being recorded
+	GList *children = gtk_container_get_children(GTK_CONTAINER(tab_label));
+	w->live_tab_label = children ? children->data : NULL;
+	g_list_free(children);
 	gtk_notebook_append_page(GTK_NOTEBOOK(w->notebook), w->active_panel->panel, tab_label);
-	gtk_notebook_set_tab_reorderable(GTK_NOTEBOOK(w->notebook), w->active_panel->panel, TRUE);
 
 	gtk_window_maximize(GTK_WINDOW(w->window));
 	gtk_widget_show_all(w->window);
@@ -2504,8 +2884,9 @@ static void init_main_window(struct main_window *w)
 	notes_panel_set_visible(w->notes, notes_panel_remembered_visible(w));
 	gtk_window_set_focus(GTK_WINDOW(w->window), NULL);
 
-	// A new, empty session for the watch selected at startup
+	// A new, empty session for the watch selected at startup, recording run 1
 	session_set_watch_label(w, selected_watch(w));
+	record_update(w);
 	session_mark_saved(w);
 }
 
@@ -2542,7 +2923,21 @@ guint refresh(struct main_window *w)
 	}
 	unlock_computer(w->computer);
 	refresh_results(w);
-	trend_update(w->active_panel->trend, w->active_snapshot, w->live_position);
+	// Only a run in progress records; while paused the display still updates
+	if(w->recording) {
+		trend_update(w->active_panel->trend, w->active_snapshot, w->live_position);
+		// Keep, every 2 s, the last live state with a waveform: the end of
+		// the run, if the signal is lost before Pause or Save
+		struct snapshot *a = w->active_snapshot;
+		gint64 now = g_get_monotonic_time();
+		if(a->pb && !a->calibrate && !a->is_old &&
+				now - w->last_live_us >= TREND_INTERVAL_S * G_USEC_PER_SEC) {
+			if(w->last_live)
+				snapshot_destroy(w->last_live);
+			w->last_live = snapshot_clone(a);
+			w->last_live_us = now;
+		}
+	}
 	update_export_item(w);
 	op_set_snapshot(w->active_panel, w->active_snapshot);
 
@@ -2553,7 +2948,8 @@ guint refresh(struct main_window *w)
 		photogenic = !w->active_snapshot->calibrate && w->active_snapshot->pb;
 		gtk_widget_queue_draw(w->notebook);
 	}
-	gtk_widget_set_sensitive(w->snapshot_button, photogenic);
+	// A snapshot belongs to a run: none while paused
+	gtk_widget_set_sensitive(w->snapshot_button, photogenic && w->recording);
 	// New live readings are changes of a session in use (shown with * in the title)
 	if(session_is_modified(w) != w->title_dirty_shown)
 		session_update_title(w);
@@ -2626,6 +3022,8 @@ static void start_interface(GApplication* app, void *p)
 	w->window = NULL;
 	w->new_session_item = NULL;
 	w->save_as_item = NULL;
+	w->export_item = NULL;
+	w->report_item = NULL;
 	w->session_bar = NULL;
 	w->session_bar_label = NULL;
 	w->session_bar_use = NULL;
@@ -2637,6 +3035,16 @@ static void start_interface(GApplication* app, void *p)
 	w->saved_trend_start_us = 0;
 	w->title_dirty_shown = -1;
 	w->notes = NULL;
+	// The program starts recording run 1
+	w->record_button = NULL;
+	w->live_tab_label = NULL;
+	w->recording = 1;
+	w->run_number = 1;
+	w->run_start = g_get_real_time() / G_USEC_PER_SEC;
+	w->last_live = NULL;
+	w->last_live_us = 0;
+	w->run_notes = NULL;
+	w->run_last_snap = 0;
 
 	load_config(w);
 	set_audio_output_device_name(w->audio_output_device_name);

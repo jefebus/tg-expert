@@ -56,7 +56,7 @@ Mit den Standard-Algorithmuseinstellungen dauert die Kalibrierung etwa
 15 Minuten (900 Ticks); andere Einstellungen können die Dauer ändern. Wiederholen Sie sie
 einmal, um das Ergebnis zu bestätigen. Zwei Durchläufe sollten auf wenige
 Zehntelsekunden pro Tag übereinstimmen.
-#shot("calibration.png", [Kalibrierung läuft, bei 5 %. Das Gangdiagramm zeigt
+#shot("calibration.png", [Kalibrierung wartet auf ein gleichmäßiges Signal. Das Gangdiagramm zeigt
 die Referenzticks, die rechte Seite die Anleitung.])
 == Wie lange sie gilt
 Der Wert cal gehört zur Soundkarte und ihrem Takt, nicht zur Uhr. Er wird

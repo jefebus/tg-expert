@@ -284,10 +284,28 @@ struct snapshot {
 	 *  by snapshot_clone() and freed by snapshot_destroy(). Never set on live data. */
 	char *notes;
 
-	/** 1 for the "Saved state" entry: what the real-time tab showed when the
-	 *  session was saved. 0 for snapshots taken by the user. Stored as the
-	 *  optional "role" field; older files and readers treat everything as 0. */
+	/** 1 for a run (tramo): a period of continuous recording, from Record to
+	 *  Pause, with its Trend and the real-time tab as it was at its end (or
+	 *  when the session was saved). 0 for snapshots taken by the user, which
+	 *  do not stop the recording. Stored as the optional "role" field ("run";
+	 *  files of 0.11.x before runs wrote "saved-state", read as a run). Older
+	 *  readers treat everything as a snapshot. */
 	int saved_state;
+	/** The run: a run's own number, or for a snapshot the run it was taken
+	 *  in; 0 = unknown (older files). Optional field "run". */
+	int run;
+	/** For a run: when it started, seconds since 1970 UTC, 0 = unknown.
+	 *  Optional field "run_start". It ended at wall_time. */
+	int64_t run_start;
+	/** For a snapshot: its number within its run (the M of "N.M"), given
+	 *  when it is taken and kept, 0 = none. Optional field "snap". */
+	int snap;
+
+	/** When the snapshot was taken (for a run, when it ended or was saved): seconds since
+	 *  1970-01-01 UTC, 0 = unknown (older files, live data). timestamp above
+	 *  is the audio sample counter, which does not give a date. Stored as the
+	 *  optional "wall_time" field. */
+	int64_t wall_time;
 };
 
 /* Watch position during a measurement (stored in snapshots and .tgj files) */
@@ -389,6 +407,126 @@ double trend_stats_sd(const struct trend_stats *s);
 void trend_get_plot_ranges(const struct trend *t, double t0, double t1,
 	double fixed_rate, double fixed_be, struct trend_plot_ranges *ranges);
 
+/* render.c: drawing themes shared by the screen and the PDF report (TG-31) */
+enum render_theme_id {
+	RENDER_SCREEN,		// colours on black, as on screen
+	RENDER_DOC_COLOR,	// on white, for documents
+	RENDER_DOC_MONO,	// black and greys; positions differ by symbol
+	RENDER_THEME_COUNT
+};
+
+struct render_rgb { double r, g, b; };
+
+struct render_theme {
+	enum render_theme_id id;
+	int monochrome;
+	struct render_rgb background;
+	struct render_rgb text;		// titles
+	struct render_rgb label;	// scale numbers
+	struct render_rgb message;	// "no data" messages
+	struct render_rgb grid;
+	double grid_alpha, grid_minor_alpha;
+	double line_scale;		// multiplies line widths
+	double symbol_scale;		// multiplies the size of the position symbols
+	struct render_rgb position[POS_COUNT];	// symbol colours of the positions
+	/* Series and scales of the Trend graphs, waveforms and paper strip */
+	struct render_rgb axis;		// grids, scales and secondary text, with an alpha
+	double axis_major_alpha, axis_minor_alpha;
+	struct render_rgb rate, amp, be;
+	struct render_rgb tic, toc, wave;
+};
+
+const struct render_theme *render_theme_get(enum render_theme_id id);
+void render_set_rgb(cairo_t *cr, struct render_rgb c, double alpha);
+void render_position_symbol(cairo_t *cr, const struct render_theme *th, int position,
+	double x, double y, double radius);
+void render_message(cairo_t *cr, const struct render_theme *th, double width, double height,
+	const char *message);
+void render_text(cairo_t *cr, double x, double y, double align, const char *text);
+double render_position_legend(cairo_t *cr, const struct render_theme *th, double x, double y,
+	double font, unsigned mask);
+
+/* correlations.c: scatter plots of the Trend readings */
+enum correlation_kind {
+	CORRELATION_AMP_RATE,	// x amplitude, y rate
+	CORRELATION_BE_RATE,	// x beat error, y rate
+	CORRELATION_BE_AMP,	// x beat error, y amplitude
+	CORRELATION_COUNT
+};
+
+struct correlation_options {
+	enum correlation_kind kind;
+	int position;		// enum watch_position, -1 = all positions
+	double t0, t1;		// time range, s since the start of the recording
+	int rate_range;		// s/d either side of 0, 0 = automatic
+	int be_range;		// maximum beat error in ms, 0 = automatic
+	double font;		// size of the scale numbers (10 on screen)
+};
+
+/* Time range shown for a Trend span (0 = everything) */
+void correlation_time_range(const struct trend *t, int span_s, double *t0, double *t1);
+/* Draw one scatter plot in a width x height area at the origin of cr */
+void render_correlation(cairo_t *cr, double width, double height, const struct trend *t,
+	const struct correlation_options *o, const struct render_theme *th);
+
+/* trend_render.c: the Trend page (statistics and the rate, amplitude and
+ * beat error graphs), drawn from the data alone */
+#define TREND_RENDER_STATS	1	// tables: since the start, per position
+#define TREND_RENDER_GRAPHS	2	// the three graphs on a shared time axis
+
+struct trend_render_options {
+	int sections;		// TREND_RENDER_* flags
+	int span_s;		// time shown, 0 = everything since the start
+	int rate_range;		// s/d either side of 0, 0 = automatic
+	int be_range;		// maximum beat error in ms, 0 = automatic
+	double font;		// text size (on screen from the window width, at least 12)
+	int calibrating;	// for the message when there are no readings
+	int paused;		// the live recording is paused (message when empty)
+};
+
+void render_trend(cairo_t *c, double width, double height, const struct trend *t,
+	const struct trend_render_options *o, const struct render_theme *th);
+double render_trend_stats_height(const struct trend *t, double font);
+
+/* waveform_render.c: the averaged waveforms of a snapshot */
+enum waveform_kind {
+	WAVEFORM_TIC,		// first beat, with the amplitude scale and lift pulse
+	WAVEFORM_TOC,		// second beat
+	WAVEFORM_PERIOD		// the full period, tic and toc windows tinted
+};
+
+struct waveform_options {
+	enum waveform_kind kind;
+	int negative_span;	// ms before the beat, from waveform_negative_span()
+	double font;		// text size (on screen from the window width, at least 12)
+};
+
+void render_waveform(cairo_t *c, double width, double height, const struct snapshot *s,
+	const struct waveform_options *o, const struct render_theme *th);
+double render_waveform_legend(cairo_t *c, const struct render_theme *th, double x, double y,
+	double font);
+
+/* paperstrip_render.c: the paper strip of a snapshot */
+struct paperstrip_options {
+	double tick_seconds;	// time between the marks on the vertical axis
+	double window_seconds;	// time span shown vertically
+	double guide_rate;	// s/d of the rate guide lines, NAN = none (the report draws none;
+				// unused when calibrating, where the guide follows cal)
+	uint64_t now;		// timestamp (samples) of the newest row: the snapshot's own when saved
+	double font;		// text size (on screen from the window width, at least 12)
+	int legend;		// draw the legend under the strip
+};
+
+extern const double paperstrip_zoom_levels[];	// ends with 0
+int paperstrip_zoom_index(double trace_zoom);
+double paperstrip_zoom_factor(const struct snapshot *snst);
+void render_paperstrip(cairo_t *c, double width, double height, const struct snapshot *snst,
+	const struct paperstrip_options *o, const struct render_theme *th);
+double render_paperstrip_legend(cairo_t *c, const struct render_theme *th, double x, double y,
+	double font, int calibrate, int guide);
+/* output_panel.c: ms shown before a beat, from the current algorithm settings */
+int waveform_negative_span(const struct snapshot *s);
+
 /* output_panel.c */
 struct output_panel {
 	GtkWidget *panel;
@@ -428,7 +566,10 @@ struct output_panel {
 	gint64 detection_status_until;
 	void (*settling_setting_changed)(void *, int);
 	void *settling_setting_data;
-	struct trend *trend;         // owned; NULL for snapshots loaded from a file
+	struct trend *trend;         // owned; NULL for snapshots (only runs have one)
+	GtkWidget *trend_page;       // the Trend and Correlations pages of right_stack,
+	GtkWidget *correlations_page;	// hidden on tabs without a trend
+	int paused;                  // live panel: not recording (the Trend page says so)
 	int trend_rate_range;        // s/d shown either side of 0, 0 = automatic
 	int trend_be_range;          // maximum beat error in ms, 0 = automatic
 	int trend_span_s;            // time shown, 0 = everything since the start
@@ -456,6 +597,9 @@ void redraw_op(struct output_panel *op);
 void op_set_snapshot(struct output_panel *op, struct snapshot *snst);
 void op_set_border(struct output_panel *op, int i);
 void op_destroy(struct output_panel *op);
+/* Show the Trend and Correlations pages only where there is a trend: the
+ * live panel and runs; snapshots have none. Call after setting op->trend. */
+void op_update_trend_pages(struct output_panel *op);
 
 /* Project metadata stored in .tgj files (the "project-metadata" block inside "data").
  * All strings are UTF-8, owned by the structure, and NULL or "" mean "not set".
@@ -513,14 +657,16 @@ struct main_window {
 	GtkWidget *save_item;
 	GtkWidget *save_as_item;
 	GtkWidget *export_item;
+	GtkWidget *report_item;	// File > Export report (PDF)
 	GtkWidget *session_bar;	// notice about the watch of an opened session
 	GtkWidget *session_bar_label;
 	GtkWidget *session_bar_use;	// "Use <watch> to continue measuring"
 	struct output_panel *active_panel;
 
-	/* The session: one document with the project metadata, the snapshot tabs
-	 * and, when saved, the state of the real-time tab ("Saved state").
-	 * Snapshots loaded from a file are kept as they are (tab data "from-file"). */
+	/* The session: one document with the project metadata, the run and
+	 * snapshot tabs and, when saved, the run in progress (TG-34).
+	 * Loaded measurements and closed runs are kept as they are (tab data
+	 * "from-file"). */
 	struct project_metadata project;
 	gchar *session_path;	// UTF-8, NULL until saved or opened
 	int session_dirty;	// changed since the last save, open or new session
@@ -529,6 +675,20 @@ struct main_window {
 	gint64 saved_trend_start_us;
 	int title_dirty_shown;	// -1 = title not set yet
 	struct notes_panel *notes;	// project and notes panel (TG-29), below the tabs
+
+	/* Runs (TG-34): the session is recorded in runs, from Record to Pause.
+	 * While paused the live display still analyses the audio, but nothing
+	 * is recorded and no snapshot can be taken. A closed run becomes a tab;
+	 * the current one is written as a run entry when the session is saved. */
+	GtkWidget *record_button;	// "Record" / "Pause"
+	GtkWidget *live_tab_label;	// title of the real-time tab, shows the state
+	int recording;
+	int run_number;		// the current run, while recording
+	int64_t run_start;	// when it started, seconds since 1970 UTC
+	struct snapshot *last_live;	// last usable live state of the current run, or NULL
+	gint64 last_live_us;	// monotonic time it was copied
+	char *run_notes;	// notes of the run being recorded (UTF-8, owned), or NULL
+	int run_last_snap;	// the highest snapshot number given in the run being recorded
 
 	struct computer *computer;
 	struct snapshot *active_snapshot;
@@ -662,8 +822,12 @@ GtkWidget *notes_panel_widget(struct notes_panel *np);
 void notes_panel_free(struct notes_panel *np);
 void notes_panel_show_project(struct notes_panel *np);	// all project fields, from w->project
 void notes_panel_show_watch(struct notes_panel *np);
-void notes_panel_show_snapshot(struct notes_panel *np, struct output_panel *op, const char *title);
-void notes_panel_forget(struct notes_panel *np, struct output_panel *op);	// op is being destroyed
+/* The Measurement page edits *target (the notes of a run or snapshot), shown
+ * as "Notes of: <title>"; target NULL shows the message none instead (NULL:
+ * the default hint) */
+void notes_panel_show_measurement(struct notes_panel *np, char **target, const char *title,
+	const char *none);
+void notes_panel_forget(struct notes_panel *np, char **target);	// the notes are being freed
 void notes_panel_attach_toggle(struct notes_panel *np, GtkWidget *check_item);
 int notes_panel_remembered_visible(struct main_window *w);
 void notes_panel_set_visible(struct notes_panel *np, int visible);
@@ -671,4 +835,74 @@ void notes_panel_set_visible(struct notes_panel *np, int visible);
 /* session.c */
 char *session_sanitize_filename_part(const char *text);
 char *session_suggest_filename(const char *date, const char *name);
+char *session_suggest_filename_ext(const char *date, const char *name, const char *ext);
+
+/* interface.c: the run being recorded as a run entry (a copy with its notes),
+ * NULL if not recording or there is nothing to keep */
+struct snapshot *session_current_run(struct main_window *w);
+/* interface.c: the title of a run or snapshot as its tab shows it ("Run 2",
+ * "2.3 name (DU)"); name is the one given by the user, or NULL. g_free(). */
+gchar *measurement_title(const struct snapshot *s, const char *name);
+
+/* interface.c: the program icon (ICON_NAME) at size x size, NULL if it cannot
+ * be found. Free with g_object_unref(). */
+GdkPixbuf *program_icon(int size);
+
+/* interface.c: a save dialog returning the chosen path (UTF-8, with the
+ * extension), after asking before replacing a file; NULL if cancelled */
+char *choose_path_for_save(struct main_window *w, const char *title,
+	const char *suggestion, const char *extension);
+
+/* report.c: the PDF report (TG-16). The data is a copy taken when the export
+ * starts, so that the report is coherent while the measurement goes on; the
+ * report is built from it alone, without GTK widgets. */
+struct report_measurement {
+	struct snapshot *snapshot;	// owned copy, NULL = not in the report
+	char *title;			// as the tab shows it (name and position)
+	int negative_span;		// ms before a beat in the waveforms
+};
+
+/* One run in the report: its Trends, optionally its final state, and the
+ * snapshots chosen among those taken in it */
+struct report_run {
+	int number;
+	char *name;			// given by the user (owned), or NULL
+	int in_progress;		// the run being recorded when exporting
+	int64_t start, end;		// seconds since 1970 UTC, 0 = unknown
+	struct trend *trend;		// owned copy, NULL if it has none
+	int show_trends;		// statistics, graphs and correlations
+	struct report_measurement state;	// its final state (owned); its notes are the run's
+	int show_state;
+	struct report_measurement *snapshots;	// in the order taken
+	int snapshot_count;
+	int snapshots_taken;		// in the session, chosen or not (summary table)
+};
+
+struct report_data {
+	struct project_metadata project;	// copy
+	int include_owner;		// the owner is left out unless asked for
+	enum render_theme_id theme;	// RENDER_DOC_COLOR or RENDER_DOC_MONO
+	char *date;			// when it was exported, "YYYY-MM-DD HH:MM"
+	double paperstrip_tick_seconds, paperstrip_window_seconds;
+	int summary;			// the table of the runs on the first page
+	struct report_run *runs;	// in chronological order
+	int run_count;
+	struct report_measurement current;	// the real-time tab, frozen, or no snapshot
+	struct report_measurement *others;	// snapshots without a run (older files)
+	int other_count;
+	GdkPixbuf *logo;		// the program icon for the page header (owned), or NULL
+};
+
+#define REPORT_ERROR_WRITE 1	// the file could not be written (the previous one is kept)
+#define REPORT_ERROR_NO_PDF 2	// this Cairo has no PDF backend
+
+void report_data_free(struct report_data *d);
+/* Draw the report on cr, one A4 page after another (cairo_show_page). With
+ * total_pages 0 the footers say "page N of N"; returns the number of pages. */
+int report_render(cairo_t *cr, const struct report_data *d, int total_pages);
+/* Write the report to path safely (temporary file, then replace). 0 = written. */
+int report_write_pdf(const char *path, const struct report_data *d);
+
+/* report_dialog.c: File > Export report */
+void report_dialog_open(struct main_window *w);
 int session_write_file_safely(const char *path, int (*writer)(FILE *f, void *data), void *data);

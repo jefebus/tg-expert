@@ -8,6 +8,12 @@ src/correlations.c
 src/interface.c
 src/notes_panel.c
 src/output_panel.c
+src/paperstrip_render.c
+src/render.c
+src/report.c
+src/report_dialog.c
 src/serializer.c
 src/session.c
 src/trend.c
+src/trend_render.c
+src/waveform_render.c

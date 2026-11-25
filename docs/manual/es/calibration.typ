@@ -54,7 +54,7 @@ Con los ajustes predeterminados del algoritmo, la calibración dura unos
 15 minutos (900 tics); otros ajustes pueden cambiar la duración. Repítala una vez para
 confirmar el resultado. Dos mediciones deberían coincidir con una diferencia
 de unas décimas de segundo por día.
-#shot("calibration.png", [Calibración en curso, al 5 %. El diagrama de marcha
+#shot("calibration.png", [Calibración a la espera de una señal estable. El diagrama de marcha
 muestra los tics de referencia, y el lado derecho muestra las instrucciones.])
 == Cuánto dura
 El valor cal pertenece a la tarjeta de sonido y a su reloj, no al reloj de

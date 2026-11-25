@@ -39,11 +39,14 @@ Drehen der Uhr etwa eine Minute warten, damit sich die Messwerte einpendeln
 können.
 == Aufnahmen
 #ui[Messung festhalten] (Strg+Leertaste) behält die aktuelle Messung in einem
-neuen Reiter. Der Reiter trägt den Namen der gewählten Uhr und zeigt die Lage
-an. Eine Aufnahme behält die Ergebnistabelle, das Gangdiagramm, die
-Signalformen und die Seite #ui[Verlauf] so, wie sie waren.
+neuen Reiter. Der Reiter trägt die Nummer des Abschnitts und der Aufnahme
+sowie die Lage: #ui[2.3 (DU)] ist die dritte Aufnahme von Abschnitt 2,
+Zifferblatt oben (siehe @runs). Eine Aufnahme behält die Ergebnistabelle, das
+Gangdiagramm und die Signalformen so, wie sie waren; der Verlauf gehört zum
+Abschnitt, dessen Aufzeichnung weiterläuft.
 In einem Aufnahme-Reiter:
-- lässt sich der Name im Feld #ui[Aktuelle Aufnahme] ändern;
+- lässt sich im Feld #ui[Aktuelle Aufnahme] ein Name hinzufügen; er steht nach
+  der Nummer;
 - lässt sich die Lage in der oberen Leiste ändern;
 - wird der Reiter mit dem × in seinem Titel geschlossen.
 Ein typischer Ablauf: mit Zifferblatt oben messen, eine Aufnahme machen, die

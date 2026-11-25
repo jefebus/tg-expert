@@ -7,30 +7,28 @@
     published by the Free Software Foundation.
 */
 
+/* The scatter plots are drawn by render_correlation(), which only takes data,
+ * a size, options and a theme (TG-31), so that the PDF report uses the same
+ * code as the screen. The GTK callbacks below only gather those from the
+ * output panel. */
+
 #include "tg.h"
-#include <pango/pangocairo.h>
 
-enum correlation_kind {
-	CORRELATION_AMP_RATE,
-	CORRELATION_BE_RATE,
-	CORRELATION_BE_AMP,
-	CORRELATION_COUNT
-};
-
-struct correlation_style {
-	double r, g, b;
+/* Legend of the screen page (GTK labels): the colours of the screen theme
+ * and the characters closest to the symbols drawn by render_position_symbol() */
+struct correlation_legend {
 	const char *hex;
 	const char *symbol;
 };
 
-static const struct correlation_style styles[POS_COUNT] = {
-	{.65, .65, .65, "#a6a6a6", "◆"},
-	{.30, .65, 1,   "#4da6ff", "●"},
-	{1, .31, .82,   "#ff4fd1", "■"},
-	{.98, .76, .02, "#fac205", "▲"},
-	{.35, .85, .45, "#59d973", "▼"},
-	{.71, .49, 1,   "#b57dff", "+"},
-	{1, .48, .25,   "#ff7a40", "×"}
+static const struct correlation_legend legend_styles[POS_COUNT] = {
+	{"#a6a6a6", "◆"},
+	{"#4da6ff", "●"},
+	{"#ff4fd1", "■"},
+	{"#fac205", "▲"},
+	{"#59d973", "▼"},
+	{"#b57dff", "+"},
+	{"#ff7a40", "×"}
 };
 
 struct correlation_plot {
@@ -81,13 +79,13 @@ static int in_time_range(const struct trend_sample *sample, double t0, double t1
 	return isfinite(sample->t) && sample->t >= t0 && sample->t <= t1;
 }
 
-static void correlation_time_range(const struct output_panel *op, double *t0, double *t1)
+void correlation_time_range(const struct trend *t, int span_s, double *t0, double *t1)
 {
-	*t1 = trend_elapsed(op->trend);
+	*t1 = t ? trend_elapsed(t) : 0;
 	*t0 = 0;
-	if(op->trend_span_s > 0) {
-		*t1 = fmax(*t1, op->trend_span_s);
-		*t0 = *t1 - op->trend_span_s;
+	if(span_s > 0) {
+		*t1 = fmax(*t1, span_s);
+		*t0 = *t1 - span_s;
 	} else if(*t1 < 60)
 		*t1 = 60;
 }
@@ -109,109 +107,43 @@ static void correlation_measure(struct correlation_plot *plot, const struct tren
 	}
 }
 
-static void correlation_ranges(struct correlation_plot *plot, const struct output_panel *op,
-	enum correlation_kind kind, double t0, double t1)
+static void correlation_ranges(struct correlation_plot *plot, const struct trend *t,
+	const struct correlation_options *o)
 {
 	struct trend_plot_ranges ranges;
-	trend_get_plot_ranges(op->trend, t0, t1, op->trend_rate_range,
-		op->trend_be_range, &ranges);
-	plot->xmin = kind == CORRELATION_AMP_RATE ? ranges.amp_min : ranges.be_min;
-	plot->xmax = kind == CORRELATION_AMP_RATE ? ranges.amp_max : ranges.be_max;
-	plot->ymin = kind == CORRELATION_BE_AMP ? ranges.amp_min : ranges.rate_min;
-	plot->ymax = kind == CORRELATION_BE_AMP ? ranges.amp_max : ranges.rate_max;
+	trend_get_plot_ranges(t, o->t0, o->t1, o->rate_range, o->be_range, &ranges);
+	plot->xmin = o->kind == CORRELATION_AMP_RATE ? ranges.amp_min : ranges.be_min;
+	plot->xmax = o->kind == CORRELATION_AMP_RATE ? ranges.amp_max : ranges.be_max;
+	plot->ymin = o->kind == CORRELATION_BE_AMP ? ranges.amp_min : ranges.rate_min;
+	plot->ymax = o->kind == CORRELATION_BE_AMP ? ranges.amp_max : ranges.rate_max;
 }
 
-static void correlation_geometry(struct correlation_plot *plot, int width, int height)
+/* A square plot area; the margins hold the scales and grow with the font
+ * (the screen uses 10, which gives the margins it always had) */
+static void correlation_geometry(struct correlation_plot *plot, double width, double height,
+	double font)
 {
-	double available_width = width - 58 - 15;
-	double available_height = height - 30 - 42;
+	double k = font / 10;
+	double left = 58 * k, right = 15 * k, top = 30 * k, bottom = 42 * k;
+	double available_width = width - left - right;
+	double available_height = height - top - bottom;
 	double side = fmin(available_width, available_height);
-	plot->left = 58 + (available_width - side) / 2;
-	plot->top = 30 + (available_height - side) / 2;
+	plot->left = left + (available_width - side) / 2;
+	plot->top = top + (available_height - side) / 2;
 	plot->width = plot->height = side;
 }
 
-static void correlation_point(const struct correlation_plot *plot, double x, double y,
+/* Position of a reading in the plot. 0 if it is outside the scales: it is
+ * then not drawn, rather than drawn on the border as if it had been read
+ * there (with a fixed rate or beat error range). */
+static int correlation_point(const struct correlation_plot *plot, double x, double y,
 	double *px, double *py)
 {
-	x = fmin(fmax(x, plot->xmin), plot->xmax);
-	y = fmin(fmax(y, plot->ymin), plot->ymax);
+	if(x < plot->xmin || x > plot->xmax || y < plot->ymin || y > plot->ymax)
+		return 0;
 	*px = plot->left + (x - plot->xmin) / (plot->xmax - plot->xmin) * plot->width;
 	*py = plot->top + (plot->ymax - y) / (plot->ymax - plot->ymin) * plot->height;
-}
-
-static void draw_symbol(cairo_t *cr, int position, double x, double y, double radius)
-{
-	const struct correlation_style *style = &styles[position];
-	cairo_set_source_rgb(cr, style->r, style->g, style->b);
-	cairo_set_line_width(cr, 1.4);
-	switch(position) {
-	case POS_NONE:
-		cairo_move_to(cr, x, y - radius);
-		cairo_line_to(cr, x + radius, y);
-		cairo_line_to(cr, x, y + radius);
-		cairo_line_to(cr, x - radius, y);
-		cairo_close_path(cr);
-		cairo_stroke(cr);
-		break;
-	case POS_DU:
-		cairo_arc(cr, x, y, radius, 0, 2 * M_PI);
-		cairo_fill(cr);
-		break;
-	case POS_DD:
-		cairo_rectangle(cr, x - radius, y - radius, 2 * radius, 2 * radius);
-		cairo_fill(cr);
-		break;
-	case POS_CU:
-	case POS_CD: {
-		int sign = position == POS_CU ? 1 : -1;
-		cairo_move_to(cr, x, y - sign * radius);
-		cairo_line_to(cr, x + radius, y + sign * radius);
-		cairo_line_to(cr, x - radius, y + sign * radius);
-		cairo_close_path(cr);
-		cairo_fill(cr);
-		break;
-	}
-	case POS_CL:
-		cairo_move_to(cr, x - radius, y);
-		cairo_line_to(cr, x + radius, y);
-		cairo_move_to(cr, x, y - radius);
-		cairo_line_to(cr, x, y + radius);
-		cairo_stroke(cr);
-		break;
-	case POS_CR:
-		cairo_move_to(cr, x - radius, y - radius);
-		cairo_line_to(cr, x + radius, y + radius);
-		cairo_move_to(cr, x - radius, y + radius);
-		cairo_line_to(cr, x + radius, y - radius);
-		cairo_stroke(cr);
-		break;
-	default:
-		break;
-	}
-}
-
-static void draw_text(cairo_t *cr, double x, double y, double align, const char *text)
-{
-	cairo_text_extents_t extents;
-	cairo_text_extents(cr, text, &extents);
-	cairo_move_to(cr, x - align * extents.x_advance, y);
-	cairo_show_text(cr, text);
-}
-
-static void draw_message(cairo_t *cr, int width, int height, const char *message)
-{
-	PangoLayout *layout = pango_cairo_create_layout(cr);
-	pango_layout_set_text(layout, message, -1);
-	pango_layout_set_width(layout, (width - 20) * PANGO_SCALE);
-	pango_layout_set_wrap(layout, PANGO_WRAP_WORD_CHAR);
-	pango_layout_set_alignment(layout, PANGO_ALIGN_CENTER);
-	int text_height;
-	pango_layout_get_pixel_size(layout, NULL, &text_height);
-	cairo_set_source_rgb(cr, .75, .75, .75);
-	cairo_move_to(cr, 10, (height - text_height) / 2.0);
-	pango_cairo_show_layout(cr, layout);
-	g_object_unref(layout);
+	return 1;
 }
 
 static int axis_subdivisions(double major_step, int decimals)
@@ -239,7 +171,7 @@ static int axis_subdivisions(double major_step, int decimals)
 }
 
 static void draw_axis_grid(cairo_t *cr, const struct correlation_plot *plot,
-	enum correlation_kind kind)
+	enum correlation_kind kind, const struct render_theme *th)
 {
 	int xdiv = axis_subdivisions((plot->xmax - plot->xmin) / 2,
 		kind == CORRELATION_AMP_RATE ? 1 : 2);
@@ -247,15 +179,15 @@ static void draw_axis_grid(cairo_t *cr, const struct correlation_plot *plot,
 	if(!xdiv || !ydiv)
 		return;
 	cairo_save(cr);
-	cairo_set_line_width(cr, 1);
-	cairo_set_source_rgba(cr, 1, 1, 1, .22);
+	cairo_set_line_width(cr, th->line_scale);
+	render_set_rgb(cr, th->grid, th->grid_alpha);
 	cairo_move_to(cr, plot->left + plot->width / 2, plot->top);
 	cairo_line_to(cr, plot->left + plot->width / 2, plot->top + plot->height);
 	cairo_stroke(cr);
 
 	static const double dashes[] = {3, 3};
 	cairo_set_dash(cr, dashes, 2, 0);
-	cairo_set_source_rgba(cr, 1, 1, 1, .16);
+	render_set_rgb(cr, th->grid, th->grid_minor_alpha);
 	for(int i = 1; i < 2 * xdiv; i++) {
 		if(i % xdiv == 0)
 			continue;
@@ -280,84 +212,123 @@ static enum correlation_kind widget_kind(GtkWidget *widget)
 		g_object_get_data(G_OBJECT(widget), "correlation-kind")) - 1);
 }
 
-static gboolean correlation_draw(GtkWidget *widget, cairo_t *cr, struct output_panel *op)
+void render_correlation(cairo_t *cr, double width, double height, const struct trend *t,
+	const struct correlation_options *o, const struct render_theme *th)
 {
-	int width = gtk_widget_get_allocated_width(widget);
-	int height = gtk_widget_get_allocated_height(widget);
-	cairo_set_source_rgb(cr, 0, 0, 0);
+	const double font = o->font > 0 ? o->font : 10;
+	const double k = font / 10;
+	cairo_save(cr);
+	cairo_rectangle(cr, 0, 0, width, height);
+	cairo_clip(cr);
+	render_set_rgb(cr, th->background, 1);
 	cairo_paint(cr);
-	if(width < 100 || height < 100) return FALSE;
-	if(!op->trend) {
-		draw_message(cr, width, height, _("No long-term statistics"));
-		return FALSE;
+	if(width < 100 * k || height < 100 * k) goto done;
+	if(!t) {
+		render_message(cr, th, width, height, _("No long-term statistics"));
+		goto done;
 	}
-	if(!op->trend->count) {
-		draw_message(cr, width, height, _("No readings were recorded"));
-		return FALSE;
+	if(!t->count) {
+		render_message(cr, th, width, height, _("No readings were recorded"));
+		goto done;
 	}
 
-	enum correlation_kind kind = widget_kind(widget);
-	double t0, t1;
-	correlation_time_range(op, &t0, &t1);
 	struct correlation_plot plot;
-	correlation_measure(&plot, op->trend, kind, op->correlation_position, t0, t1);
+	correlation_measure(&plot, t, o->kind, o->position, o->t0, o->t1);
 	if(!plot.valid) {
-		draw_message(cr, width, height, _("No valid points for this graph in the selected time range"));
-		return FALSE;
+		render_message(cr, th, width, height, _("No valid points for this graph in the selected time range"));
+		goto done;
 	}
 	if(!plot.selected) {
-		draw_message(cr, width, height, _("No points for the selected position"));
-		return FALSE;
+		render_message(cr, th, width, height, _("No points for the selected position"));
+		goto done;
 	}
-	correlation_ranges(&plot, op, kind, t0, t1);
-	correlation_geometry(&plot, width, height);
-	cairo_select_font_face(cr, "sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
-	cairo_set_font_size(cr, 10);
+	correlation_ranges(&plot, t, o);
+	correlation_geometry(&plot, width, height, font);
+	// The font family is the caller's: the screen's default sans, or the
+	// report's DejaVu Sans
+	cairo_set_font_size(cr, font);
+	cairo_set_line_width(cr, th->line_scale);
 	for(int i = 0; i <= 4; i++) {
 		double y = plot.top + plot.height * i / 4;
 		double value = plot.ymax - (plot.ymax - plot.ymin) * i / 4;
-		cairo_set_source_rgba(cr, 1, 1, 1, .22);
+		render_set_rgb(cr, th->grid, th->grid_alpha);
 		cairo_move_to(cr, plot.left, y);
 		cairo_line_to(cr, plot.left + plot.width, y);
 		cairo_stroke(cr);
 		char text[32];
 		snprintf(text, sizeof(text), "%.1f", value);
-		cairo_set_source_rgb(cr, .85, .85, .85);
-		draw_text(cr, plot.left - 5, y + 3, 1, text);
+		render_set_rgb(cr, th->label, 1);
+		render_text(cr, plot.left - 5 * k, y + 3 * k, 1, text);
 	}
 	for(int i = 0; i <= 2; i++) {
 		double x = plot.left + plot.width * i / 2;
 		double value = plot.xmin + (plot.xmax - plot.xmin) * i / 2;
 		char text[32];
-		snprintf(text, sizeof(text), kind == CORRELATION_AMP_RATE ? "%.1f" : "%.2f", value);
-		cairo_set_source_rgb(cr, .85, .85, .85);
-		draw_text(cr, x, plot.top + plot.height + 14, .5, text);
+		snprintf(text, sizeof(text), o->kind == CORRELATION_AMP_RATE ? "%.1f" : "%.2f", value);
+		render_set_rgb(cr, th->label, 1);
+		render_text(cr, x, plot.top + plot.height + 14 * k, .5, text);
 	}
-	cairo_set_source_rgba(cr, 1, 1, 1, .22);
+	render_set_rgb(cr, th->grid, th->grid_alpha);
 	cairo_rectangle(cr, plot.left, plot.top, plot.width, plot.height);
 	cairo_stroke(cr);
-	draw_axis_grid(cr, &plot, kind);
-	cairo_set_source_rgb(cr, 1, 1, 1);
-	draw_text(cr, plot.left, plot.top - 13, 0,
-		kind == CORRELATION_BE_AMP ? _("Amplitude (°)") : _("Rate (s/d)"));
-	draw_text(cr, plot.left + plot.width / 2, plot.top + plot.height + 38, .5,
-		kind == CORRELATION_AMP_RATE ? _("Amplitude (°)") : _("Beat error (ms)"));
+	draw_axis_grid(cr, &plot, o->kind, th);
+	render_set_rgb(cr, th->text, 1);
+	render_text(cr, plot.left, plot.top - 13 * k, 0,
+		o->kind == CORRELATION_BE_AMP ? _("Amplitude (°)") : _("Rate (s/d)"));
+	render_text(cr, plot.left + plot.width / 2, plot.top + plot.height + 38 * k, .5,
+		o->kind == CORRELATION_AMP_RATE ? _("Amplitude (°)") : _("Beat error (ms)"));
 
+	int outside = 0;
 	cairo_save(cr);
 	cairo_rectangle(cr, plot.left, plot.top, plot.width, plot.height);
 	cairo_clip(cr);
-	for(int i = 0; i < op->trend->count; i++) {
-		const struct trend_sample *sample = &op->trend->samples[i];
+	for(int i = 0; i < t->count; i++) {
+		const struct trend_sample *sample = &t->samples[i];
 		int position = sample_position(sample);
 		double x, y, px, py;
-		if(!in_time_range(sample, t0, t1) ||
-				(op->correlation_position >= 0 && op->correlation_position != position) ||
-				!correlation_values(sample, kind, &x, &y))
+		if(!in_time_range(sample, o->t0, o->t1) ||
+				(o->position >= 0 && o->position != position) ||
+				!correlation_values(sample, o->kind, &x, &y))
 			continue;
-		correlation_point(&plot, x, y, &px, &py);
-		draw_symbol(cr, position, px, py, 3.5);
+		if(!correlation_point(&plot, x, y, &px, &py)) {
+			outside++;
+			continue;
+		}
+		render_position_symbol(cr, th, position, px, py, 3.5 * k);
 	}
 	cairo_restore(cr);
+	// Readings beyond a fixed scale are counted, not drawn on the border
+	if(outside) {
+		/* TRANSLATORS: correlation graph: number of readings beyond the scales,
+		 * which are not drawn. Short, shown above the plot at the right */
+		char *text = g_strdup_printf(_("Off scale: %d"), outside);
+		render_set_rgb(cr, th->label, 1);
+		render_text(cr, plot.left + plot.width, plot.top - 13 * k, 1, text);
+		g_free(text);
+	}
+done:
+	cairo_restore(cr);
+}
+
+/* What the screen shows, taken from the output panel */
+static void correlation_screen_options(struct correlation_options *o, GtkWidget *widget,
+	const struct output_panel *op)
+{
+	o->kind = widget_kind(widget);
+	o->position = op->correlation_position;
+	correlation_time_range(op->trend, op->trend_span_s, &o->t0, &o->t1);
+	o->rate_range = op->trend_rate_range;
+	o->be_range = op->trend_be_range;
+	o->font = 10;
+}
+
+static gboolean correlation_draw(GtkWidget *widget, cairo_t *cr, struct output_panel *op)
+{
+	struct correlation_options o;
+	correlation_screen_options(&o, widget, op);
+	render_correlation(cr, gtk_widget_get_allocated_width(widget),
+		gtk_widget_get_allocated_height(widget), op->trend, &o,
+		render_theme_get(RENDER_SCREEN));
 	return FALSE;
 }
 
@@ -366,14 +337,13 @@ static gboolean correlation_tooltip(GtkWidget *widget, gint x, gint y,
 {
 	if(keyboard_mode || !op->trend || !op->trend->count)
 		return FALSE;
-	enum correlation_kind kind = widget_kind(widget);
-	double t0, t1;
-	correlation_time_range(op, &t0, &t1);
+	struct correlation_options o;
+	correlation_screen_options(&o, widget, op);
 	struct correlation_plot plot;
-	correlation_measure(&plot, op->trend, kind, op->correlation_position, t0, t1);
-	correlation_ranges(&plot, op, kind, t0, t1);
+	correlation_measure(&plot, op->trend, o.kind, o.position, o.t0, o.t1);
+	correlation_ranges(&plot, op->trend, &o);
 	correlation_geometry(&plot, gtk_widget_get_allocated_width(widget),
-		gtk_widget_get_allocated_height(widget));
+		gtk_widget_get_allocated_height(widget), o.font);
 	if(!plot.selected || plot.width <= 0 || plot.height <= 0)
 		return FALSE;
 
@@ -383,11 +353,11 @@ static gboolean correlation_tooltip(GtkWidget *widget, gint x, gint y,
 		const struct trend_sample *sample = &op->trend->samples[i];
 		int position = sample_position(sample);
 		double vx, vy, px, py;
-		if(!in_time_range(sample, t0, t1) ||
-				(op->correlation_position >= 0 && op->correlation_position != position) ||
-				!correlation_values(sample, kind, &vx, &vy))
+		if(!in_time_range(sample, o.t0, o.t1) ||
+				(o.position >= 0 && o.position != position) ||
+				!correlation_values(sample, o.kind, &vx, &vy) ||
+				!correlation_point(&plot, vx, vy, &px, &py))
 			continue;
-		correlation_point(&plot, vx, vy, &px, &py);
 		double distance = (px - x) * (px - x) + (py - y) * (py - y);
 		if(distance <= best) {
 			best = distance;
@@ -471,7 +441,7 @@ GtkWidget *correlations_create_page(struct output_panel *op)
 		const char *code = watch_position_code(i);
 		GtkWidget *label = gtk_label_new(NULL);
 		char *markup = g_markup_printf_escaped("<span foreground=\"%s\">%s %s</span>",
-			styles[i].hex, styles[i].symbol, code ? code : watch_position_label(i));
+			legend_styles[i].hex, legend_styles[i].symbol, code ? code : watch_position_label(i));
 		gtk_label_set_markup(GTK_LABEL(label), markup);
 		g_free(markup);
 		gtk_widget_set_tooltip_text(label, watch_position_label(i));

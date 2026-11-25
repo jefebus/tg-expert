@@ -38,11 +38,14 @@ alrededor de un minuto después de girar el reloj, para que las lecturas se
 estabilicen.
 == Capturas
 #ui[Capturar medición] (Ctrl+Espacio) conserva la medición actual en una
-pestaña nueva. La pestaña recibe el nombre del reloj seleccionado y muestra la
-posición. Una captura conserva tal como estaban la tabla de resultados, el
-diagrama de marcha, las formas de onda y la página de tendencia.
+pestaña nueva. La pestaña se titula con el número del tramo y de la captura, y
+la posición: #ui[2.3 (DU)] es la tercera captura del tramo 2, con la esfera
+arriba (véase @runs). Una captura conserva tal como estaban la tabla de
+resultados, el diagrama de marcha y las formas de onda; la tendencia es del
+tramo, que sigue grabándose.
 En una pestaña de captura:
-- el nombre puede cambiarse en el campo #ui[Captura actual];
+- puede añadirse un nombre en el campo #ui[Captura actual]; se muestra tras el
+  número;
 - la posición puede cambiarse en la barra superior;
 - la pestaña se cierra con la × de su título.
 Una sesión típica: mida con la esfera arriba, haga una captura, gire el reloj
