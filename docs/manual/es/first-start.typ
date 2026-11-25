@@ -6,8 +6,7 @@ sistema de audio predeterminado. Si no puede abrirse ninguna entrada, muestra
 el mensaje #ui[No se pudo abrir ninguna entrada de audio.] con un botón que
 lleva a los ajustes de audio.
 == El diálogo de ajustes de audio
-Ábralo con #ui[Ajustes de audio…] en el menú (el botón situado a la derecha
-de la barra superior), o haciendo clic en el botón de audio de la barra
+Ábralo con #ui[Ajustes de audio…] en el menú #ui[Ajustes], o haciendo clic en el botón de audio de la barra
 superior, que muestra la entrada que se está usando.
 #shot("audio-settings.png", [El diálogo de ajustes de audio. La línea situada
 bajo el medidor de nivel muestra la entrada en uso.], width: 55%)

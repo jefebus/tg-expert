@@ -55,5 +55,5 @@ In a snapshot tab:
 - the tab is closed with the × in its title.
 
 A typical session: measure dial up, take a snapshot, turn the watch crown
-down, wait, take another snapshot, and so on. Then save all snapshots to one
-file (see @files).
+down, wait, take another snapshot, and so on. Then save the session: one
+file holds all the snapshots (see @files).

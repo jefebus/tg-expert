@@ -15,6 +15,7 @@ tg_expert_SOURCES = src/algo.c \
 		   src/interface.c \
 		   src/output_panel.c \
 		   src/serializer.c \
+		   src/session.c \
 		   src/trend.c \
 		   src/tg.h
 

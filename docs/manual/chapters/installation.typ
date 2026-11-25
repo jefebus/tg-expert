@@ -10,7 +10,7 @@ and run it. The installer puts tg-expert in its own folder under
 `Program Files`, adds Start menu entries for the program and for this manual,
 and associates `.tgj` files with the program.
 
-On every system, #ui[User manual] in the menu opens this manual. If the
+On every system, #ui[User manual] in the #ui[Help] menu opens this manual. If the
 manual isn't installed, it opens the releases page, where the PDF can be
 downloaded.
 

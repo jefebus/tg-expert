@@ -47,4 +47,4 @@ En una pestaña de captura:
 - la pestaña se cierra con la × de su título.
 Una sesión típica: mida con la esfera arriba, haga una captura, gire el reloj
 con la corona abajo, espere, haga otra captura, y así sucesivamente. Después
-guarde todas las capturas en un solo archivo (véase @files).
+guarde la sesión: un solo archivo contiene todas las capturas (véase @files).

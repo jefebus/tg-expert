@@ -32,7 +32,7 @@ the calibration, typically better than 0.5 s/d.
 1. Place the quartz watch very close to the microphone, ideally touching it.
 2. Work in a quiet room. Switch off fans and speakers nearby, and don't touch
   the desk.
-3. Choose #ui[Start calibration] in the menu. The right side of the window
+3. Choose #ui[Start calibration] in the #ui[Tools] menu. The right side of the window
   shows the calibration instructions.
 4. Watch the status in the results table:
   - *cal (wait)*: no steady tick once per second found yet. Check the setup.
@@ -44,7 +44,7 @@ the calibration, typically better than 0.5 s/d.
     field and saved.
   - *cal (fail)*: the signal was too irregular. Improve the setup and start
     again.
-5. When it shows *done*, choose #ui[Stop calibration] in the menu to return to
+5. When it shows *done*, choose #ui[Stop calibration] in the #ui[Tools] menu to return to
   normal measurement.
 
 If you stop before calibration is complete and there is a usable estimate,

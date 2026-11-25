@@ -110,7 +110,7 @@ without Trend history cannot supply correlation points.
 
 == Exporting data
 
-Choose #ui[Export Trend as CSV] in the command menu to save the Trend data
+Choose #ui[Export data…] in the #ui[File] menu to save the Trend data
 from the active tab. Time values are elapsed seconds from the start of the
 recording, not clock times. The file includes position codes and the
 measurement settings. Only readings with a good signal are recorded, so

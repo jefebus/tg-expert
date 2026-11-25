@@ -27,9 +27,19 @@ From left to right:
   Ctrl+Space.
 / Current snapshot: the name of the selected snapshot tab, which can be
   edited.
-/ Menu: #ui[Open], #ui[Save current display], #ui[Save all snapshots],
-  #ui[Audio settings…], #ui[Algorithm configuration…], #ui[Start calibration],
-  #ui[User manual], #ui[Close all snapshots] and #ui[Quit].
+The menu bar at the top of the window has four menus:
+
+/ File: #ui[New session], #ui[Open session…], #ui[Save], #ui[Save as…],
+  #ui[Export data…] and #ui[Quit].
+/ Settings: #ui[Audio settings…] and #ui[Algorithm configuration…].
+/ Tools: #ui[Start calibration] (#ui[Stop calibration] while calibrating).
+/ Help: #ui[User manual] and #ui[About Tg Expert], with the version, the
+  licence and a link to the source code on GitHub.
+
+Keyboard shortcuts, shown next to the menu entries: Ctrl+N new session,
+Ctrl+O open session, Ctrl+S save, Ctrl+Shift+S save as, Ctrl+E export data,
+Ctrl+Q quit, F1 user manual, and Ctrl+Space to take a snapshot. A shortcut
+only works while its entry is available (for example, not while calibrating).
 
 The detection process and the #ui[Algorithm configuration…] dialog are
 described in @algorithm, with the complete parameter reference in

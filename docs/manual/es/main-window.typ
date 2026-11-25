@@ -25,11 +25,21 @@ De izquierda a derecha:
   atajo es Ctrl+Espacio.
 / Captura actual: el nombre de la pestaña de captura seleccionada, que puede
   editarse.
-/ Menú: #ui[Abrir], #ui[Guardar la pantalla actual], #ui[Guardar todas las
-  capturas], #ui[Ajustes de audio…], #ui[Configuración
-  del algoritmo…], #ui[Iniciar
-  calibración], #ui[Manual de usuario], #ui[Cerrar todas las capturas] y
-  #ui[Salir].
+La barra de menús, en la parte superior de la ventana, tiene cuatro menús:
+
+/ Archivo: #ui[Nueva sesión], #ui[Abrir sesión…], #ui[Guardar], #ui[Guardar
+  como…], #ui[Exportar datos…] y #ui[Salir].
+/ Ajustes: #ui[Ajustes de audio…] y #ui[Configuración del algoritmo…].
+/ Herramientas: #ui[Iniciar calibración] (#ui[Detener calibración] durante la
+  calibración).
+/ Ayuda: #ui[Manual de usuario] y #ui[Acerca de Tg Expert], con la versión,
+  la licencia y un enlace al código fuente en GitHub.
+
+Atajos de teclado, indicados junto a las entradas del menú: Ctrl+N nueva
+sesión, Ctrl+O abrir sesión, Ctrl+S guardar, Ctrl+Mayús+S guardar como,
+Ctrl+E exportar datos, Ctrl+Q salir, F1 manual de usuario y Ctrl+Espacio para
+hacer una captura. Un atajo solo funciona cuando su entrada está disponible
+(por ejemplo, no durante la calibración).
 
 El proceso de detección y el diálogo #ui[Configuración del algoritmo…] se
 describen en @algorithm; la referencia completa de parámetros está en

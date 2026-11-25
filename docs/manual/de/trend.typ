@@ -105,7 +105,7 @@ Korrelationspunkte.
 
 == Daten exportieren
 
-Wählen Sie im Befehlsmenü #ui[Verlauf als CSV exportieren], um die
+Wählen Sie im Menü #ui[Datei] #ui[Daten exportieren…], um die
 Verlaufsdaten der aktiven Registerkarte zu speichern. Die Zeitwerte sind die
 verstrichenen Sekunden seit Beginn der Aufzeichnung, keine Uhrzeiten. Die
 Datei enthält Lagenkürzel und Messeinstellungen. Aufgezeichnet werden nur

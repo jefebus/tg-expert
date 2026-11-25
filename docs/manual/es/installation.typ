@@ -7,7 +7,7 @@ Descargue el instalador `.msi` de Windows de la versión más reciente en la
 y ejecútelo. El instalador coloca tg-expert en su propia carpeta dentro de
 `Program Files`, añade entradas al menú Inicio para el programa y para este
 manual, y asocia los archivos `.tgj` con el programa.
-En cualquier sistema, #ui[Manual de usuario] en el menú abre este manual. Si
+En cualquier sistema, #ui[Manual de usuario] en el menú #ui[Ayuda] abre este manual. Si
 el manual no está instalado, abre la página de versiones, desde donde puede
 descargarse el PDF.
 Para desinstalarlo, use *Configuración > Aplicaciones* en Windows.

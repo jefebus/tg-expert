@@ -279,6 +279,15 @@ struct snapshot {
 	double trace_zoom;
 
 	int position; // enum watch_position, set by the user on snapshot tabs
+
+	/** Free text notes of a saved snapshot (UTF-8), NULL if none. Owned: deep-copied
+	 *  by snapshot_clone() and freed by snapshot_destroy(). Never set on live data. */
+	char *notes;
+
+	/** 1 for the "Saved state" entry: what the real-time tab showed when the
+	 *  session was saved. 0 for snapshots taken by the user. Stored as the
+	 *  optional "role" field; older files and readers treat everything as 0. */
+	int saved_state;
 };
 
 /* Watch position during a measurement (stored in snapshots and .tgj files) */
@@ -448,6 +457,23 @@ void op_set_snapshot(struct output_panel *op, struct snapshot *snst);
 void op_set_border(struct output_panel *op, int i);
 void op_destroy(struct output_panel *op);
 
+/* Project metadata stored in .tgj files (the "project-metadata" block inside "data").
+ * All strings are UTF-8, owned by the structure, and NULL or "" mean "not set".
+ * The watch label is a copy: it never refers to an entry of the INI file.
+ * Functions in serializer.c. */
+#define PROJECT_FIELD_MAX 256		// bytes, title, reference, label, owner and date
+#define PROJECT_NOTES_MAX 65536		// bytes, general notes and snapshot notes
+#define PROJECT_SCHEMA_VERSION 1
+
+struct project_metadata {
+	char *title;
+	char *project_reference;
+	char *watch_label;
+	char *owner;
+	char *last_service_date;	// "", "YYYY", "YYYY-MM" or "YYYY-MM-DD"
+	char *notes;
+};
+
 /* interface.c */
 enum csv_format {
 	CSV_FORMAT_PORTABLE,
@@ -481,13 +507,27 @@ struct main_window {
 	int live_position;     // position for the next snapshot (real-time tab)
 	GtkWidget *cal_button; // "Start calibration" / "Stop calibration" menu item
 	GtkWidget *notebook;
+	GtkWidget *new_session_item;
 	GtkWidget *open_item;
 	GtkWidget *algorithm_item;
 	GtkWidget *save_item;
-	GtkWidget *save_all_item;
+	GtkWidget *save_as_item;
 	GtkWidget *export_item;
-	GtkWidget *close_all_item;
+	GtkWidget *session_bar;	// notice about the watch of an opened session
+	GtkWidget *session_bar_label;
+	GtkWidget *session_bar_use;	// "Use <watch> to continue measuring"
 	struct output_panel *active_panel;
+
+	/* The session: one document with the project metadata, the snapshot tabs
+	 * and, when saved, the state of the real-time tab ("Saved state").
+	 * Snapshots loaded from a file are kept as they are (tab data "from-file"). */
+	struct project_metadata project;
+	gchar *session_path;	// UTF-8, NULL until saved or opened
+	int session_dirty;	// changed since the last save, open or new session
+	int session_updating;	// tabs are being replaced: no change tracking
+	int saved_trend_count;	// live trend when last saved, to see new readings
+	gint64 saved_trend_start_us;
+	int title_dirty_shown;	// -1 = title not set yet
 
 	struct computer *computer;
 	struct snapshot *active_snapshot;
@@ -592,8 +632,26 @@ gchar **list_watches(struct main_window *w); // free with g_strfreev
 void set_watch(struct main_window *w, const char *name, int bph, double la);
 void delete_watch(struct main_window *w, const char *name);
 
-/* serializer.c */
-/* trends[i] is the long-term trend of snapshot i, NULL if it has none */
-int write_file(FILE *f, struct snapshot **s, char **names, struct trend **trends, uint64_t cnt);
+/* serializer.c (struct project_metadata is defined before struct main_window) */
+
+void project_metadata_init(struct project_metadata *m);
+void project_metadata_free(struct project_metadata *m);	// leaves it empty
+int project_metadata_copy(struct project_metadata *dst, const struct project_metadata *src);
+int project_metadata_is_empty(const struct project_metadata *m);
+int project_date_valid(const char *date);	// NULL and "" are valid (not set)
+int project_text_valid(const char *text, size_t max_bytes);	// UTF-8 and length
+
+/* trends[i] is the long-term trend of snapshot i, NULL if it has none.
+ * meta may be NULL: nothing is written (write_file) or read (read_file) of the project.
+ * read_file fills *meta with the stored metadata, or leaves it empty if the file has none.
+ * Fails if a stored value is invalid (too long, not UTF-8, duplicated, bad date). */
+int write_file(FILE *f, struct snapshot **s, char **names, struct trend **trends, uint64_t cnt,
+	const struct project_metadata *meta);
 int write_trend_csv(FILE *f, const struct trend *t, char separator, char decimal);
-int read_file(FILE *f, struct snapshot ***s, char ***names, struct trend ***trends, uint64_t *cnt);
+int read_file(FILE *f, struct snapshot ***s, char ***names, struct trend ***trends, uint64_t *cnt,
+	struct project_metadata *meta);
+
+/* session.c */
+char *session_sanitize_filename_part(const char *text);
+char *session_suggest_filename(const char *date, const char *name);
+int session_write_file_safely(const char *path, int (*writer)(FILE *f, void *data), void *data);

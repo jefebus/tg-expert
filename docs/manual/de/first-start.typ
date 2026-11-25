@@ -6,8 +6,7 @@ Lässt sich kein Eingang öffnen, erscheint die Meldung #ui[Es konnte kein
 Audioeingang geöffnet werden.] mit einer Schaltfläche zu den
 Audioeinstellungen.
 == Der Dialog Audioeinstellungen
-Er wird über #ui[Audioeinstellungen…] im Menü geöffnet (die Schaltfläche am
-rechten Rand der oberen Leiste) oder über die Audio-Schaltfläche in der
+Er wird über #ui[Audioeinstellungen…] im Menü #ui[Einstellungen] geöffnet oder über die Audio-Schaltfläche in der
 oberen Leiste, die den aktuell verwendeten Eingang anzeigt.
 #shot("audio-settings.png", [Der Dialog Audioeinstellungen. Die Zeile unter
 der Pegelanzeige zeigt den verwendeten Eingang.], width: 55%)

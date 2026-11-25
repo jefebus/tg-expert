@@ -28,7 +28,7 @@ de la calibración, normalmente mejor que 0.5 s/día.
 1. Coloque el reloj de cuarzo muy cerca del micrófono, a ser posible tocándolo.
 2. Trabaje en una sala silenciosa. Apague los ventiladores y los altavoces
   cercanos, y no toque la mesa.
-3. Elija #ui[Iniciar calibración] en el menú. El lado derecho de la ventana
+3. Elija #ui[Iniciar calibración] en el menú #ui[Herramientas]. El lado derecho de la ventana
   muestra las instrucciones de calibración.
 4. Observe el estado en la tabla de resultados:
   - *cal (wait)*: todavía no se ha encontrado un tic estable una vez por
@@ -41,7 +41,7 @@ de la calibración, normalmente mejor que 0.5 s/día.
     y se guarda.
   - *cal (fail)*: la señal fue demasiado irregular. Mejore la instalación y
     empiece de nuevo.
-5. Cuando aparezca *done*, elija #ui[Detener calibración] en el menú para
+5. Cuando aparezca *done*, elija #ui[Detener calibración] en el menú #ui[Herramientas] para
   volver a la medición normal.
 
 Si detiene la calibración antes de terminar y hay una estimación utilizable,

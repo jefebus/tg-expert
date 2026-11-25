@@ -25,10 +25,21 @@ Von links nach rechts:
   Tastenkürzel ist Strg+Leertaste.
 / Aktuelle Aufnahme: der Name des gewählten Aufnahme-Reiters, der bearbeitet
   werden kann.
-/ Menü: #ui[Öffnen], #ui[Aktuelle Anzeige speichern],
-  #ui[Alle Aufnahmen speichern],
-  #ui[Audioeinstellungen…], #ui[Algorithmuskonfiguration…], #ui[Kalibrierung starten], #ui[Benutzerhandbuch],
-  #ui[Alle Aufnahmen schließen] und #ui[Beenden].
+Die Menüleiste am oberen Fensterrand hat vier Menüs:
+
+/ Datei: #ui[Neue Sitzung], #ui[Sitzung öffnen…], #ui[Speichern],
+  #ui[Speichern unter…], #ui[Daten exportieren…] und #ui[Beenden].
+/ Einstellungen: #ui[Audioeinstellungen…] und #ui[Algorithmuskonfiguration…].
+/ Werkzeuge: #ui[Kalibrierung starten] (#ui[Kalibrierung beenden] während der
+  Kalibrierung).
+/ Hilfe: #ui[Benutzerhandbuch] und #ui[Über Tg Expert], mit der Version, der
+  Lizenz und einem Link zum Quellcode auf GitHub.
+
+Tastenkürzel, neben den Menüeinträgen angezeigt: Strg+N neue Sitzung, Strg+O
+Sitzung öffnen, Strg+S speichern, Strg+Umschalt+S speichern unter, Strg+E
+Daten exportieren, Strg+Q beenden, F1 Benutzerhandbuch und Strg+Leertaste für
+eine Aufnahme. Ein Kürzel wirkt nur, solange sein Eintrag verfügbar ist (zum
+Beispiel nicht während der Kalibrierung).
 
 Der Erkennungsablauf und die #ui[Algorithmuskonfiguration…] werden in
 @algorithm beschrieben; die vollständige Parameterreferenz steht in

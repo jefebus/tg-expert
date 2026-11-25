@@ -30,7 +30,7 @@ bestimmt die Genauigkeit der Kalibrierung, typischerweise besser als 0.5 s/t.
 1. Die Quarzuhr ganz nah an das Mikrofon legen, am besten direkt daran.
 2. In einem ruhigen Raum arbeiten. Lüfter und Lautsprecher in der Nähe
   ausschalten und den Tisch nicht berühren.
-3. Im Menü #ui[Kalibrierung starten] wählen. Die rechte Fensterseite zeigt die
+3. Im Menü #ui[Werkzeuge] #ui[Kalibrierung starten] wählen. Die rechte Fensterseite zeigt die
   Kalibrierungsanleitung.
 4. Den Status in der Ergebnistabelle beobachten:
   - *cal (wait)*: noch kein stabiler Tick pro Sekunde gefunden. Den Aufbau
@@ -43,7 +43,7 @@ bestimmt die Genauigkeit der Kalibrierung, typischerweise besser als 0.5 s/t.
     übernommen und gespeichert.
   - *cal (fail)*: das Signal war zu unregelmäßig. Den Aufbau verbessern und
     erneut starten.
-5. Sobald *done* angezeigt wird, im Menü #ui[Kalibrierung beenden] wählen, um
+5. Sobald *done* angezeigt wird, im Menü #ui[Werkzeuge] #ui[Kalibrierung beenden] wählen, um
   zur normalen Messung zurückzukehren.
 
 Wenn Sie vor Abschluss stoppen und eine brauchbare Schätzung vorliegt, fragt

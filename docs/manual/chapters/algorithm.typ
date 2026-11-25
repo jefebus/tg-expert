@@ -83,7 +83,7 @@ incorrect readings that still look plausible.]
 
 === Dialog, levels and applying changes
 
-Open #ui[Algorithm configuration…] from the menu to find these settings.
+Open #ui[Algorithm configuration…] from the #ui[Settings] menu to find these settings.
 #ui[Basic] lets you choose Light mode; #ui[Advanced] shows the five more
 commonly useful movement controls. To investigate a particular stage,
 #ui[Show Expert settings] adds thirteen more under the same headings.

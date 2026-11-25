@@ -35,6 +35,7 @@ struct snapshot *snapshot_clone(struct snapshot *s)
 	struct snapshot *t = malloc(sizeof(struct snapshot));
 	memcpy(t,s,sizeof(struct snapshot));
 	if(s->pb) t->pb = pb_clone(s->pb);
+	t->notes = s->notes ? strdup(s->notes) : NULL;
 	t->events_count = count_events_buffer(s->events, s->events_wp, s->events_count);
 	if(t->events_count) {
 		t->events_wp = t->events_count - 1;
@@ -78,6 +79,7 @@ void snapshot_destroy(struct snapshot *s)
 	free(s->amps);
 	free(s->events_tictoc);
 	free(s->events);
+	free(s->notes);
 	free(s);
 }
 
@@ -378,6 +380,8 @@ struct computer *start_computer(int nominal_sr, int bph, double la, int cal, int
 	s = malloc(sizeof(struct snapshot));
 	if(!s) goto error;
 	s->timestamp = 0;
+	s->notes = NULL;
+	s->saved_state = 0;
 	s->nominal_sr = nominal_sr;
 	s->pb = NULL;
 	s->is_old = 1;

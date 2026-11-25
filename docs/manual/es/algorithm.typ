@@ -90,7 +90,7 @@ plausibles.]
 
 === Diálogo, niveles y aplicación de cambios
 
-El menú #ui[Configuración del algoritmo…] reúne estos ajustes. En
+#ui[Configuración del algoritmo…], en el menú #ui[Ajustes], reúne estos ajustes. En
 #ui[Básico] puede elegir el modo ligero; en #ui[Avanzado] encontrará los
 cinco controles de uso más habitual. Si necesita afinar una etapa concreta,
 #ui[Mostrar ajustes de experto] añade otros trece bajo los mismos encabezados.

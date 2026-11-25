@@ -8,8 +8,7 @@ could be opened.] with a button to the audio settings.
 
 == The audio settings dialog
 
-Open it with #ui[Audio settings…] in the menu (the button at the right of the
-top bar), or by clicking the audio button in the top bar, which shows the
+Open it with #ui[Audio settings…] in the #ui[Settings] menu, or by clicking the audio button in the top bar, which shows the
 input currently in use.
 
 #shot("audio-settings.png", [The audio settings dialog. The line below the

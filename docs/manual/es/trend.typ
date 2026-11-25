@@ -107,7 +107,7 @@ no pueden proporcionar puntos.
 
 == Exportar datos
 
-Elige #ui[Exportar tendencia como CSV] en el menú de comandos para guardar
+Elige #ui[Exportar datos…] en el menú #ui[Archivo] para guardar
 los datos de tendencia de la pestaña activa. Los valores de tiempo son los
 segundos transcurridos desde el inicio del registro, no la hora del reloj. El
 archivo incluye los códigos de posición y los ajustes de medición. Solo se

@@ -78,6 +78,14 @@ do
 	cp "$ABSDIR/../po/$lang.gmo" "$STAGE/share/locale/$lang/LC_MESSAGES/tg-expert.mo"
 done
 
+# The program icon in the hicolor theme, where GTK looks it up by name
+# (window icon, About dialog)
+for size in 16x16 22x22 32x32 48x48 64x64 128x128 256x256
+do
+	mkdir -p "$STAGE/share/icons/hicolor/$size/apps"
+	cp "$ABSDIR/../icons/$size/apps/tg-timer.png" "$STAGE/share/icons/hicolor/$size/apps/"
+done
+
 cp "$ABSDIR/../tg-expert.exe" "$TARGET/tg-expert.exe"
 cd "$TARGET"
 cp "$ABSDIR/tg-expert.wxs" "$TARGET"

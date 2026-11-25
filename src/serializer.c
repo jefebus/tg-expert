@@ -19,6 +19,7 @@
 
 #include "tg.h"
 #include <inttypes.h>
+#include <stddef.h>
 
 #define LABEL_SIZE 64
 
@@ -203,6 +204,134 @@ static int scan_string(FILE *f, char **s, uint64_t max_l, uint64_t *len)
 	return 0;
 }
 
+/* Strings of user text (project metadata and notes). Unlike scan_string(), the length
+ * is limited before allocating, malloc is checked, and the text must be UTF-8 without
+ * embedded NUL bytes. An empty string is stored as NULL. *s must be NULL on entry and
+ * is NULL after a failure. */
+static int scan_text(FILE *f, char **s, size_t max_bytes)
+{
+	uint64_t l;
+	int n = 0;
+	*s = NULL;
+	if(1 != fscanf(f, " S%"SCNu64";%n", &l, &n) || !n) return 1;
+	if(l > max_bytes) return 1;
+	char *t = malloc(l+1);
+	if(!t) return 1;
+	if(l+1 != fread(t, 1, l+1, f) || t[l] != ';') goto error;
+	t[l] = 0;
+	if(strlen(t) != l || !g_utf8_validate(t, -1, NULL)) goto error;
+	if(!l) {
+		free(t);
+		return 0;
+	}
+	*s = t;
+	return 0;
+error:
+	free(t);
+	return 1;
+}
+
+int project_text_valid(const char *text, size_t max_bytes)
+{
+	if(!text) return 1;
+	return strlen(text) <= max_bytes && g_utf8_validate(text, -1, NULL);
+}
+
+static int days_in_month(int year, int month)
+{
+	static const int days[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+	if(month == 2 && ((year % 4 == 0 && year % 100) || year % 400 == 0))
+		return 29;
+	return days[month - 1];
+}
+
+static int date_digits(const char *s, int n)
+{
+	int v = 0;
+	for(int i = 0; i < n; i++) {
+		if(s[i] < '0' || s[i] > '9') return -1;
+		v = v * 10 + s[i] - '0';
+	}
+	return v;
+}
+
+/* Accepts "", "YYYY", "YYYY-MM" and "YYYY-MM-DD" (year 1000 to 9999). The precision
+ * is kept as typed: nothing is completed and no time zone is involved. */
+int project_date_valid(const char *date)
+{
+	if(!date || !*date) return 1;
+	size_t len = strlen(date);
+	if(len != 4 && len != 7 && len != 10) return 0;
+	int year = date_digits(date, 4);
+	if(year < 1000) return 0;
+	if(len == 4) return 1;
+	if(date[4] != '-') return 0;
+	int month = date_digits(date + 5, 2);
+	if(month < 1 || month > 12) return 0;
+	if(len == 7) return 1;
+	if(date[7] != '-') return 0;
+	int day = date_digits(date + 8, 2);
+	return day >= 1 && day <= days_in_month(year, month);
+}
+
+static const struct {
+	const char *label;
+	size_t offset;
+	size_t max_bytes;
+} project_fields[] = {
+	{"title", offsetof(struct project_metadata, title), PROJECT_FIELD_MAX},
+	{"project-reference", offsetof(struct project_metadata, project_reference), PROJECT_FIELD_MAX},
+	{"watch-label", offsetof(struct project_metadata, watch_label), PROJECT_FIELD_MAX},
+	{"owner", offsetof(struct project_metadata, owner), PROJECT_FIELD_MAX},
+	{"last-service-date", offsetof(struct project_metadata, last_service_date), PROJECT_FIELD_MAX},
+	{"notes", offsetof(struct project_metadata, notes), PROJECT_NOTES_MAX}
+};
+#define PROJECT_FIELD_COUNT ((int)(sizeof(project_fields) / sizeof(project_fields[0])))
+
+static char **project_field(struct project_metadata *m, int i)
+{
+	return (char **)((char *)m + project_fields[i].offset);
+}
+
+void project_metadata_init(struct project_metadata *m)
+{
+	memset(m, 0, sizeof(*m));
+}
+
+void project_metadata_free(struct project_metadata *m)
+{
+	for(int i = 0; i < PROJECT_FIELD_COUNT; i++) {
+		char **p = project_field(m, i);
+		free(*p);
+		*p = NULL;
+	}
+}
+
+int project_metadata_copy(struct project_metadata *dst, const struct project_metadata *src)
+{
+	struct project_metadata t;
+	project_metadata_init(&t);
+	for(int i = 0; i < PROJECT_FIELD_COUNT; i++) {
+		const char *from = *project_field((struct project_metadata *)src, i);
+		if(from && *from && !(*project_field(&t, i) = strdup(from))) {
+			project_metadata_free(&t);
+			return 1;
+		}
+	}
+	project_metadata_free(dst);
+	*dst = t;
+	return 0;
+}
+
+int project_metadata_is_empty(const struct project_metadata *m)
+{
+	for(int i = 0; i < PROJECT_FIELD_COUNT; i++) {
+		const char *p = *project_field((struct project_metadata *)m, i);
+		if(p && *p) return 0;
+	}
+	return 1;
+}
+
 static int serialize_uint64_t_array(FILE *f, uint64_t *a, uint64_t len)
 {
 	uint64_t i;
@@ -356,6 +485,60 @@ static int serialize_union_begin(FILE *f, char *s)
 	if(serialize_ ## T (f, s -> A)) return 1;	\
 	}
 
+static int serialize_project_metadata(FILE *f, const struct project_metadata *m)
+{
+	if(project_metadata_is_empty(m)) return 0;	// absent equals empty
+	for(int i = 0; i < PROJECT_FIELD_COUNT; i++)
+		if(!project_text_valid(*project_field((struct project_metadata *)m, i),
+				project_fields[i].max_bytes))
+			return 1;
+	if(!project_date_valid(m->last_service_date)) return 1;
+
+	if(make_label(f, "project-metadata")) return 1;
+	if(serialize_struct_begin(f)) return 1;
+	if(make_label(f, "schema-version")) return 1;
+	if(serialize_int(f, PROJECT_SCHEMA_VERSION)) return 1;
+	for(int i = 0; i < PROJECT_FIELD_COUNT; i++) {
+		const char *p = *project_field((struct project_metadata *)m, i);
+		if(!p || !*p) continue;
+		if(make_label(f, project_fields[i].label)) return 1;
+		if(serialize_string(f, (char *)p)) return 1;
+	}
+	return serialize_struct_end(f);
+}
+
+/* Reads the struct after the "project-metadata" label. Unknown labels (written by a
+ * newer version) are skipped. On failure *m may hold partial data: the caller frees it. */
+static int scan_project_metadata(FILE *f, struct project_metadata *m)
+{
+	char l[LABEL_SIZE+1];
+	int n = 0;
+	int seen[PROJECT_FIELD_COUNT] = {0};
+	int have_version = 0;
+	if(0 != fscanf(f, " T;%n", &n) || !n) return 1;
+	for(;;) {
+		if(scan_label(f, l)) return 1;
+		if(!strcmp("__end__", l)) break;
+		if(!strcmp("schema-version", l)) {
+			int v;
+			if(have_version || scan_int(f, &v) || v < 1) return 1;
+			have_version = 1;
+			continue;
+		}
+		int i;
+		for(i = 0; i < PROJECT_FIELD_COUNT; i++)
+			if(!strcmp(project_fields[i].label, l)) break;
+		if(i < PROJECT_FIELD_COUNT) {
+			if(seen[i]) return 1;
+			seen[i] = 1;
+			if(scan_text(f, project_field(m, i), project_fields[i].max_bytes)) return 1;
+			continue;
+		}
+		if(eat_object(f)) return 1;
+	}
+	return !project_date_valid(m->last_service_date);
+}
+
 /* Long-term trend: the settings, the elapsed time and one array per value.
  * The statistics are not stored, they are computed again on loading. */
 static int serialize_trend(FILE *f, const struct trend *s)
@@ -465,6 +648,15 @@ static int serialize_snapshot(FILE *f, struct snapshot *s, char *name, const str
 		if(make_label(f, "name")) return 1;
 		if(serialize_string(f, name)) return 1;
 	}
+	if(s->saved_state) { // optional, older versions skip it and show a snapshot
+		if(make_label(f, "role")) return 1;
+		if(serialize_string(f, "saved-state")) return 1;
+	}
+	if(s->notes && *s->notes) { // optional, older versions skip it
+		if(!project_text_valid(s->notes, PROJECT_NOTES_MAX)) return 1;
+		if(make_label(f, "notes")) return 1;
+		if(serialize_string(f, s->notes)) return 1;
+	}
 	if(make_label(f, "pb->waveform")) return 1;
 	if(serialize_float_array(f, s->pb->waveform, s->pb->sample_count)) return 1;
 	if(make_label(f, "events")) return 1;
@@ -535,6 +727,8 @@ static int scan_snapshot(FILE *f, struct snapshot **s, char **name, struct trend
 	(*s)->pb = malloc(sizeof(struct processing_buffers));
 	memset((*s)->pb, 0, sizeof(struct processing_buffers));
 	*name = NULL;
+	int have_notes = 0;
+	int have_role = 0;
 
 	n = 0;
 	if(0 != fscanf(f, " T;%n", &n) || !n) goto error;
@@ -545,6 +739,23 @@ static int scan_snapshot(FILE *f, struct snapshot **s, char **name, struct trend
 		if(!strcmp("name", l)) {
 			debug("serializer: scanning name\n");
 			if(scan_string(f, name, 0, NULL)) goto error;
+			continue;
+		}
+		if(!strcmp("notes", l)) {
+			debug("serializer: scanning notes\n");
+			if(have_notes) goto error;
+			have_notes = 1;
+			if(scan_text(f, &((*s)->notes), PROJECT_NOTES_MAX)) goto error;
+			continue;
+		}
+		if(!strcmp("role", l)) {
+			// Unknown roles (from newer versions) load as plain snapshots
+			char *role = NULL;
+			if(have_role) goto error;
+			have_role = 1;
+			if(scan_text(f, &role, LABEL_SIZE)) goto error;
+			(*s)->saved_state = role && !strcmp(role, "saved-state");
+			free(role);
 			continue;
 		}
 		if(!strcmp("pb->waveform", l)) {
@@ -682,6 +893,7 @@ error:
 	trend_free(*trend);
 	*trend = NULL;
 	free(*name);
+	free((*s)->notes);
 	free((*s)->pb->waveform);
 	free((*s)->pb);
 	free((*s)->amps_time);
@@ -735,13 +947,15 @@ error:
 	return 1;
 }
 
-int write_file(FILE *f, struct snapshot **s, char **names, struct trend **trends, uint64_t cnt)
+int write_file(FILE *f, struct snapshot **s, char **names, struct trend **trends, uint64_t cnt,
+	const struct project_metadata *meta)
 {
 	uint64_t i;
 	if(make_label(f, "tg-timer-version")) return 1;
 	if(serialize_string(f, VERSION)) return 1;
 	if(make_label(f, "data")) return 1;
 	if(serialize_struct_begin(f)) return 1;
+	if(meta && serialize_project_metadata(f, meta)) return 1;
 	if(make_label(f, "snapshot-list")) return 1;
 	if(0 > fprintf(f, "A%"PRIu64";\n", cnt)) return 1;
 	for(i = 0; i < cnt; i++)
@@ -822,12 +1036,17 @@ int write_trend_csv(FILE *f, const struct trend *t, char separator, char decimal
 	return ferror(f) ? 1 : 0;
 }
 
-int read_file(FILE *f, struct snapshot ***s, char ***names, struct trend ***trends, uint64_t *cnt)
+int read_file(FILE *f, struct snapshot ***s, char ***names, struct trend ***trends, uint64_t *cnt,
+	struct project_metadata *meta)
 {
 	debug("serializer: reading file\n");
 	char lbl[LABEL_SIZE+1];
 	char *l = lbl;
 	int found_snapshot_list = 0;
+	int found_metadata = 0;
+	struct project_metadata local;
+	struct project_metadata *m = meta ? meta : &local;
+	project_metadata_init(m);
 	*cnt = 0;
 	*s = NULL;
 	*names = NULL;
@@ -847,17 +1066,26 @@ int read_file(FILE *f, struct snapshot ***s, char ***names, struct trend ***tren
 			found_snapshot_list = 1;
 			continue;
 		}
+		if(!strcmp("project-metadata", l)) {
+			if(found_metadata || scan_project_metadata(f, m)) goto error;
+			found_metadata = 1;
+			continue;
+		}
 		if(eat_object(f)) goto error;
 	}
 	if(!found_snapshot_list) goto error;
 	debug("serializer: end of data structure\n",l);
 	char c;
-	if(1 != fscanf(f, " %c", &c)) return 0;
+	if(1 != fscanf(f, " %c", &c)) {
+		if(!meta) project_metadata_free(&local);
+		return 0;
+	}
 #ifdef DEBUG
 	debug("serializer: stray char %c (%d) after end\n", c, c);
 #endif
 error:
 	debug("serializer: read error\n");
+	project_metadata_free(m);
 	if(*s) {
 		uint64_t i;
 		for(i = 0; i < *cnt; i++) {

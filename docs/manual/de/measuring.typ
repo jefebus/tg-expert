@@ -48,4 +48,4 @@ In einem Aufnahme-Reiter:
 - wird der Reiter mit dem × in seinem Titel geschlossen.
 Ein typischer Ablauf: mit Zifferblatt oben messen, eine Aufnahme machen, die
 Uhr auf Krone unten drehen, warten, die nächste Aufnahme machen und so weiter.
-Anschließend alle Aufnahmen in einer Datei speichern (siehe @files).
+Anschließend die Sitzung speichern: Eine Datei enthält alle Aufnahmen (siehe @files).

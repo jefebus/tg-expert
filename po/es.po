@@ -1782,3 +1782,102 @@ msgstr "La escucha se detuvo porque falló la salida seleccionada. Elija una sal
 #: src/interface.c
 msgid "Listen to the live input through headphones. Speakers can feed back into the microphone."
 msgstr "Escuche la entrada en directo con auriculares. Los altavoces pueden realimentar el micrófono."
+
+#. TRANSLATORS: title of the tab with what the real-time tab showed when the
+#. * session was saved. Short (tab title)
+msgid "Saved state"
+msgstr "Estado al guardar"
+
+msgid "New session"
+msgstr "Nueva sesión"
+
+msgid "Open session…"
+msgstr "Abrir sesión…"
+
+msgid "Open session"
+msgstr "Abrir sesión"
+
+msgid "Save as…"
+msgstr "Guardar como…"
+
+msgid "Save session"
+msgstr "Guardar sesión"
+
+msgid "Export data…"
+msgstr "Exportar datos…"
+
+msgid "Export the Trend of the selected tab as CSV."
+msgstr "Exportar la tendencia de la pestaña seleccionada como CSV."
+
+msgid "Save the changes to the current session?"
+msgstr "¿Guardar los cambios de la sesión actual?"
+
+msgid "If you do not save them, they will be lost."
+msgstr "Si no los guarda, se perderán."
+
+msgid "_Discard"
+msgstr "_Descartar"
+
+msgid "The session could not be saved. The previous file, if any, was not changed."
+msgstr "No se pudo guardar la sesión. El archivo anterior, si existía, no se ha modificado."
+
+msgid "Only the first file was opened: a session is one file."
+msgstr "Solo se ha abierto el primer archivo: una sesión es un único archivo."
+
+#, c-format
+msgid "Use the watch \"%s\" for this session?"
+msgstr "¿Usar el reloj \"%s\" en esta sesión?"
+
+msgid "Remove the watch from this session?"
+msgstr "¿Quitar el reloj de esta sesión?"
+
+msgid "The session already has measurements. Start a new session for the other watch, or associate this session with it. The measurements keep their own settings and names."
+msgstr "La sesión ya tiene mediciones. Inicie una sesión nueva para el otro reloj o asocie esta sesión con él. Las mediciones conservan sus propios ajustes y nombres."
+
+msgid "_New session"
+msgstr "Sesión _nueva"
+
+msgid "_Associate"
+msgstr "_Asociar"
+
+#, c-format
+msgid "The watch \"%s\" of this session is not among the saved watches. Nothing was added or changed."
+msgstr "El reloj \"%s\" de esta sesión no está entre los relojes guardados. No se ha añadido ni cambiado nada."
+
+#, c-format
+msgid "The saved watch \"%s\" has other settings (%s, lift angle %g°) than the last measurement of this session (%s, lift angle %g°). Nothing was changed."
+msgstr "El reloj guardado \"%s\" tiene otros ajustes (%s, ángulo de alzamiento %g°) que la última medición de esta sesión (%s, ángulo de alzamiento %g°). No se ha cambiado nada."
+
+#, c-format
+msgid "This session was measured with the watch \"%s\"."
+msgstr "Esta sesión se midió con el reloj \"%s\"."
+
+msgid "Use this watch"
+msgstr "Usar este reloj"
+
+msgid "Selects the watch and applies its bph and lift angle to new measurements."
+msgstr "Selecciona el reloj y aplica sus bph y su ángulo de alzamiento a las nuevas mediciones."
+
+msgid "_File"
+msgstr "_Archivo"
+
+msgid "_Settings"
+msgstr "A_justes"
+
+msgid "_Tools"
+msgstr "_Herramientas"
+
+msgid "_Help"
+msgstr "Ay_uda"
+
+msgid "About Tg Expert"
+msgstr "Acerca de Tg Expert"
+
+msgid "Timegrapher for mechanical watches, using a microphone and the computer's sound card."
+msgstr "Cronocomparador para relojes mecánicos, con un micrófono y la tarjeta de sonido del ordenador."
+
+msgid "Source code and releases on GitHub"
+msgstr "Código fuente y versiones en GitHub"
+
+msgid "Free software under the GNU General Public License, version 2. It comes with absolutely no warranty."
+msgstr "Software libre bajo la Licencia Pública General de GNU, versión 2. Se distribuye sin ninguna garantía."

@@ -84,6 +84,9 @@ static void refresh_results(struct main_window *w)
 static void kill_computer(struct main_window *w);
 static void watch_sync_selection(struct main_window *w);
 static void show_position(struct main_window *w, int pos);
+static int session_watch_change_allowed(struct main_window *w, const char *name);
+static void session_mark_changed(struct main_window *w);
+static int session_confirm_discard(struct main_window *w);
 
 static void handle_bph_change(GtkComboBox *b, struct main_window *w)
 {
@@ -239,6 +242,9 @@ static void handle_watch_change(GtkComboBox *b, struct main_window *w)
 	if(w->watch_updating || !w->controls_active) return;
 	watch_update_buttons(w);
 
+	// The selected watch is the watch of the session: ask before changing it
+	// when the session already has measurements (or put the selection back)
+	if(!session_watch_change_allowed(w, selected_watch(w))) return;
 	const char *name = selected_watch(w);
 	if(!name) {
 		watch_remember(w, NULL);
@@ -341,6 +347,9 @@ static void handle_watch_save(GtkButton *b, struct main_window *w)
 		watch_remember(w, name);
 		set_watch(w, name, w->bph, w->la); // also writes the config file
 		watch_populate(w, name);
+		// The new watch is now selected: it becomes the watch of the session
+		// as if picked in the selector (it has the current bph and lift angle)
+		session_watch_change_allowed(w, name);
 		g_free(name);
 	}
 }
@@ -439,6 +448,8 @@ static void on_shutdown(GApplication *app, void *p)
 		if(w->computer)
 			computer_destroy(w->computer);
 		op_destroy(w->active_panel);
+		project_metadata_free(&w->project);
+		g_free(w->session_path);
 		close_config(w);
 		g_free(w->audio_device_name);
 		g_free(w->audio_output_device_name);
@@ -612,14 +623,17 @@ static gboolean delete_event(GtkWidget *widget, GdkEvent *event, gpointer w)
 	UNUSED(widget);
 	UNUSED(event);
 	debug("Received delete event\n");
-	quit((struct main_window *)w);
+	struct main_window *mw = w;
+	if(!mw->zombie && session_confirm_discard(mw))
+		quit(mw);
 	return TRUE;
 }
 
 static void handle_quit(GtkMenuItem *m, struct main_window *w)
 {
 	UNUSED(m);
-	quit(w);
+	if(!w->zombie && session_confirm_discard(w))
+		quit(w);
 }
 
 static void recompute(struct main_window *w)
@@ -652,8 +666,8 @@ static guint kick_computer(struct main_window *w)
 	}
 }
 
-/* Menu items whose availability depends on the program state (e.g. "Save all
- * snapshots" only with snapshots open) remember the wanted state here, so that
+/* Menu items whose availability depends on the program state (e.g. "Export
+ * data" only with Trend readings) remember the wanted state here, so that
  * calibration can lock them and later restore them correctly. */
 static void set_menu_item_enabled(struct main_window *w, GtkWidget *item, int enabled)
 {
@@ -714,14 +728,14 @@ static void update_sensitivity(struct main_window *w)
 			w->calibrate ? _("Stop calibration") : _("Start calibration"));
 
 	// Other menu entries are locked while calibrating (Quit stays available)
+	gtk_widget_set_sensitive(w->new_session_item, !calibration_locked);
 	gtk_widget_set_sensitive(w->open_item, !calibration_locked);
 	gtk_widget_set_sensitive(w->algorithm_item, !calibration_locked && !w->restart_audio && !w->restart_algorithm);
-	gtk_widget_set_sensitive(w->save_item, menu_item_wanted(w->save_item) && !calibration_locked);
-	gtk_widget_set_sensitive(w->save_all_item, menu_item_wanted(w->save_all_item) && !calibration_locked);
+	gtk_widget_set_sensitive(w->save_item, !calibration_locked);
+	gtk_widget_set_sensitive(w->save_as_item, !calibration_locked);
 	if(w->export_item)
 		gtk_widget_set_sensitive(w->export_item,
 			menu_item_wanted(w->export_item) && !calibration_locked);
-	gtk_widget_set_sensitive(w->close_all_item, menu_item_wanted(w->close_all_item) && !calibration_locked);
 }
 
 static void handle_calibrate(GtkMenuItem *b, struct main_window *w)
@@ -898,29 +912,33 @@ static void handle_tab_changed(GtkNotebook *nbk, GtkWidget *panel, guint x, stru
 
 	controls_active(w, !op);
 
+	// Measurements loaded from a session file keep their position; any snapshot
+	// can be renamed, except the saved state, whose title comes from its role
+	int from_file = op && GPOINTER_TO_INT(g_object_get_data(G_OBJECT(panel), "from-file"));
+	gtk_widget_set_sensitive(w->snapshot_name_entry, !op || !op->snst->saved_state);
+	gtk_widget_set_sensitive(w->snapshot_position_combo, !from_file);
+
 	int bph, cal;
 	double la;
-	struct snapshot *snap;
 	if(op) {
+		w->session_updating++; // showing the name is not renaming
 		gtk_entry_set_text(GTK_ENTRY(w->snapshot_name_entry), tab_name ? tab_name : "");
+		w->session_updating--;
 		show_position(w, op->snst->position);
 		bph = op->snst->bph;
 		cal = op->snst->cal;
 		la = op->snst->la;
-		snap = op->snst;
 	} else {
 		show_position(w, w->live_position);
 		bph = w->bph;
 		cal = w->cal;
 		la = w->la;
-		snap = w->active_snapshot;
 	}
 
 	set_bph_combo(w, bph);
 
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w->la_spin_button), la);
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w->cal_spin_button), cal);
-	set_menu_item_enabled(w, w->save_item, !snap->calibrate && snap->pb);
 	update_export_item(w);
 
 	// Snapshot tabs show their own bph/la, so no saved watch is selected there
@@ -936,13 +954,14 @@ static void handle_tab_closed(GtkNotebook *nbk, GtkWidget *panel, guint x, struc
 	if(gtk_notebook_get_n_pages(nbk) == 1 && !w->zombie) {
 		gtk_notebook_set_show_tabs(GTK_NOTEBOOK(nbk), FALSE);
 		gtk_notebook_set_show_border(GTK_NOTEBOOK(nbk), FALSE);
-		set_menu_item_enabled(w, w->save_all_item, FALSE);
-		set_menu_item_enabled(w, w->close_all_item, FALSE);
 	}
 	// Now, are we sure that we are not going to segfault?
 	struct output_panel *op = g_object_get_data(G_OBJECT(panel), "op-pointer");
 	if(op) op_destroy(op);
 	free(g_object_get_data(G_OBJECT(panel), "tab-name"));
+	g_object_set_data(G_OBJECT(panel), "tab-name", NULL);
+	if(op && !w->zombie)
+		session_mark_changed(w); // ignored while the session is being replaced
 }
 
 static void handle_close_tab(GtkButton *b, struct output_panel *p)
@@ -996,6 +1015,9 @@ static void update_tab_label(GtkWidget *panel)
 	if(!label || !op) return;
 
 	const char *name = g_object_get_data(G_OBJECT(panel), "tab-name");
+	/* TRANSLATORS: title of the tab with what the real-time tab showed when the
+	 * session was saved. Short (tab title) */
+	if(op->snst->saved_state) name = _("Saved state");
 	/* TRANSLATORS: default title of a snapshot tab, short (tab title) */
 	if(!name) name = _("Snapshot");
 	int pos = op->snst->position;
@@ -1013,11 +1035,18 @@ static void handle_name_change(GtkEntry *e, struct main_window *w)
 	int p = gtk_notebook_get_current_page(GTK_NOTEBOOK(w->notebook));
 	GtkWidget *panel = gtk_notebook_get_nth_page(GTK_NOTEBOOK(w->notebook), p);
 	if(!g_object_get_data(G_OBJECT(panel), "op-pointer")) return; // real-time tab
-	free( g_object_get_data(G_OBJECT(panel), "tab-name") );
+	if(w->session_updating) return; // the entry is only showing the name
+	struct output_panel *op = g_object_get_data(G_OBJECT(panel), "op-pointer");
+	if(op->snst->saved_state) return; // titled by its role, not by a name
+	char *old = g_object_get_data(G_OBJECT(panel), "tab-name");
 	char *name = (char *)gtk_entry_get_text(e);
 	name = blank_string(name) ? NULL : strdup(name);
+	int changed = g_strcmp0(old, name) != 0;
+	free(old);
 	g_object_set_data(G_OBJECT(panel), "tab-name", name);
 	update_tab_label(panel);
+	if(changed)
+		session_mark_changed(w);
 }
 
 /* Path of the installed manual, or NULL if it is not there. It is looked for
@@ -1096,8 +1125,14 @@ static void handle_position_change(GtkComboBox *b, struct main_window *w)
 		w->live_position = pos;
 		return;
 	}
+	if(GPOINTER_TO_INT(g_object_get_data(G_OBJECT(panel), "from-file"))) {
+		show_position(w, op->snst->position); // kept as it was saved
+		return;
+	}
+	if(op->snst->position == pos) return;
 	op->snst->position = pos;
 	update_tab_label(panel);
+	session_mark_changed(w);
 }
 
 /* Show a position in the combo box without triggering a change */
@@ -1146,6 +1181,7 @@ static GtkWidget *make_tab_label(char *name, struct output_panel *panel_to_close
 		gtk_button_set_relief(GTK_BUTTON(button), GTK_RELIEF_NONE);
 		g_signal_connect(button, "clicked", G_CALLBACK(handle_close_tab), panel_to_close);
 		gtk_box_pack_start(GTK_BOX(hbox), button, FALSE, FALSE, 0);
+		g_object_set_data(G_OBJECT(panel_to_close->panel), "tab-close", button);
 		g_object_set_data(G_OBJECT(panel_to_close->panel), "op-pointer", panel_to_close);
 		g_object_set_data(G_OBJECT(panel_to_close->panel), "tab-label", label);
 		g_object_set_data(G_OBJECT(panel_to_close->panel), "tab-name", name ? strdup(name) : NULL);
@@ -1186,8 +1222,6 @@ static struct output_panel *add_new_tab(struct snapshot *s, char *name, struct m
 	gtk_notebook_set_show_border(GTK_NOTEBOOK(w->notebook), TRUE);
 	gtk_notebook_append_page(GTK_NOTEBOOK(w->notebook), op->panel, label);
 	gtk_notebook_set_tab_reorderable(GTK_NOTEBOOK(w->notebook), op->panel, TRUE);
-	set_menu_item_enabled(w, w->save_all_item, TRUE);
-	set_menu_item_enabled(w, w->close_all_item, TRUE);
 	return op;
 }
 
@@ -1204,6 +1238,7 @@ static void handle_snapshot(GtkButton *b, struct main_window *w)
 	// The snapshot keeps the long-term statistics as they are now
 	op->trend = trend_clone(w->active_panel->trend);
 	update_export_item(w);
+	session_mark_changed(w);
 }
 
 /* Keyboard shortcut for the most frequent action: Ctrl+Space takes a snapshot.
@@ -1273,7 +1308,9 @@ error:	g_free(name);
 	return f;
 }
 
-static FILE *save_selected_file(struct main_window *w, GtkFileChooser *chooser,
+/* The file chosen in a save dialog, with the extension added when needed and
+ * a confirmation if it exists. NULL if cancelled or unusable. Free with g_free(). */
+static char *chooser_save_path(struct main_window *w, GtkFileChooser *chooser,
 	const char *extension, int force_extension)
 {
 	GFile *gf = gtk_file_chooser_get_file(chooser);
@@ -1305,30 +1342,40 @@ static FILE *save_selected_file(struct main_window *w, GtkFileChooser *chooser,
 		filename = with_extension;
 	}
 
-	struct stat stst;
-	int do_open = 0;
-	if(!stat(filename, &stst)) {
+	// g_file_test takes UTF-8 names on Windows too (stat() would not)
+	if(g_file_test(filename, G_FILE_TEST_EXISTS)) {
 		GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(w->window),
 			GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
 			GTK_MESSAGE_QUESTION,
 			GTK_BUTTONS_OK_CANCEL,
 			_("File %s already exists. Do you want to replace it?"),
 			filename);
-		do_open = GTK_RESPONSE_OK == gtk_dialog_run(GTK_DIALOG(dialog));
+		int replace = GTK_RESPONSE_OK == gtk_dialog_run(GTK_DIALOG(dialog));
 		gtk_widget_destroy(dialog);
-	} else
-		do_open = 1;
-
-	FILE *f = NULL;
-	if(do_open) {
-		f = fopen_check(filename, "wb", w);
-		if(f) {
-			char *uri = g_filename_to_uri(filename,NULL,NULL);
-			if(uri)
-				gtk_recent_manager_add_item(gtk_recent_manager_get_default(), uri);
-			g_free(uri);
+		if(!replace) {
+			g_free(filename);
+			return NULL;
 		}
 	}
+	return filename;
+}
+
+static void add_recent_file(const char *filename)
+{
+	char *uri = g_filename_to_uri(filename, NULL, NULL);
+	if(uri)
+		gtk_recent_manager_add_item(gtk_recent_manager_get_default(), uri);
+	g_free(uri);
+}
+
+static FILE *save_selected_file(struct main_window *w, GtkFileChooser *chooser,
+	const char *extension, int force_extension)
+{
+	char *filename = chooser_save_path(w, chooser, extension, force_extension);
+	if(!filename) return NULL;
+	FILE *f = fopen_check(filename, "wb", w);
+	if(f)
+		add_recent_file(filename);
 	g_free(filename);
 	return f;
 }
@@ -1364,88 +1411,506 @@ static FILE *choose_file_for_save_with_options(struct main_window *w, const char
 	return f;
 }
 
-static FILE *choose_file_for_save(struct main_window *w, const char *title, char *suggestion)
+/* A save dialog that returns the chosen path (UTF-8) instead of opening it */
+static char *choose_path_for_save(struct main_window *w, const char *title,
+	const char *suggestion, const char *extension)
 {
-	return choose_file_for_save_with_options(w, title, suggestion, ".tgj",
-		NULL, NULL, NULL, 0);
-}
-
-static void save_current(GtkMenuItem *m, struct main_window *w)
-{
-	UNUSED(m);
-	int p = gtk_notebook_get_current_page(GTK_NOTEBOOK(w->notebook));
-	GtkWidget *tab = gtk_notebook_get_nth_page(GTK_NOTEBOOK(w->notebook), p);
-	struct output_panel *op = g_object_get_data(G_OBJECT(tab), "op-pointer");
-	struct snapshot *snapshot = op ? op->snst : w->active_snapshot;
-	// The real-time tab saves the trend recorded so far
-	struct trend *trend = op ? op->trend : w->active_panel->trend;
-	char *name = g_object_get_data(G_OBJECT(tab), "tab-name");
-
-	if(snapshot->calibrate || !snapshot->pb) return;
-
-	snapshot = snapshot_clone(snapshot);
-
-	if(!snapshot->timestamp)
-		snapshot->timestamp = get_timestamp(snapshot->is_light);
-
-	FILE *f = choose_file_for_save(w, _("Save current display"), name);
-
-	if(f) {
-		if(write_file(f, &snapshot, &name, &trend, 1)) {
-			GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(w->window),0,GTK_MESSAGE_ERROR,GTK_BUTTONS_CLOSE,
-						_("Error writing file"));
-			gtk_dialog_run(GTK_DIALOG(dialog));
-			gtk_widget_destroy(dialog);
-		}
-		fclose(f);
+	GtkWidget *dialog = gtk_file_chooser_dialog_new(title,
+		GTK_WINDOW(w->window),
+		GTK_FILE_CHOOSER_ACTION_SAVE,
+		_("Cancel"),
+		GTK_RESPONSE_CANCEL,
+		_("Save"),
+		GTK_RESPONSE_ACCEPT,
+		NULL);
+	GtkFileChooser *chooser = GTK_FILE_CHOOSER(dialog);
+	if(w->session_path) {
+		gchar *dir = g_path_get_dirname(w->session_path);
+		gtk_file_chooser_set_current_folder(chooser, dir);
+		g_free(dir);
 	}
+	if(suggestion)
+		gtk_file_chooser_set_current_name(chooser, suggestion);
+	chooser_set_filters(chooser, extension);
 
-	snapshot_destroy(snapshot);
+	char *path = NULL;
+	if(GTK_RESPONSE_ACCEPT == gtk_dialog_run(GTK_DIALOG(dialog)))
+		path = chooser_save_path(w, chooser, extension, 1);
+	gtk_widget_destroy(dialog);
+	return path;
 }
 
-static void close_all(GtkMenuItem *m, struct main_window *w)
+/* ---- The session ----
+ *
+ * One document: the project metadata (with the watch label), the snapshot
+ * tabs and, when saved, what the real-time tab shows ("Saved state").
+ * Save writes all of it, whichever tab is shown. Opening a session replaces
+ * the current one and lets it go on: new snapshots are added, while the
+ * measurements loaded from the file (tab data "from-file") are kept as they
+ * are. Each save writes one new "Saved state" with the current real-time
+ * data; the ones loaded from the file stay, so an interrupted recording
+ * keeps what was saved before. Nothing here changes the saved watches, the
+ * calibration or any other setting of the configuration file. */
+
+static int session_snapshot_count(struct main_window *w)
 {
-	UNUSED(m);
+	int n = 0, pages = gtk_notebook_get_n_pages(GTK_NOTEBOOK(w->notebook));
+	for(int i = 0; i < pages; i++) {
+		GtkWidget *tab = gtk_notebook_get_nth_page(GTK_NOTEBOOK(w->notebook), i);
+		if(g_object_get_data(G_OBJECT(tab), "op-pointer"))
+			n++;
+	}
+	return n;
+}
+
+static int text_set(const char *s)
+{
+	return s && *s;
+}
+
+/* The session holds something besides the live display: then new live
+ * readings are changes too. Just watching the live display is not. */
+static int session_in_use(struct main_window *w)
+{
+	const struct project_metadata *m = &w->project;
+	return w->session_path || session_snapshot_count(w) ||
+		text_set(m->title) || text_set(m->project_reference) || text_set(m->owner) ||
+		text_set(m->last_service_date) || text_set(m->notes);
+}
+
+static int live_trend_changed(struct main_window *w)
+{
+	const struct trend *t = w->active_panel ? w->active_panel->trend : NULL;
+	if(!t) return 0;
+	return t->count != w->saved_trend_count ||
+		(t->count && t->start_us != w->saved_trend_start_us);
+}
+
+static int session_is_modified(struct main_window *w)
+{
+	return w->session_dirty || (session_in_use(w) && live_trend_changed(w));
+}
+
+/* "Tg Expert <version> — <project> (<file>) *", * with unsaved changes */
+static void session_update_title(struct main_window *w)
+{
+	if(w->zombie || !w->window) return;
+	int dirty = session_is_modified(w);
+	w->title_dirty_shown = dirty;
+	const char *title = text_set(w->project.title) ? w->project.title : NULL;
+	gchar *file = w->session_path ? g_path_get_basename(w->session_path) : NULL;
+	GString *s = g_string_new(PROGRAM_NAME " " VERSION);
+	if(title || file)
+		g_string_append(s, " \xE2\x80\x94 ");
+	if(title)
+		g_string_append(s, title);
+	if(file)
+		g_string_append_printf(s, title ? " (%s)" : "%s", file);
+	if(dirty)
+		g_string_append(s, " *");
+	gtk_window_set_title(GTK_WINDOW(w->window), s->str);
+	g_string_free(s, TRUE);
+	g_free(file);
+}
+
+static void session_mark_changed(struct main_window *w)
+{
+	if(w->session_updating) return;
+	w->session_dirty = 1;
+	session_update_title(w);
+}
+
+/* The session now matches its file (or is new and empty) */
+static void session_mark_saved(struct main_window *w)
+{
+	const struct trend *t = w->active_panel ? w->active_panel->trend : NULL;
+	w->session_dirty = 0;
+	w->saved_trend_count = t ? t->count : 0;
+	w->saved_trend_start_us = t ? t->start_us : 0;
+	session_update_title(w);
+}
+
+static void session_set_watch_label(struct main_window *w, const char *name)
+{
+	free(w->project.watch_label);
+	w->project.watch_label = name ? strdup(name) : NULL;
+}
+
+static void session_message(struct main_window *w, GtkMessageType type,
+	const char *text, const char *detail)
+{
+	GtkWidget *d = gtk_message_dialog_new(GTK_WINDOW(w->window),
+		GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+		type, GTK_BUTTONS_CLOSE, "%s", text);
+	if(detail)
+		gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(d), "%s", detail);
+	gtk_dialog_run(GTK_DIALOG(d));
+	gtk_widget_destroy(d);
+}
+
+/* What the real-time tab shows, as the "Saved state" entry, or NULL when
+ * there is nothing to keep (no waveform yet, or calibrating) */
+static struct snapshot *session_live_state(struct main_window *w)
+{
+	struct snapshot *a = w->active_snapshot;
+	if(!a || a->calibrate || !a->pb) return NULL;
+	struct snapshot *s = snapshot_clone(a);
+	if(!s->timestamp)
+		s->timestamp = get_timestamp(s->is_light);
+	s->audio_status = w->active_panel->audio_status;
+	s->position = w->live_position;
+	s->saved_state = 1;
+	free(s->notes);
+	s->notes = NULL;
+	return s;
+}
+
+struct session_contents {
+	struct snapshot **s;
+	char **names;
+	struct trend **trends;
+	uint64_t count;
+	const struct project_metadata *meta;
+};
+
+static int session_writer(FILE *f, void *data)
+{
+	struct session_contents *c = data;
+	return write_file(f, c->s, c->names, c->trends, c->count, c->meta);
+}
+
+/* Write the whole session to path, safely. 0 on success. */
+static int session_write(struct main_window *w, const char *path)
+{
+	int pages = gtk_notebook_get_n_pages(GTK_NOTEBOOK(w->notebook));
+	struct snapshot **s = g_new0(struct snapshot *, pages + 1);
+	char **names = g_new0(char *, pages + 1);
+	struct trend **trends = g_new0(struct trend *, pages + 1);
+	uint64_t n = 0;
+	for(int i = 0; i < pages; i++) {
+		GtkWidget *tab = gtk_notebook_get_nth_page(GTK_NOTEBOOK(w->notebook), i);
+		struct output_panel *op = g_object_get_data(G_OBJECT(tab), "op-pointer");
+		if(!op) continue; // the real-time tab, written last as "Saved state"
+		s[n] = op->snst;
+		trends[n] = op->trend;
+		names[n++] = g_object_get_data(G_OBJECT(tab), "tab-name");
+	}
+	// The data is copied here, in the GUI thread, so it is coherent even
+	// while the measurement goes on
+	struct snapshot *live = session_live_state(w);
+	if(live) {
+		s[n] = live;
+		trends[n] = w->active_panel->trend;
+		// Older programs show this name, newer ones the role
+		names[n++] = (char *)_("Saved state");
+	}
+	struct session_contents c = {s, names, trends, n, &w->project};
+	int failed = session_write_file_safely(path, session_writer, &c);
+	if(live)
+		snapshot_destroy(live);
+	g_free(s);
+	g_free(names);
+	g_free(trends);
+	return failed;
+}
+
+static int session_save_to(struct main_window *w, const char *path)
+{
+	if(session_write(w, path)) {
+		session_message(w, GTK_MESSAGE_ERROR,
+			_("The session could not be saved. The previous file, if any, was not changed."),
+			path);
+		return 0;
+	}
+	if(w->session_path != path) {
+		g_free(w->session_path);
+		w->session_path = g_strdup(path);
+	}
+	add_recent_file(path);
+	session_mark_saved(w);
+	return 1;
+}
+
+/* "YYYY-MM-DD <project name>.tgj", or the watch label without a project name */
+static char *session_suggested_name(struct main_window *w)
+{
+	GDateTime *now = g_date_time_new_now_local();
+	char *date = now ? g_date_time_format(now, "%Y-%m-%d") : NULL;
+	if(now) g_date_time_unref(now);
+	const char *name = text_set(w->project.title) ? w->project.title : w->project.watch_label;
+	char *s = session_suggest_filename(date ? date : "", name);
+	g_free(date);
+	return s;
+}
+
+static int session_save_as(struct main_window *w)
+{
+	char *suggestion = session_suggested_name(w);
+	char *path = choose_path_for_save(w, _("Save session"), suggestion, ".tgj");
+	g_free(suggestion);
+	if(!path) return 0;
+	int saved = session_save_to(w, path);
+	g_free(path);
+	return saved;
+}
+
+static int session_save(struct main_window *w)
+{
+	return w->session_path ? session_save_to(w, w->session_path) : session_save_as(w);
+}
+
+/* Before the session is replaced or the program closed: 1 to go on, 0 to stop */
+static int session_confirm_discard(struct main_window *w)
+{
+	if(!session_is_modified(w)) return 1;
+	GtkWidget *d = gtk_message_dialog_new(GTK_WINDOW(w->window),
+		GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+		GTK_MESSAGE_QUESTION, GTK_BUTTONS_NONE,
+		"%s", _("Save the changes to the current session?"));
+	gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(d), "%s",
+		_("If you do not save them, they will be lost."));
+	gtk_dialog_add_buttons(GTK_DIALOG(d),
+		_("_Cancel"), GTK_RESPONSE_CANCEL,
+		_("_Discard"), GTK_RESPONSE_REJECT,
+		_("_Save"), GTK_RESPONSE_ACCEPT,
+		NULL);
+	gtk_dialog_set_default_response(GTK_DIALOG(d), GTK_RESPONSE_ACCEPT);
+	int r = gtk_dialog_run(GTK_DIALOG(d));
+	gtk_widget_destroy(d);
+	if(r == GTK_RESPONSE_REJECT) return 1;
+	if(r == GTK_RESPONSE_ACCEPT) return session_save(w);
+	return 0;
+}
+
+static void session_bar_hide(struct main_window *w)
+{
+	if(w->session_bar)
+		gtk_widget_hide(w->session_bar);
+}
+
+/* After opening: say how the watch of the session relates to the saved
+ * watches. Nothing is selected, applied, added or changed by itself. */
+static void session_show_watch_notice(struct main_window *w, int have_ref, int ref_bph, double ref_la)
+{
+	const char *label = w->project.watch_label;
+	if(!w->session_bar || !label) {
+		session_bar_hide(w);
+		return;
+	}
+	int bph;
+	double la;
+	gchar *text = NULL;
+	int can_use = 0;
+	GtkMessageType type = GTK_MESSAGE_INFO;
+	if(get_watch(w, label, &bph, &la)) {
+		text = g_strdup_printf(_("The watch \"%s\" of this session is not among the saved watches. Nothing was added or changed."), label);
+	} else if(have_ref && (bph != ref_bph || fabs(la - ref_la) >= 0.05)) {
+		gchar *now = bph ? g_strdup_printf("%d bph", bph) : g_strdup(_("bph guess"));
+		gchar *then = ref_bph ? g_strdup_printf("%d bph", ref_bph) : g_strdup(_("bph guess"));
+		type = GTK_MESSAGE_WARNING;
+		text = g_strdup_printf(_("The saved watch \"%s\" has other settings (%s, lift angle %g\xC2\xB0) than the last measurement of this session (%s, lift angle %g\xC2\xB0). Nothing was changed."),
+			label, now, la, then, ref_la);
+		g_free(now);
+		g_free(then);
+	} else if(!g_strcmp0(selected_watch(w), label) && w->bph == bph && fabs(w->la - la) < 0.05) {
+		session_bar_hide(w); // already in use
+		return;
+	} else {
+		text = g_strdup_printf(_("This session was measured with the watch \"%s\"."), label);
+		can_use = 1;
+	}
+	gtk_info_bar_set_message_type(GTK_INFO_BAR(w->session_bar), type);
+	gtk_label_set_text(GTK_LABEL(w->session_bar_label), text);
+	gtk_widget_set_visible(w->session_bar_use, can_use);
+	gtk_widget_show(w->session_bar);
+	g_free(text);
+}
+
+/* "Use this watch": select it and apply its bph and lift angle to the live
+ * measurement, as if picked in the selector */
+static void session_use_watch(struct main_window *w)
+{
+	const char *label = w->project.watch_label;
+	int bph;
+	double la;
+	if(!label || get_watch(w, label, &bph, &la)) {
+		session_bar_hide(w);
+		return;
+	}
+	gtk_notebook_set_current_page(GTK_NOTEBOOK(w->notebook),
+		gtk_notebook_page_num(GTK_NOTEBOOK(w->notebook), w->active_panel->panel));
+	if(!w->controls_active || w->calibrate || w->calibration_stop_pending)
+		return;
+	watch_select(w, label);
+	watch_remember(w, label);
+	watch_apply(w, bph, la);
+	session_bar_hide(w);
+}
+
+static void handle_session_bar_response(GtkInfoBar *bar, gint response, struct main_window *w)
+{
+	UNUSED(bar);
+	if(response == GTK_RESPONSE_ACCEPT)
+		session_use_watch(w);
+	else
+		session_bar_hide(w);
+}
+
+/* Close the snapshot tabs, empty the project and start the live statistics
+ * over. The settings and the live measurement itself are not touched. */
+static void session_clear(struct main_window *w)
+{
+	w->session_updating++;
 	int i = 0;
 	while(i < gtk_notebook_get_n_pages(GTK_NOTEBOOK(w->notebook))) {
 		GtkWidget *tab = gtk_notebook_get_nth_page(GTK_NOTEBOOK(w->notebook), i);
-		struct output_panel *op = g_object_get_data(G_OBJECT(tab), "op-pointer");
-		if(!op) {  // This one is the real-time tab
+		if(!g_object_get_data(G_OBJECT(tab), "op-pointer")) {  // the real-time tab
 			i++;
 			continue;
 		}
 		gtk_widget_destroy(tab);
 	}
+	w->session_updating--;
+	project_metadata_free(&w->project);
+	g_free(w->session_path);
+	w->session_path = NULL;
+	// The live readings so far belong to the previous session
+	trend_reset(w->active_panel->trend);
+	trend_start_settling(w->active_panel->trend, w->settling_seconds);
+	op_update_settling_status(w->active_panel);
+	session_bar_hide(w);
+	update_export_item(w);
+	gtk_widget_queue_draw(w->notebook);
 }
 
-static void save_all(GtkMenuItem *m, struct main_window *w)
+static int session_new(struct main_window *w)
 {
-	UNUSED(m);
-	FILE *f = choose_file_for_save(w, _("Save all snapshots"), NULL);
-	if(!f) return;
+	if(!session_confirm_discard(w)) return 0;
+	session_clear(w);
+	session_set_watch_label(w, selected_watch(w));
+	session_mark_saved(w);
+	return 1;
+}
 
-	int i, j, tabs = gtk_notebook_get_n_pages(GTK_NOTEBOOK(w->notebook));
-	struct snapshot *s[tabs];
-	char *names[tabs];
-	struct trend *trends[tabs];
-
-	for(i = j = 0; i < tabs; i++) {
-		GtkWidget *tab = gtk_notebook_get_nth_page(GTK_NOTEBOOK(w->notebook), i);
-		struct output_panel *op = g_object_get_data(G_OBJECT(tab), "op-pointer");
-		if(!op) continue; // This one is the real-time tab
-		s[j] = op->snst;
-		trends[j] = op->trend;
-		names[j++] = g_object_get_data(G_OBJECT(tab), "tab-name");
-	}
-
-	if(write_file(f, s, names, trends, j)) {
+static int session_open(struct main_window *w, const char *path)
+{
+	if(!session_confirm_discard(w)) return 0;
+	FILE *f = fopen_check((char *)path, "rb", w);
+	if(!f) return 0;
+	struct snapshot **s;
+	char **names;
+	struct trend **trends;
+	uint64_t cnt;
+	struct project_metadata meta;
+	int failed = read_file(f, &s, &names, &trends, &cnt, &meta);
+	fclose(f);
+	gchar *base = g_path_get_basename(path);
+	if(failed) {
 		GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(w->window),0,GTK_MESSAGE_ERROR,GTK_BUTTONS_CLOSE,
-					_("Error writing file"));
+					_("Error reading file: %s"), base);
 		gtk_dialog_run(GTK_DIALOG(dialog));
 		gtk_widget_destroy(dialog);
+		g_free(base);
+		return 0;
 	}
+	// Snapshots without a name (older files) are named after the file
+	size_t len = strlen(base);
+	if(len > 4 && !g_ascii_strcasecmp(".tgj", base + len - 4))
+		base[len - 4] = 0;
 
-	fclose(f);
+	session_clear(w);
+	w->session_updating++;
+	w->project = meta; // owned by the session from now on
+	int have_ref = cnt > 0;
+	int ref_bph = cnt ? s[cnt - 1]->bph : 0;
+	double ref_la = cnt ? s[cnt - 1]->la : 0;
+	for(uint64_t i = 0; i < cnt; i++) {
+		struct output_panel *op = add_new_tab(s[i], names[i] ? names[i] : base, w);
+		op->trend = trends[i]; // NULL for files saved without one
+		g_object_set_data(G_OBJECT(op->panel), "from-file", GINT_TO_POINTER(1));
+		GtkWidget *close = g_object_get_data(G_OBJECT(op->panel), "tab-close");
+		if(close)
+			gtk_widget_hide(close); // measurements in the file are kept
+		update_tab_label(op->panel);
+		free(names[i]);
+	}
+	free(s);
+	free(names);
+	free(trends);
+	g_free(base);
+	w->session_path = g_strdup(path);
+	w->session_updating--;
+	add_recent_file(path);
+	update_export_item(w);
+	session_mark_saved(w);
+	session_show_watch_notice(w, have_ref, ref_bph, ref_la);
+	return 1;
+}
+
+/* The user picked another watch in the selector (name NULL: none). With
+ * measurements in the session, ask whether to start a new session or to
+ * associate this one with that watch; the measurements keep their names
+ * and settings either way. Returns 0 if cancelled: the selection is put
+ * back to the watch of the session. */
+static int session_watch_change_allowed(struct main_window *w, const char *name)
+{
+	const char *current = w->project.watch_label;
+	if(!g_strcmp0(name, current)) return 1;
+	if(!session_snapshot_count(w) && !w->session_path) {
+		session_set_watch_label(w, name); // nothing measured yet
+		return 1;
+	}
+	gchar *chosen = g_strdup(name);
+	gchar *question = chosen ?
+		g_strdup_printf(_("Use the watch \"%s\" for this session?"), chosen) :
+		g_strdup(_("Remove the watch from this session?"));
+	GtkWidget *d = gtk_message_dialog_new(GTK_WINDOW(w->window),
+		GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+		GTK_MESSAGE_QUESTION, GTK_BUTTONS_NONE, "%s", question);
+	gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(d), "%s",
+		_("The session already has measurements. Start a new session for the other watch, or associate this session with it. The measurements keep their own settings and names."));
+	gtk_dialog_add_buttons(GTK_DIALOG(d),
+		_("_Cancel"), GTK_RESPONSE_CANCEL,
+		_("_New session"), 1,
+		_("_Associate"), 2,
+		NULL);
+	gtk_dialog_set_default_response(GTK_DIALOG(d), GTK_RESPONSE_CANCEL);
+	int r = gtk_dialog_run(GTK_DIALOG(d));
+	gtk_widget_destroy(d);
+	g_free(question);
+
+	int allowed = 0;
+	if(r == 1 && session_new(w)) {
+		session_set_watch_label(w, chosen);
+		watch_select(w, chosen); // closing the tabs may have restored another one
+		allowed = 1;
+	} else if(r == 2) {
+		session_set_watch_label(w, chosen);
+		session_mark_changed(w);
+		allowed = 1;
+	}
+	if(!allowed)
+		watch_select(w, w->project.watch_label);
+	g_free(chosen);
+	return allowed;
+}
+
+static void handle_new_session(GtkMenuItem *m, struct main_window *w)
+{
+	UNUSED(m);
+	session_new(w);
+}
+
+static void handle_save(GtkMenuItem *m, struct main_window *w)
+{
+	UNUSED(m);
+	session_save(w);
+}
+
+static void handle_save_as(GtkMenuItem *m, struct main_window *w)
+{
+	UNUSED(m);
+	session_save_as(w);
 }
 
 static gboolean localized_csv_available(void)
@@ -1564,51 +2029,10 @@ static void export_trend_csv(GtkMenuItem *m, struct main_window *w)
 	}
 }
 
-static void load_snapshots(FILE *f, char *name, struct main_window *w)
-{
-	struct snapshot **s;
-	char **names;
-	struct trend **trends;
-	uint64_t cnt;
-	if(!read_file(f, &s, &names, &trends, &cnt)) {
-		uint64_t i;
-		for(i = 0; i < cnt; i++) {
-			struct output_panel *op = add_new_tab(s[i], names[i] ? names[i] : name, w);
-			op->trend = trends[i]; // NULL for files saved without one
-			update_export_item(w);
-			free(names[i]);
-		}
-		free(s);
-		free(names);
-		free(trends);
-	} else {
-		GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(w->window),0,GTK_MESSAGE_ERROR,GTK_BUTTONS_CLOSE,
-					_("Error reading file: %s"), name);
-		gtk_dialog_run(GTK_DIALOG(dialog));
-		gtk_widget_destroy(dialog);
-	}
-}
-
-static void load_from_file(char *filename, struct main_window *w)
-{
-	FILE *f = fopen_check(filename, "rb", w);
-	if(f) {
-		char *filename_cpy = strdup(filename);
-		char *name = basename(filename_cpy);
-		name = g_filename_to_utf8(name, -1, NULL, NULL, NULL);
-		if(name && strlen(name) > 3 && !strcasecmp(".tgj", name + strlen(name) - 4))
-			name[strlen(name) - 4] = 0;
-		load_snapshots(f, name, w);
-		free(filename_cpy);
-		g_free(name);
-		fclose(f);
-	}
-}
-
-static void load(GtkMenuItem *m, struct main_window *w)
+static void handle_open_session(GtkMenuItem *m, struct main_window *w)
 {
 	UNUSED(m);
-	GtkWidget *dialog = gtk_file_chooser_dialog_new (_("Open"),
+	GtkWidget *dialog = gtk_file_chooser_dialog_new (_("Open session"),
 			GTK_WINDOW(w->window),
 			GTK_FILE_CHOOSER_ACTION_OPEN,
 			_("Cancel"),
@@ -1620,16 +2044,27 @@ static void load(GtkMenuItem *m, struct main_window *w)
 
 	chooser_set_filters(chooser, ".tgj");
 
+	if(w->session_path) {
+		gchar *dir = g_path_get_dirname(w->session_path);
+		gtk_file_chooser_set_current_folder(chooser, dir);
+		g_free(dir);
+	}
+
+	char *filename = NULL;
 	if(GTK_RESPONSE_ACCEPT == gtk_dialog_run (GTK_DIALOG (dialog)))
 	{
 		GFile *gf = gtk_file_chooser_get_file(chooser);
-		char *filename = g_file_get_path(gf);
-		g_object_unref(gf);
-		load_from_file(filename, w);
-		g_free (filename);
+		if(gf) {
+			filename = g_file_get_path(gf);
+			g_object_unref(gf);
+		}
 	}
-
 	gtk_widget_destroy(dialog);
+
+	if(filename) {
+		session_open(w, filename);
+		g_free(filename);
+	}
 }
 
 /* The top bar is three bars (watch, audio, snapshot) in a flow box: side by side
@@ -1656,6 +2091,73 @@ static void apply_compact_css(void)
 	g_object_unref(provider);
 }
 
+/* A top-level entry of the menu bar (label with a mnemonic) and its menu */
+static GtkWidget *menu_bar_add(GtkWidget *menu_bar, const char *label)
+{
+	GtkWidget *item = gtk_menu_item_new_with_mnemonic(label);
+	GtkWidget *menu = gtk_menu_new();
+	gtk_menu_item_set_submenu(GTK_MENU_ITEM(item), menu);
+	gtk_menu_shell_append(GTK_MENU_SHELL(menu_bar), item);
+	return menu;
+}
+
+#define PROJECT_URL "https://github.com/jefebus/tg-expert"
+
+/* The program icon at the given size, or NULL. From the icon theme when it is
+ * installed there (make install, the Windows installer); otherwise from the
+ * hicolor folders of the data directories, or from the source tree in debug
+ * builds started there. Free with g_object_unref(). */
+static GdkPixbuf *program_icon(int size)
+{
+	GdkPixbuf *p = gtk_icon_theme_load_icon(gtk_icon_theme_get_default(),
+		ICON_NAME, size, 0, NULL);
+	if(p) return p;
+	gchar *rel = g_strdup_printf("%dx%d/apps/" ICON_NAME ".png", size, size);
+	const gchar * const *dirs = g_get_system_data_dirs();
+	for(int i = 0; !p && dirs[i]; i++) {
+		gchar *path = g_build_filename(dirs[i], "icons", "hicolor", rel, NULL);
+		p = gdk_pixbuf_new_from_file(path, NULL);
+		g_free(path);
+	}
+#ifdef DEBUG
+	if(!p) {
+		gchar *path = g_build_filename("icons", rel, NULL);
+		p = gdk_pixbuf_new_from_file(path, NULL);
+		g_free(path);
+	}
+#endif
+	g_free(rel);
+	return p;
+}
+
+static void handle_about(GtkMenuItem *m, struct main_window *w)
+{
+	UNUSED(m);
+	/* All the texts are the program's own, so that they follow its translation.
+	 * The licence, authors and credits pages of GtkAboutDialog are not used:
+	 * their texts come from GTK's catalogue, which may be incomplete or missing
+	 * (the dialog then mixes languages). */
+	gchar *comments = g_strdup_printf("%s\n\n%s",
+		_("Timegrapher for mechanical watches, using a microphone and the computer's sound card."),
+		_("Free software under the GNU General Public License, version 2. It comes with absolutely no warranty."));
+	gchar *title = g_strdup(_("About Tg Expert"));
+	// Without the icon GTK would show its "missing image" picture
+	GdkPixbuf *logo = program_icon(128);
+	gtk_show_about_dialog(GTK_WINDOW(w->window),
+		"title", title,
+		"program-name", PROGRAM_NAME,
+		"version", VERSION,
+		"logo", logo,
+		"comments", comments,
+		"copyright", "\xC2\xA9 2015 Marcello Mamino (tg)\n\xC2\xA9 2026 jefebus (tg-expert)",
+		"website", PROJECT_URL,
+		"website-label", _("Source code and releases on GitHub"),
+		NULL);
+	if(logo) g_object_unref(logo);
+	g_free(title);
+	g_free(comments);
+}
+
 /* Set up the main window and populate with widgets */
 static void init_main_window(struct main_window *w)
 {
@@ -1664,17 +2166,28 @@ static void init_main_window(struct main_window *w)
 
 	gtk_widget_set_size_request(w->window, 950, 700);
 
-	gtk_container_set_border_width(GTK_CONTAINER(w->window), 10);
 	g_signal_connect(w->window, "delete_event", G_CALLBACK(delete_event), w);
 	g_signal_connect(w->window, "key-press-event", G_CALLBACK(handle_key_press), w);
 
 	gtk_window_set_title(GTK_WINDOW(w->window), PROGRAM_NAME " " VERSION);
 	gtk_window_set_icon_name (GTK_WINDOW(w->window), ICON_NAME);
 
-	GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
-	gtk_container_add(GTK_CONTAINER(w->window), vbox);
+	// The menu bar runs along the top edge; the rest keeps a 10 px border
+	GtkWidget *outer = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+	gtk_container_add(GTK_CONTAINER(w->window), outer);
+	GtkWidget *menu_bar = gtk_menu_bar_new();
+	gtk_box_pack_start(GTK_BOX(outer), menu_bar, FALSE, FALSE, 0);
+	// Keyboard shortcuts of the menu entries, shown next to them. They only work
+	// while the entry is available, so the calibration locks apply to them too.
+	GtkAccelGroup *accel = gtk_accel_group_new();
+	gtk_window_add_accel_group(GTK_WINDOW(w->window), accel);
+	g_object_unref(accel);
 
-	// Top strip: the bars on the left, the command menu on the right
+	GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
+	gtk_container_set_border_width(GTK_CONTAINER(vbox), 10);
+	gtk_box_pack_start(GTK_BOX(outer), vbox, TRUE, TRUE, 0);
+
+	// Top strip: the bars (watch, audio, snapshot)
 	GtkWidget *top_strip = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
 	gtk_box_pack_start(GTK_BOX(vbox), top_strip, FALSE, FALSE, 0);
 
@@ -1829,54 +2342,67 @@ static void init_main_window(struct main_window *w)
 	gtk_box_pack_start(GTK_BOX(hbox), w->snapshot_name, FALSE, FALSE, 0);
 	g_signal_connect(w->snapshot_name_entry, "changed", G_CALLBACK(handle_name_change), w);
 
-	// Command menu
-	GtkWidget *command_menu = gtk_menu_new();
-	GtkWidget *command_menu_button = gtk_menu_button_new();
-#ifdef WIN_XP
-	GtkWidget *image = image_from_file("open-menu.png");
-#else
-	GtkWidget *image = gtk_image_new_from_icon_name("open-menu-symbolic", GTK_ICON_SIZE_SMALL_TOOLBAR);
-#endif
-	gtk_button_set_image(GTK_BUTTON(command_menu_button), image);
-	g_object_set(G_OBJECT(command_menu_button), "direction", GTK_ARROW_DOWN, NULL);
-	g_object_set(G_OBJECT(command_menu), "halign", GTK_ALIGN_END, NULL);
-	gtk_menu_button_set_popup(GTK_MENU_BUTTON(command_menu_button), command_menu);
-	gtk_box_pack_end(GTK_BOX(top_strip), command_menu_button, FALSE, FALSE, 0);
-	
-	// ... Open
-	w->open_item = gtk_menu_item_new_with_label(_("Open"));
-	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), w->open_item);
-	g_signal_connect(w->open_item, "activate", G_CALLBACK(load), w);
+	// Menu bar: File, Settings, Tools, Help
+	GtkWidget *file_menu = menu_bar_add(menu_bar, _("_File"));
+	GtkWidget *settings_menu = menu_bar_add(menu_bar, _("_Settings"));
+	GtkWidget *tools_menu = menu_bar_add(menu_bar, _("_Tools"));
+	GtkWidget *help_menu = menu_bar_add(menu_bar, _("_Help"));
 
-	// ... Save
-	w->save_item = gtk_menu_item_new_with_label(_("Save current display"));
-	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), w->save_item);
-	g_signal_connect(w->save_item, "activate", G_CALLBACK(save_current), w);
-	set_menu_item_enabled(w, w->save_item, FALSE);
+	// File: the session (one document with the project, the snapshots and the
+	// saved state), the data export and Quit
+	w->new_session_item = gtk_menu_item_new_with_label(_("New session"));
+	gtk_menu_shell_append(GTK_MENU_SHELL(file_menu), w->new_session_item);
+	g_signal_connect(w->new_session_item, "activate", G_CALLBACK(handle_new_session), w);
+	gtk_widget_add_accelerator(w->new_session_item, "activate", accel,
+		GDK_KEY_n, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
 
-	// ... Save all
-	w->save_all_item = gtk_menu_item_new_with_label(_("Save all snapshots"));
-	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), w->save_all_item);
-	g_signal_connect(w->save_all_item, "activate", G_CALLBACK(save_all), w);
-	set_menu_item_enabled(w, w->save_all_item, FALSE);
+	w->open_item = gtk_menu_item_new_with_label(_("Open session…"));
+	gtk_menu_shell_append(GTK_MENU_SHELL(file_menu), w->open_item);
+	g_signal_connect(w->open_item, "activate", G_CALLBACK(handle_open_session), w);
+	gtk_widget_add_accelerator(w->open_item, "activate", accel,
+		GDK_KEY_o, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
 
-	w->export_item = gtk_menu_item_new_with_label(_("Export Trend as CSV…"));
-	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), w->export_item);
+	w->save_item = gtk_menu_item_new_with_label(_("Save"));
+	gtk_menu_shell_append(GTK_MENU_SHELL(file_menu), w->save_item);
+	g_signal_connect(w->save_item, "activate", G_CALLBACK(handle_save), w);
+	gtk_widget_add_accelerator(w->save_item, "activate", accel,
+		GDK_KEY_s, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+
+	w->save_as_item = gtk_menu_item_new_with_label(_("Save as…"));
+	gtk_menu_shell_append(GTK_MENU_SHELL(file_menu), w->save_as_item);
+	g_signal_connect(w->save_as_item, "activate", G_CALLBACK(handle_save_as), w);
+	gtk_widget_add_accelerator(w->save_as_item, "activate", accel,
+		GDK_KEY_s, GDK_CONTROL_MASK | GDK_SHIFT_MASK, GTK_ACCEL_VISIBLE);
+
+	gtk_menu_shell_append(GTK_MENU_SHELL(file_menu), gtk_separator_menu_item_new());
+
+	// The Trend of the selected tab, as CSV (TG-02)
+	w->export_item = gtk_menu_item_new_with_label(_("Export data…"));
+	gtk_widget_set_tooltip_text(w->export_item, _("Export the Trend of the selected tab as CSV."));
+	gtk_menu_shell_append(GTK_MENU_SHELL(file_menu), w->export_item);
 	g_signal_connect(w->export_item, "activate", G_CALLBACK(export_trend_csv), w);
+	gtk_widget_add_accelerator(w->export_item, "activate", accel,
+		GDK_KEY_e, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
 	set_menu_item_enabled(w, w->export_item, FALSE);
 
-	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), gtk_separator_menu_item_new());
+	gtk_menu_shell_append(GTK_MENU_SHELL(file_menu), gtk_separator_menu_item_new());
 
-	// ... Audio settings: audio system, input device and rate
+	GtkWidget *quit_item = gtk_menu_item_new_with_label(_("Quit"));
+	gtk_menu_shell_append(GTK_MENU_SHELL(file_menu), quit_item);
+	g_signal_connect(quit_item, "activate", G_CALLBACK(handle_quit), w);
+	gtk_widget_add_accelerator(quit_item, "activate", accel,
+		GDK_KEY_q, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+
+	// Settings: audio system, input device and rate; algorithm parameters
 	GtkWidget *audio_settings_item = gtk_menu_item_new_with_label(_("Audio settings…"));
-	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), audio_settings_item);
+	gtk_menu_shell_append(GTK_MENU_SHELL(settings_menu), audio_settings_item);
 	g_signal_connect_swapped(audio_settings_item, "activate", G_CALLBACK(audio_settings_open), w);
 
 	w->algorithm_item = gtk_menu_item_new_with_label(_("Algorithm configuration…"));
-	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), w->algorithm_item);
+	gtk_menu_shell_append(GTK_MENU_SHELL(settings_menu), w->algorithm_item);
 	g_signal_connect_swapped(w->algorithm_item, "activate", G_CALLBACK(algorithm_settings_open), w);
 
-	// ... Start / Stop calibration (label switches with the state)
+	// Tools: Start / Stop calibration (label switches with the state)
 	w->cal_button = gtk_menu_item_new_with_label(_("Start calibration"));
 	gtk_widget_set_tooltip_text(w->cal_button,
 		_("Measures the error of\n"
@@ -1890,29 +2416,41 @@ static void init_main_window(struct main_window *w)
 		"The result is stored\n"
 		"in the cal field.")
 		);
-	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), w->cal_button);
+	gtk_menu_shell_append(GTK_MENU_SHELL(tools_menu), w->cal_button);
 	g_signal_connect(w->cal_button, "activate", G_CALLBACK(handle_calibrate), w);
 
-	// ... User manual
+	// Help: user manual and About
 	GtkWidget *manual_item = gtk_menu_item_new_with_label(_("User manual"));
 	gtk_widget_set_tooltip_text(manual_item, _("Open the user manual (PDF)."));
-	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), manual_item);
+	gtk_menu_shell_append(GTK_MENU_SHELL(help_menu), manual_item);
 	g_signal_connect(manual_item, "activate", G_CALLBACK(handle_manual), w);
+	gtk_widget_add_accelerator(manual_item, "activate", accel,
+		GDK_KEY_F1, 0, GTK_ACCEL_VISIBLE);
 
-	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), gtk_separator_menu_item_new());
+	gtk_menu_shell_append(GTK_MENU_SHELL(help_menu), gtk_separator_menu_item_new());
 
-	// ... Close all
-	w->close_all_item = gtk_menu_item_new_with_label(_("Close all snapshots"));
-	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), w->close_all_item);
-	g_signal_connect(w->close_all_item, "activate", G_CALLBACK(close_all), w);
-	set_menu_item_enabled(w, w->close_all_item, FALSE);
+	GtkWidget *about_item = gtk_menu_item_new_with_label(_("About Tg Expert"));
+	gtk_menu_shell_append(GTK_MENU_SHELL(help_menu), about_item);
+	g_signal_connect(about_item, "activate", G_CALLBACK(handle_about), w);
 
-	// ... Quit
-	GtkWidget *quit_item = gtk_menu_item_new_with_label(_("Quit"));
-	gtk_menu_shell_append(GTK_MENU_SHELL(command_menu), quit_item);
-	g_signal_connect(quit_item, "activate", G_CALLBACK(handle_quit), w);
+	gtk_widget_show_all(menu_bar);
 
-	gtk_widget_show_all(command_menu);
+	// Notice about the watch of an opened session, hidden until then
+	w->session_bar = gtk_info_bar_new();
+	gtk_info_bar_set_show_close_button(GTK_INFO_BAR(w->session_bar), TRUE);
+	w->session_bar_label = gtk_label_new("");
+	gtk_label_set_line_wrap(GTK_LABEL(w->session_bar_label), TRUE);
+	gtk_label_set_xalign(GTK_LABEL(w->session_bar_label), 0);
+	gtk_container_add(GTK_CONTAINER(gtk_info_bar_get_content_area(GTK_INFO_BAR(w->session_bar))),
+		w->session_bar_label);
+	gtk_widget_show(w->session_bar_label);
+	w->session_bar_use = gtk_info_bar_add_button(GTK_INFO_BAR(w->session_bar),
+		_("Use this watch"), GTK_RESPONSE_ACCEPT);
+	gtk_widget_set_tooltip_text(w->session_bar_use,
+		_("Selects the watch and applies its bph and lift angle to new measurements."));
+	g_signal_connect(w->session_bar, "response", G_CALLBACK(handle_session_bar_response), w);
+	gtk_widget_set_no_show_all(w->session_bar, TRUE);
+	gtk_box_pack_start(GTK_BOX(vbox), w->session_bar, FALSE, FALSE, 0);
 
 	// The tabs' container
 	w->notebook = gtk_notebook_new();
@@ -1932,6 +2470,10 @@ static void init_main_window(struct main_window *w)
 	gtk_widget_show_all(w->window);
 	gtk_widget_hide(w->snapshot_name);
 	gtk_window_set_focus(GTK_WINDOW(w->window), NULL);
+
+	// A new, empty session for the watch selected at startup
+	session_set_watch_label(w, selected_watch(w));
+	session_mark_saved(w);
 }
 
 guint save_on_change_timer(struct main_window *w)
@@ -1976,10 +2518,12 @@ guint refresh(struct main_window *w)
 	int photogenic = 0;
 	if(!g_object_get_data(G_OBJECT(panel), "op-pointer")) {
 		photogenic = !w->active_snapshot->calibrate && w->active_snapshot->pb;
-		set_menu_item_enabled(w, w->save_item, photogenic);
 		gtk_widget_queue_draw(w->notebook);
 	}
 	gtk_widget_set_sensitive(w->snapshot_button, photogenic);
+	// New live readings are changes of a session in use (shown with * in the title)
+	if(session_is_modified(w) != w->title_dirty_shown)
+		session_update_title(w);
 
 	if(w->calibration_stop_pending && !w->active_snapshot->calibrate) {
 		w->calibration_stop_pending = 0;
@@ -2046,6 +2590,19 @@ static void start_interface(GApplication* app, void *p)
 	w->watch_updating = 0;
 	w->position_updating = 0;
 	w->live_position = POS_NONE;
+	w->window = NULL;
+	w->new_session_item = NULL;
+	w->save_as_item = NULL;
+	w->session_bar = NULL;
+	w->session_bar_label = NULL;
+	w->session_bar_use = NULL;
+	project_metadata_init(&w->project);
+	w->session_path = NULL;
+	w->session_dirty = 0;
+	w->session_updating = 0;
+	w->saved_trend_count = 0;
+	w->saved_trend_start_us = 0;
+	w->title_dirty_shown = -1;
 
 	load_config(w);
 	set_audio_output_device_name(w->audio_output_device_name);
@@ -2168,18 +2725,18 @@ static void handle_open(GApplication* app, GFile **files, int cnt, char *hint, v
 	UNUSED(hint);
 	UNUSED(p);
 	struct main_window *w = g_object_get_data(G_OBJECT(app), "main-window");
-	if(w) {
-		int i;
-		for(i = 0; i < cnt; i++) {
-			char *path = g_file_get_path(files[i]);
-			// This partially works around a bug in XP (i.e. gtk+ bundle 3.6.4)
-			path = g_locale_to_utf8(path, -1, NULL, NULL, NULL);
-			if(!path) continue;
-			load_from_file(path, w);
+	if(w && cnt > 0) {
+		gtk_window_present(GTK_WINDOW(w->window));
+		// A session is one file: the first one given replaces the current session
+		char *path = g_file_get_path(files[0]);
+		if(path) {
+			if(session_open(w, path))
+				gtk_notebook_set_current_page(GTK_NOTEBOOK(w->notebook), -1);
 			g_free(path);
 		}
-		gtk_notebook_set_current_page(GTK_NOTEBOOK(w->notebook), -1);
-		gtk_window_present(GTK_WINDOW(w->window));
+		if(cnt > 1)
+			session_message(w, GTK_MESSAGE_INFO,
+				_("Only the first file was opened: a session is one file."), NULL);
 	}
 }
 

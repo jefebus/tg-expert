@@ -8,7 +8,7 @@ herunterladen und ausführen. Das Installationsprogramm legt tg-expert in
 einem eigenen Ordner unter `Program Files` ab, fügt Startmenü-Einträge für das
 Programm und für dieses Handbuch hinzu und verknüpft `.tgj`-Dateien mit dem
 Programm.
-Auf jedem System öffnet #ui[Benutzerhandbuch] im Menü dieses Handbuch. Ist das
+Auf jedem System öffnet #ui[Benutzerhandbuch] im Menü #ui[Hilfe] dieses Handbuch. Ist das
 Handbuch nicht installiert, öffnet sich die Releases-Seite, von der sich das
 PDF herunterladen lässt.
 Zum Deinstallieren dient *Einstellungen > Apps* in Windows.

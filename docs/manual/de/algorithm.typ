@@ -89,7 +89,7 @@ aussehen.]
 
 === Dialog, Ebenen und Übernahme von Änderungen
 
-Öffnen Sie #ui[Algorithmuskonfiguration…] im Menü. Unter #ui[Grundlegend]
+Öffnen Sie #ui[Algorithmuskonfiguration…] im Menü #ui[Einstellungen]. Unter #ui[Grundlegend]
 wählen Sie den leichten Modus; #ui[Fortgeschritten] zeigt fünf häufiger
 benötigte Bewegungseinstellungen. Für die Untersuchung einer bestimmten
 Stufe ergänzt #ui[Experteneinstellungen anzeigen] dreizehn weitere unter
