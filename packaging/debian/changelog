@@ -1,3 +1,13 @@
+tg-expert (0.12.0-1) unstable; urgency=medium
+
+  * Record separate measurement runs and save them with their snapshots
+    and workshop notes in one session file.
+  * Export PDF reports with selected runs and snapshots, graphs and notes.
+  * Add a menu bar and make off-scale readings clearer in the graphs.
+    See CHANGELOG.md for details.
+
+ -- jefebus <jefebus@users.noreply.github.com>  <date from date -R>
+ 
 tg-expert (0.11.0-1) unstable; urgency=medium
 
   * Add live audio listening, beat-error trends and correlation plots.

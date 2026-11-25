@@ -1,34 +1,33 @@
 # Changelog
 
-## Unreleased
+## 0.12.0
+
+### Added
+
+- Record separate measurement runs in one session—for example, before and
+  after an adjustment. Each run has its own Trend graphs. You can name runs
+  and snapshots, and snapshots stay grouped with the run they came from.
+- Keep a job reference, last service date and general notes with the session.
+  Add separate notes to individual runs and snapshots.
+- Export an A4 PDF report from File > Export report… (Ctrl+P). Choose which
+  runs and snapshots to include, print in colour or monochrome, and include
+  the owner's name only if you choose to.
 
 ### Changed
 
-- A traditional menu bar (File, Settings, Tools, Help) replaces the menu button at the right of the top bar. Calibration is in Tools; Help has the user manual and an About dialog with the version, licence and a link to the GitHub repository.
-- Project and notes panel floating over the right part of the tabs (hidden by default, shown from Tools, closed with its own button, resizable from its left edge): project name, job reference, owner, last-service date, the watch of the session, general notes, and independent notes for each snapshot. Changes go straight into the session.
-- Correlation and Trend graphs: readings beyond a fixed rate or beat error range are no longer drawn on the border as if read there; the line breaks and they are counted ("Off scale: N") above the graph. The paper strip amplitude line also breaks where the amplitude is beyond its scale.
-- Waveform panels: each column shows the peak of the samples it covers, so that narrow pulses are not lost.
-- The graphs (correlations, Trend, waveforms, paper strip) are drawn by renderers shared with the coming PDF report, with screen, document colour and document monochrome themes.
-- PDF report (File > Export report…, Ctrl+P), written directly with Cairo on A4: header with the project and watch, trends (statistics, Trend and correlation graphs), current state and chosen snapshots with paper strip, waveforms and notes. Colour or monochrome; the owner only on request. Notes are rendered with a Markdown subset (headings, bold, italic, lists). Written through a temporary file; the session is not changed. Requires Cairo with its PDF backend and PangoCairo (both come with GTK 3).
-- Keyboard shortcuts: Ctrl+N new session, Ctrl+O open, Ctrl+S save, Ctrl+Shift+S save as, Ctrl+E export data, Ctrl+Q quit, F1 user manual (Ctrl+Space still takes a snapshot).
-- Sessions: the File menu has New session, Open session…, Save, Save as… and Export data…, replacing Open, Save current display, Save all snapshots, Export Trend as CSV… and Close all snapshots. Save writes the whole session (project, watch, all snapshots and the real-time tab as "Saved state") whichever tab is shown, through a temporary file that replaces the previous one only when complete. Opening a session replaces the current one and lets it go on; measurements loaded from the file are kept as they are. Unsaved changes are shown with `*` in the title and asked about before they are lost.
-- Choosing another saved watch when the session already has measurements asks whether to start a new session or associate the session with that watch. Opening a session never selects, applies, adds or changes saved watches or the calibration.
-
-- Recording runs: a Record / Pause button next to Take Snapshot. The program and New session start recording; an opened session is paused. Pause closes the run into its own tab with its Trend and correlations; Record starts a new run whose Trend starts from zero. While paused the live display still analyses the audio, but nothing is recorded and no snapshot can be taken. Snapshots no longer copy the Trend: they keep the moment (readings, paper strip, waveforms) and name the run they were taken in. Tabs are ordered newest run first, each followed by its snapshots (newest first, with a camera icon); they are no longer reordered by dragging.
-- Tab titles by number: runs are "Run N"; snapshots are "N.M" (the M-th snapshot of run N), with an optional name after the number and the position, e.g. "2.3 after adjustment (DU)". New snapshots are no longer named after the selected watch. Closing a snapshot does not renumber the others.
-- Run notes: the notes panel page "Snapshot" is now "Measurement" and edits the notes of the selected run or snapshot; on the real-time tab, those of the run being recorded, which go with it to its tab on Pause and into the file on Save.
-- PDF report organised by run: the first page adds a table of the runs (period, duration, positions, mean rate, amplitude and beat error, number of snapshots); then each run in the order recorded, from a new page, with its notes, Trends, final state and snapshots (one per page); then the current state and the snapshots of older files. The export dialog is a tree: each run with its Trends, final state (checked by default only for runs without snapshots) and snapshots, then current state (unchecked by default), other snapshots and the summary table. The "From" selector is gone: each run has its own Trends.
-- Runs can be named like snapshots ("Run 2 after adjustment"). The summary table on the first page of the report lists, under each run, its snapshots in the report with their position, date and time and readings. In the report the notes of a run, its final state and each snapshot come first, before the readings and graphs.
+- Save now keeps the whole session in one `.tgj` file, including watch
+  details, runs, snapshots and notes. Reopened sessions start paused, and
+  tg-expert warns you before discarding unsaved changes.
+- A menu bar replaces the old menu button. Calibration is under Tools, and
+  the user manual is under Help (F1).
+- Graphs now show gaps where readings go off scale instead of plotting them
+  at the edge. Narrow pulses are easier to see in the waveform display.
 
 ### Compatibility
 
-- A run's name is stored in an optional `run_name` field; its `name` holds the whole title ("Run 2 after adjustment") for older versions and is not used when reading.
-- Snapshots store their number within the run in an optional `snap` field. Snapshots of runs in files without it are numbered in file order when opened; older versions skip the field.
-
-- Runs are marked with an optional `role` field ("run"), with optional `run` and `run_start` fields; older versions show them as normal snapshots. The "Saved state" entries of earlier 0.11 development files open as runs. Snapshots saved with a Trend by older versions keep it.
-- Snapshots store when they were taken in an optional `wall_time` field (seconds since 1970, UTC), shown in the PDF report in local time. Files from older versions have no date; older versions skip the field.
-
-- `.tgj` files can store optional project metadata (project name, job reference, watch label, owner, last-service date as `YYYY`, `YYYY-MM` or `YYYY-MM-DD`, general notes) in a `project-metadata` block inside `data`, and optional `notes` for each snapshot. Text is UTF-8, up to 256 bytes per field and 64 KiB per note. Older files open unchanged; older versions skip the new fields when reading and drop them when saving.
+- Existing `.tgj` files still open. Older versions may show runs as ordinary
+  snapshots and may lose new session details if you save the file again
+  from an older version.
 
 ## 0.11.0
 
