@@ -85,8 +85,8 @@ static void kill_computer(struct main_window *w);
 static void watch_sync_selection(struct main_window *w);
 static void show_position(struct main_window *w, int pos);
 static int session_watch_change_allowed(struct main_window *w, const char *name);
-static void session_mark_changed(struct main_window *w);
 static int session_confirm_discard(struct main_window *w);
+static void notes_refresh_snapshot(struct main_window *w);
 
 static void handle_bph_change(GtkComboBox *b, struct main_window *w)
 {
@@ -450,6 +450,7 @@ static void on_shutdown(GApplication *app, void *p)
 		op_destroy(w->active_panel);
 		project_metadata_free(&w->project);
 		g_free(w->session_path);
+		notes_panel_free(w->notes);
 		close_config(w);
 		g_free(w->audio_device_name);
 		g_free(w->audio_output_device_name);
@@ -902,6 +903,17 @@ static int blank_string(char *s)
 	return 1;
 }
 
+/* The snapshot page of the notes panel follows the selected tab */
+static void notes_refresh_snapshot(struct main_window *w)
+{
+	if(!w->notes) return;
+	int p = gtk_notebook_get_current_page(GTK_NOTEBOOK(w->notebook));
+	GtkWidget *panel = p >= 0 ? gtk_notebook_get_nth_page(GTK_NOTEBOOK(w->notebook), p) : NULL;
+	struct output_panel *op = panel ? g_object_get_data(G_OBJECT(panel), "op-pointer") : NULL;
+	GtkLabel *label = op ? g_object_get_data(G_OBJECT(panel), "tab-label") : NULL;
+	notes_panel_show_snapshot(w->notes, op, label ? gtk_label_get_text(label) : NULL);
+}
+
 static void handle_tab_changed(GtkNotebook *nbk, GtkWidget *panel, guint x, struct main_window *w)
 {
 	UNUSED(nbk);
@@ -940,6 +952,7 @@ static void handle_tab_changed(GtkNotebook *nbk, GtkWidget *panel, guint x, stru
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w->la_spin_button), la);
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w->cal_spin_button), cal);
 	update_export_item(w);
+	notes_refresh_snapshot(w);
 
 	// Snapshot tabs show their own bph/la, so no saved watch is selected there
 	if(op)
@@ -957,7 +970,11 @@ static void handle_tab_closed(GtkNotebook *nbk, GtkWidget *panel, guint x, struc
 	}
 	// Now, are we sure that we are not going to segfault?
 	struct output_panel *op = g_object_get_data(G_OBJECT(panel), "op-pointer");
-	if(op) op_destroy(op);
+	if(op) {
+		if(!w->zombie) // when closing, the panel is being destroyed too
+			notes_panel_forget(w->notes, op);
+		op_destroy(op);
+	}
 	free(g_object_get_data(G_OBJECT(panel), "tab-name"));
 	g_object_set_data(G_OBJECT(panel), "tab-name", NULL);
 	if(op && !w->zombie)
@@ -1045,6 +1062,7 @@ static void handle_name_change(GtkEntry *e, struct main_window *w)
 	free(old);
 	g_object_set_data(G_OBJECT(panel), "tab-name", name);
 	update_tab_label(panel);
+	notes_refresh_snapshot(w); // the notes show the new title
 	if(changed)
 		session_mark_changed(w);
 }
@@ -1132,6 +1150,7 @@ static void handle_position_change(GtkComboBox *b, struct main_window *w)
 	if(op->snst->position == pos) return;
 	op->snst->position = pos;
 	update_tab_label(panel);
+	notes_refresh_snapshot(w);
 	session_mark_changed(w);
 }
 
@@ -1513,7 +1532,7 @@ static void session_update_title(struct main_window *w)
 	g_free(file);
 }
 
-static void session_mark_changed(struct main_window *w)
+void session_mark_changed(struct main_window *w)
 {
 	if(w->session_updating) return;
 	w->session_dirty = 1;
@@ -1534,6 +1553,7 @@ static void session_set_watch_label(struct main_window *w, const char *name)
 {
 	free(w->project.watch_label);
 	w->project.watch_label = name ? strdup(name) : NULL;
+	notes_panel_show_watch(w->notes);
 }
 
 static void session_message(struct main_window *w, GtkMessageType type,
@@ -1772,6 +1792,7 @@ static void session_clear(struct main_window *w)
 	}
 	w->session_updating--;
 	project_metadata_free(&w->project);
+	notes_panel_show_project(w->notes);
 	g_free(w->session_path);
 	w->session_path = NULL;
 	// The live readings so far belong to the previous session
@@ -1821,6 +1842,7 @@ static int session_open(struct main_window *w, const char *path)
 	session_clear(w);
 	w->session_updating++;
 	w->project = meta; // owned by the session from now on
+	notes_panel_show_project(w->notes);
 	int have_ref = cnt > 0;
 	int ref_bph = cnt ? s[cnt - 1]->bph : 0;
 	double ref_la = cnt ? s[cnt - 1]->la : 0;
@@ -2419,6 +2441,10 @@ static void init_main_window(struct main_window *w)
 	gtk_menu_shell_append(GTK_MENU_SHELL(tools_menu), w->cal_button);
 	g_signal_connect(w->cal_button, "activate", G_CALLBACK(handle_calibrate), w);
 
+	// Tools: show or hide the project and notes panel (connected once it exists)
+	GtkWidget *notes_item = gtk_check_menu_item_new_with_label(_("Project and notes panel"));
+	gtk_menu_shell_append(GTK_MENU_SHELL(tools_menu), notes_item);
+
 	// Help: user manual and About
 	GtkWidget *manual_item = gtk_menu_item_new_with_label(_("User manual"));
 	gtk_widget_set_tooltip_text(manual_item, _("Open the user manual (PDF)."));
@@ -2452,9 +2478,15 @@ static void init_main_window(struct main_window *w)
 	gtk_widget_set_no_show_all(w->session_bar, TRUE);
 	gtk_box_pack_start(GTK_BOX(vbox), w->session_bar, FALSE, FALSE, 0);
 
-	// The tabs' container
+	// The tabs, and the project and notes panel floating over their right
+	// part: it covers them only partly and does not change their layout
+	GtkWidget *overlay = gtk_overlay_new();
+	gtk_box_pack_start(GTK_BOX(vbox), overlay, TRUE, TRUE, 0);
 	w->notebook = gtk_notebook_new();
-	gtk_box_pack_start(GTK_BOX(vbox), w->notebook, TRUE, TRUE, 0);
+	gtk_container_add(GTK_CONTAINER(overlay), w->notebook);
+	w->notes = notes_panel_new(w);
+	gtk_overlay_add_overlay(GTK_OVERLAY(overlay), notes_panel_widget(w->notes));
+	notes_panel_attach_toggle(w->notes, notes_item);
 	gtk_notebook_set_scrollable(GTK_NOTEBOOK(w->notebook), TRUE);
 	gtk_notebook_set_show_tabs(GTK_NOTEBOOK(w->notebook), FALSE);
 	gtk_notebook_set_show_border(GTK_NOTEBOOK(w->notebook), FALSE);
@@ -2469,6 +2501,7 @@ static void init_main_window(struct main_window *w)
 	gtk_window_maximize(GTK_WINDOW(w->window));
 	gtk_widget_show_all(w->window);
 	gtk_widget_hide(w->snapshot_name);
+	notes_panel_set_visible(w->notes, notes_panel_remembered_visible(w));
 	gtk_window_set_focus(GTK_WINDOW(w->window), NULL);
 
 	// A new, empty session for the watch selected at startup
@@ -2603,6 +2636,7 @@ static void start_interface(GApplication* app, void *p)
 	w->saved_trend_count = 0;
 	w->saved_trend_start_us = 0;
 	w->title_dirty_shown = -1;
+	w->notes = NULL;
 
 	load_config(w);
 	set_audio_output_device_name(w->audio_output_device_name);

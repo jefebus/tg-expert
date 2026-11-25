@@ -1887,3 +1887,59 @@ msgstr "Quellcode und Versionen auf GitHub"
 
 msgid "Free software under the GNU General Public License, version 2. It comes with absolutely no warranty."
 msgstr "Freie Software unter der GNU General Public License, Version 2. Sie wird ohne jede Gewährleistung bereitgestellt."
+
+#. TRANSLATORS: page of the notes panel with the project details and notes. Short
+msgid "Project"
+msgstr "Projekt"
+
+#. TRANSLATORS: foldable group of the project page: name, reference, owner...
+msgid "Identification"
+msgstr "Angaben"
+
+msgid "Project name"
+msgstr "Projektname"
+
+msgid "Job reference"
+msgstr "Auftragsreferenz"
+
+msgid "Owner"
+msgstr "Eigentümer"
+
+msgid "Last service"
+msgstr "Letzte Revision"
+
+msgid "YYYY, YYYY-MM or YYYY-MM-DD"
+msgstr "JJJJ, JJJJ-MM oder JJJJ-MM-TT"
+
+msgid "Date of the last service: a year, a month or a day (YYYY, YYYY-MM or YYYY-MM-DD). It is kept as typed."
+msgstr "Datum der letzten Revision: ein Jahr, ein Monat oder ein Tag (JJJJ, JJJJ-MM oder JJJJ-MM-TT). Es wird so gespeichert, wie es eingegeben wird."
+
+msgid "Not a valid date. Use YYYY, YYYY-MM or YYYY-MM-DD; it is not saved until it is valid."
+msgstr "Kein gültiges Datum. Verwenden Sie JJJJ, JJJJ-MM oder JJJJ-MM-TT; es wird erst gespeichert, wenn es gültig ist."
+
+#. TRANSLATORS: label of the watch of the session on the project page
+msgid "Watch"
+msgstr "Uhr"
+
+msgid "The watch of the session: the one chosen in the saved watches list."
+msgstr "Die Uhr der Sitzung: die in der Liste der gespeicherten Uhren gewählte."
+
+msgid "General notes"
+msgstr "Allgemeine Notizen"
+
+msgid "Select a snapshot tab to write its notes."
+msgstr "Wählen Sie einen Aufnahme-Reiter, um seine Notizen zu schreiben."
+
+#. TRANSLATORS: title of the snapshot notes; %s is the tab title
+#, c-format
+msgid "Notes of: %s"
+msgstr "Notizen zu: %s"
+
+msgid "Hide the panel"
+msgstr "Bereich ausblenden"
+
+msgid "Project and notes panel"
+msgstr "Projekt- und Notizbereich"
+
+msgid "Drag to change the width of the panel"
+msgstr "Ziehen, um die Breite des Bereichs zu ändern"

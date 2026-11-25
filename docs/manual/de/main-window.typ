@@ -31,7 +31,8 @@ Die Menüleiste am oberen Fensterrand hat vier Menüs:
   #ui[Speichern unter…], #ui[Daten exportieren…] und #ui[Beenden].
 / Einstellungen: #ui[Audioeinstellungen…] und #ui[Algorithmuskonfiguration…].
 / Werkzeuge: #ui[Kalibrierung starten] (#ui[Kalibrierung beenden] während der
-  Kalibrierung).
+  Kalibrierung) und #ui[Projekt- und Notizbereich], der diesen Bereich ein- oder
+  ausblendet.
 / Hilfe: #ui[Benutzerhandbuch] und #ui[Über Tg Expert], mit der Version, der
   Lizenz und einem Link zum Quellcode auf GitHub.
 
@@ -40,6 +41,29 @@ Sitzung öffnen, Strg+S speichern, Strg+Umschalt+S speichern unter, Strg+E
 Daten exportieren, Strg+Q beenden, F1 Benutzerhandbuch und Strg+Leertaste für
 eine Aufnahme. Ein Kürzel wirkt nur, solange sein Eintrag verfügbar ist (zum
 Beispiel nicht während der Kalibrierung).
+
+== Projekt- und Notizbereich
+Er schwebt über dem rechten Teil der Reiter und verdeckt sie nur teilweise,
+damit der größte Teil der Diagramme beim Schreiben sichtbar bleibt. Anfangs
+ist er ausgeblendet: #ui[Projekt- und Notizbereich] im Menü #ui[Werkzeuge]
+blendet ihn ein oder aus, seine Schließen-Schaltfläche blendet ihn aus. Der
+Streifen an seinem linken Rand lässt sich ziehen, um seine Breite zu ändern.
+Das Programm merkt sich, ob er angezeigt war, und seine Breite. Er hat zwei
+Seiten:
+
+/ Projekt: #ui[Projektname], #ui[Auftragsreferenz], #ui[Eigentümer] und
+  #ui[Letzte Revision] (ein Jahr, ein Monat oder ein Tag: `JJJJ`, `JJJJ-MM`
+  oder `JJJJ-MM-TT`, so gespeichert wie eingegeben; ein ungültiges Datum wird
+  rot angezeigt und erst gespeichert, wenn es gültig ist) in der
+  einklappbaren Gruppe #ui[Angaben]; die Uhr der Sitzung, also die in der
+  Liste der gespeicherten Uhren gewählte, die hier nicht bearbeitet wird; und
+  die #ui[Allgemeinen Notizen].
+/ Aufnahme: die Notizen der Aufnahme im gewählten Reiter, mit ihrem Titel.
+  Jede Aufnahme hat eigene, zunächst leere Notizen. Im Echtzeit-Reiter gibt es
+  keine Aufnahme, und die Seite zeigt das an.
+
+Eingaben ändern die Sitzung sofort (es gibt keine Schaltfläche Übernehmen) und
+werden mit ihr gespeichert. Notizen sind reiner Text, bis zu 64 KiB je Notiz.
 
 Der Erkennungsablauf und die #ui[Algorithmuskonfiguration…] werden in
 @algorithm beschrieben; die vollständige Parameterreferenz steht in

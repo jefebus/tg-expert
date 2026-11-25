@@ -31,7 +31,8 @@ La barra de menús, en la parte superior de la ventana, tiene cuatro menús:
   como…], #ui[Exportar datos…] y #ui[Salir].
 / Ajustes: #ui[Ajustes de audio…] y #ui[Configuración del algoritmo…].
 / Herramientas: #ui[Iniciar calibración] (#ui[Detener calibración] durante la
-  calibración).
+  calibración) y #ui[Panel de proyecto y notas], que muestra u oculta ese
+  panel.
 / Ayuda: #ui[Manual de usuario] y #ui[Acerca de Tg Expert], con la versión,
   la licencia y un enlace al código fuente en GitHub.
 
@@ -40,6 +41,27 @@ sesión, Ctrl+O abrir sesión, Ctrl+S guardar, Ctrl+Mayús+S guardar como,
 Ctrl+E exportar datos, Ctrl+Q salir, F1 manual de usuario y Ctrl+Espacio para
 hacer una captura. Un atajo solo funciona cuando su entrada está disponible
 (por ejemplo, no durante la calibración).
+
+== Panel de proyecto y notas
+Flota sobre la parte derecha de las pestañas y solo las tapa en parte, para
+que la mayor parte de las gráficas siga a la vista mientras escribe. Al
+principio está oculto: #ui[Panel de proyecto y notas] en el menú
+#ui[Herramientas] lo muestra u oculta, y su botón de cerrar lo oculta.
+Arrastre la franja de su borde izquierdo para cambiar su anchura. El programa
+recuerda si estaba visible y su anchura. Tiene dos páginas:
+
+/ Proyecto: #ui[Nombre del proyecto], #ui[Referencia del trabajo],
+  #ui[Propietario] y #ui[Último servicio] (un año, un mes o un día: `AAAA`,
+  `AAAA-MM` o `AAAA-MM-DD`, que se conserva tal como se escribe; una fecha no
+  válida se muestra en rojo y no se guarda hasta que sea válida), en el grupo
+  plegable #ui[Identificación]; el reloj de la sesión, que es el elegido en la
+  lista de relojes guardados y no se edita aquí; y las #ui[Notas generales].
+/ Captura: las notas de la captura de la pestaña seleccionada, con su título.
+  Cada captura tiene sus propias notas, vacías al principio. En la pestaña de
+  tiempo real no hay captura, y la página lo indica.
+
+Lo que escribe cambia la sesión al momento (no hay botón Aplicar) y se guarda
+con ella. Las notas son texto sin formato, de hasta 64 KiB cada una.
 
 El proceso de detección y el diálogo #ui[Configuración del algoritmo…] se
 describen en @algorithm; la referencia completa de parámetros está en

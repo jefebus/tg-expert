@@ -32,7 +32,8 @@ The menu bar at the top of the window has four menus:
 / File: #ui[New session], #ui[Open session…], #ui[Save], #ui[Save as…],
   #ui[Export data…] and #ui[Quit].
 / Settings: #ui[Audio settings…] and #ui[Algorithm configuration…].
-/ Tools: #ui[Start calibration] (#ui[Stop calibration] while calibrating).
+/ Tools: #ui[Start calibration] (#ui[Stop calibration] while calibrating) and
+  #ui[Project and notes panel], which shows or hides that panel.
 / Help: #ui[User manual] and #ui[About Tg Expert], with the version, the
   licence and a link to the source code on GitHub.
 
@@ -40,6 +41,26 @@ Keyboard shortcuts, shown next to the menu entries: Ctrl+N new session,
 Ctrl+O open session, Ctrl+S save, Ctrl+Shift+S save as, Ctrl+E export data,
 Ctrl+Q quit, F1 user manual, and Ctrl+Space to take a snapshot. A shortcut
 only works while its entry is available (for example, not while calibrating).
+
+== Project and notes panel
+It floats over the right part of the tabs and covers them only partly, so
+that most of the graphs stay in view while you write. It is hidden at first:
+#ui[Project and notes panel] in the #ui[Tools] menu shows or hides it, and its
+close button hides it. Drag the strip along its left edge to change its width.
+The program remembers whether it was shown and its width. It has two pages:
+
+/ Project: #ui[Project name], #ui[Job reference], #ui[Owner] and
+  #ui[Last service] (a year, a month or a day: `YYYY`, `YYYY-MM` or
+  `YYYY-MM-DD`, kept as typed; an invalid date is shown in red and not saved
+  until it is valid), in the foldable #ui[Identification] group; the watch
+  of the session, which is the one chosen in the saved watches list and is
+  not edited here; and the #ui[General notes].
+/ Snapshot: the notes of the snapshot in the selected tab, with its title.
+  Each snapshot has its own notes, empty at first. On the real-time tab there
+  is no snapshot, and the page says so.
+
+What you type changes the session at once (there is no Apply button) and is
+saved with it. Notes are plain text, up to 64 KiB each.
 
 The detection process and the #ui[Algorithm configuration…] dialog are
 described in @algorithm, with the complete parameter reference in

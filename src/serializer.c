@@ -184,7 +184,7 @@ static int scan_float(FILE *f, float *x)
 	return 0;
 }
 
-static int serialize_string(FILE *f, char *s)
+static int serialize_string(FILE *f, const char *s)
 {
 	if(0 > fprintf(f, "S%"PRIu64";", (uint64_t)strlen(s))) return 1;
 	return 0 > fprintf(f, "%s;\n", s);
@@ -415,7 +415,7 @@ static int scan_int_array(FILE *f, int **a, uint64_t max_l, uint64_t *len)
 	return 0;
 }
 
-static int make_label(FILE *f, char *l)
+static int make_label(FILE *f, const char *l)
 {
 	return 0 > fprintf(f, "L%s;\n", l);
 }
@@ -502,7 +502,7 @@ static int serialize_project_metadata(FILE *f, const struct project_metadata *m)
 		const char *p = *project_field((struct project_metadata *)m, i);
 		if(!p || !*p) continue;
 		if(make_label(f, project_fields[i].label)) return 1;
-		if(serialize_string(f, (char *)p)) return 1;
+		if(serialize_string(f, p)) return 1;
 	}
 	return serialize_struct_end(f);
 }

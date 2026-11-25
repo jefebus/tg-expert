@@ -1881,3 +1881,59 @@ msgstr "Código fuente y versiones en GitHub"
 
 msgid "Free software under the GNU General Public License, version 2. It comes with absolutely no warranty."
 msgstr "Software libre bajo la Licencia Pública General de GNU, versión 2. Se distribuye sin ninguna garantía."
+
+#. TRANSLATORS: page of the notes panel with the project details and notes. Short
+msgid "Project"
+msgstr "Proyecto"
+
+#. TRANSLATORS: foldable group of the project page: name, reference, owner...
+msgid "Identification"
+msgstr "Identificación"
+
+msgid "Project name"
+msgstr "Nombre del proyecto"
+
+msgid "Job reference"
+msgstr "Referencia del trabajo"
+
+msgid "Owner"
+msgstr "Propietario"
+
+msgid "Last service"
+msgstr "Último servicio"
+
+msgid "YYYY, YYYY-MM or YYYY-MM-DD"
+msgstr "AAAA, AAAA-MM o AAAA-MM-DD"
+
+msgid "Date of the last service: a year, a month or a day (YYYY, YYYY-MM or YYYY-MM-DD). It is kept as typed."
+msgstr "Fecha del último servicio: un año, un mes o un día (AAAA, AAAA-MM o AAAA-MM-DD). Se conserva tal como se escribe."
+
+msgid "Not a valid date. Use YYYY, YYYY-MM or YYYY-MM-DD; it is not saved until it is valid."
+msgstr "No es una fecha válida. Use AAAA, AAAA-MM o AAAA-MM-DD; no se guarda hasta que sea válida."
+
+#. TRANSLATORS: label of the watch of the session on the project page
+msgid "Watch"
+msgstr "Reloj"
+
+msgid "The watch of the session: the one chosen in the saved watches list."
+msgstr "El reloj de la sesión: el elegido en la lista de relojes guardados."
+
+msgid "General notes"
+msgstr "Notas generales"
+
+msgid "Select a snapshot tab to write its notes."
+msgstr "Seleccione una pestaña de captura para escribir sus notas."
+
+#. TRANSLATORS: title of the snapshot notes; %s is the tab title
+#, c-format
+msgid "Notes of: %s"
+msgstr "Notas de: %s"
+
+msgid "Hide the panel"
+msgstr "Ocultar el panel"
+
+msgid "Project and notes panel"
+msgstr "Panel de proyecto y notas"
+
+msgid "Drag to change the width of the panel"
+msgstr "Arrastre para cambiar la anchura del panel"

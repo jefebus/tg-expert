@@ -6,6 +6,7 @@ src/computer.c
 src/config.c
 src/correlations.c
 src/interface.c
+src/notes_panel.c
 src/output_panel.c
 src/serializer.c
 src/session.c

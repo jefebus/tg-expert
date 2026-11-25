@@ -528,6 +528,7 @@ struct main_window {
 	int saved_trend_count;	// live trend when last saved, to see new readings
 	gint64 saved_trend_start_us;
 	int title_dirty_shown;	// -1 = title not set yet
+	struct notes_panel *notes;	// project and notes panel (TG-29), below the tabs
 
 	struct computer *computer;
 	struct snapshot *active_snapshot;
@@ -650,6 +651,22 @@ int write_file(FILE *f, struct snapshot **s, char **names, struct trend **trends
 int write_trend_csv(FILE *f, const struct trend *t, char separator, char decimal);
 int read_file(FILE *f, struct snapshot ***s, char ***names, struct trend ***trends, uint64_t *cnt,
 	struct project_metadata *meta);
+
+/* interface.c: the session changed (marks it modified, unless it is being replaced) */
+void session_mark_changed(struct main_window *w);
+
+/* notes_panel.c */
+struct notes_panel;
+struct notes_panel *notes_panel_new(struct main_window *w);
+GtkWidget *notes_panel_widget(struct notes_panel *np);
+void notes_panel_free(struct notes_panel *np);
+void notes_panel_show_project(struct notes_panel *np);	// all project fields, from w->project
+void notes_panel_show_watch(struct notes_panel *np);
+void notes_panel_show_snapshot(struct notes_panel *np, struct output_panel *op, const char *title);
+void notes_panel_forget(struct notes_panel *np, struct output_panel *op);	// op is being destroyed
+void notes_panel_attach_toggle(struct notes_panel *np, GtkWidget *check_item);
+int notes_panel_remembered_visible(struct main_window *w);
+void notes_panel_set_visible(struct notes_panel *np, int visible);
 
 /* session.c */
 char *session_sanitize_filename_part(const char *text);
