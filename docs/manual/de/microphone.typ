@@ -24,8 +24,8 @@ besser als ein teures Mikrofon in einigen Zentimetern Abstand.
   Änderungen der Position können einen großen Unterschied machen.
 - Beim Messen der Lagen (siehe @measuring) das Signal nach dem Drehen der Uhr
   erneut prüfen.
-#shot("microphone-setup.jpg", [Das Inline-Mikrofon eines Ohrhörerkabels,
-direkt auf das Uhrglas gelegt.], width: 60%)
+#shot("microphone-setup.jpg", [Ein Piezo-Mikrofon in einem Gehäuse zur
+Uhrmessung mit USB-Schnittstelle.], width: 60%)
 == Verstärkung
 Die Verstärkung erhöhen, bis die Schläge in den Signalform-Anzeigen deutlich
 sichtbar sind und die Pegelanzeige des Eingangs weit über dem Rauschen

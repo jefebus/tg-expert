@@ -32,8 +32,8 @@ expensive microphone a few centimeters away.
 - When measuring positions (see @measuring), check the signal again after
   turning the watch.
 
-#shot("microphone-setup.jpg", [The in-line microphone of an earphone cable,
-laid directly on the watch crystal.], width: 60%)
+#shot("microphone-setup.jpg", [A piezo microphone housed in a case for
+watch measurement with USB interface.], width: 60%)
 
 == Gain
 

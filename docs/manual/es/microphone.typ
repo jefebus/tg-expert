@@ -23,8 +23,8 @@ mejor que un micrófono caro situado a unos centímetros.
   posición pueden suponer una gran diferencia.
 - Al medir posiciones (véase @measuring), compruebe de nuevo la señal después
   de girar el reloj.
-#shot("microphone-setup.jpg", [El micrófono integrado en el cable de unos
-auriculares, apoyado directamente sobre el cristal del reloj.], width: 60%)
+#shot("microphone-setup.jpg", [Micrófono piezoeléctrico alojado en una carcasa para la 
+medición de relojes con interfaz USB.], width: 60%)
 == Ganancia
 Suba la ganancia hasta que los batidos se vean claramente en los paneles de
 forma de onda y el medidor del nivel de entrada se mueva claramente por encima
