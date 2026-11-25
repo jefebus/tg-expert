@@ -792,20 +792,21 @@ static void compute_phase(struct processing_buffers *p, double period)
  * features while rejecting isolated disturbances.
  *
  * @param p Processing context.
- * @param wf_size Number of samples in the folded period.
+ * @param period Folding period in samples, including any fractional part.
  */
-static void compute_waveform(struct processing_buffers *p, int wf_size)
+static void compute_waveform(struct processing_buffers *p, double period)
 {
+	const int wf_size = (int)ceil(period);
 	int i;
 	for(i=0; i<2*p->sample_rate; i++)
 		p->waveform[i] = 0;
 	for(i=0; i < wf_size; i++) {
 		/* Collect all samples occupying one phase position across repeated beats. */
-		float bin[(int)ceil(1 + p->sample_count / wf_size)];
+		float bin[(int)ceil(1.0 + p->sample_count / period)];
 		int j;
-		double k = fmod(i+p->phase,wf_size);
+		double k = fmod(i+p->phase,period);
 		for(j=0;;j++) {
-			int n = round(k+j*wf_size);
+			int n = round(k+j*period);
 			if(n >= p->sample_count) break;
 			bin[j] = p->samples[n];
 		}
@@ -837,7 +838,7 @@ static void compute_waveform(struct processing_buffers *p, int wf_size)
 static void prepare_waveform(struct processing_buffers *p)
 {
 	compute_phase(p,p->period/2);
-	compute_waveform(p,ceil(p->period));
+	compute_waveform(p,p->period);
 
 	int i;
 	fftwf_execute(p->plan_c);
