@@ -67,6 +67,15 @@ done
 STAGE="$TARGET/resources-stage"
 mkdir -p "$STAGE"
 cp -r "$RESOURCES"/. "$STAGE"
+
+NOTICES="$ABSDIR/third-party"
+test -s "$NOTICES/THIRD-PARTY-NOTICES.txt" || {
+    echo "Error: falta el catálogo de avisos en $NOTICES" >&2
+    exit 1
+}
+mkdir -p "$STAGE/share/doc/tg-expert/third-party"
+cp -R "$NOTICES"/. "$STAGE/share/doc/tg-expert/third-party/"
+
 for lang in es de
 do
 	if test ! -f "$ABSDIR/../po/$lang.gmo"

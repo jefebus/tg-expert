@@ -1,0 +1,51 @@
+tg-expert — Third-party notices
+==============================
+
+This catalogue covers third-party components distributed with the Windows
+and macOS editions. Not every component is included in every edition.
+The original licence texts and accompanying notices are grouped by
+component in the licenses/ directory.
+
+Components with collected texts
+------------------------------
+  adwaita-icon-theme-legacy — licenses/adwaita-icon-theme-legacy/
+  adwaita-icon-theme — licenses/adwaita-icon-theme/
+  at-spi2-core — licenses/at-spi2-core/
+  brotli — licenses/brotli/
+  bzip2 — licenses/bzip2/
+  cairo — licenses/cairo/
+  expat — licenses/expat/
+  fontconfig — licenses/fontconfig/
+  freetype — licenses/freetype/
+  fribidi — licenses/fribidi/
+  gcc — licenses/gcc/
+  gdk-pixbuf — licenses/gdk-pixbuf/
+  gettext — licenses/gettext/
+  glib — licenses/glib/
+  graphite2 — licenses/graphite2/
+  gtk3 — licenses/gtk3/
+  harfbuzz — licenses/harfbuzz/
+  hicolor-icon-theme — licenses/hicolor-icon-theme/
+  jbigkit — licenses/jbigkit/
+  lerc — licenses/lerc/
+  libdatrie — licenses/libdatrie/
+  libdeflate — licenses/libdeflate/
+  libepoxy — licenses/libepoxy/
+  libffi — licenses/libffi/
+  libiconv — licenses/libiconv/
+  libjpeg-turbo — licenses/libjpeg-turbo/
+  libpng — licenses/libpng/
+  librsvg — licenses/librsvg/
+  libthai — licenses/libthai/
+  libtiff — licenses/libtiff/
+  libwebp — licenses/libwebp/
+  libxml2 — licenses/libxml2/
+  pango — licenses/pango/
+  pcre2 — licenses/pcre2/
+  pixman — licenses/pixman/
+  portaudio — licenses/portaudio/
+  winpthreads — licenses/winpthreads/
+  xz — licenses/xz/
+  zlib — licenses/zlib/
+  zstd — licenses/zstd/
+  fftw — licenses/fftw/

@@ -65,3 +65,5 @@ Makefile.in
 *.deb
 /tg-expert-manual-*.pdf
 /tg-expert-manual.pdf
+configure~
+packaging/tg-expert.wxs

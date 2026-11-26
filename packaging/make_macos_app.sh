@@ -12,6 +12,14 @@ mkdir -p "$c/MacOS" "$libs/pixbuf-loaders" "$share"
 install -m 755 tg-expert "$exe"
 install -m 644 LICENSE "$res/LICENSE"
 
+NOTICES="packaging/third-party"
+test -s "$NOTICES/THIRD-PARTY-NOTICES.txt" || {
+    echo "Error: falta el catálogo de avisos en $NOTICES" >&2
+    exit 1
+}
+mkdir -p "$res/third-party"
+cp -R "$NOTICES"/. "$res/third-party/"
+
 prefix=$(brew --prefix)
 while IFS= read -r path || [[ -n "$path" ]]; do
     path=${path%$'\r'}
