@@ -1876,8 +1876,8 @@ msgstr "_Werkzeuge"
 msgid "_Help"
 msgstr "_Hilfe"
 
-msgid "About Tg Expert"
-msgstr "Über Tg Expert"
+msgid "About tg-expert"
+msgstr "Über tg-expert"
 
 msgid "Timegrapher for mechanical watches, using a microphone and the computer's sound card."
 msgstr "Zeitwaage für mechanische Uhren, mit einem Mikrofon und der Soundkarte des Computers."

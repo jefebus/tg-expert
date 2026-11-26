@@ -99,21 +99,21 @@ A single test can also be built by hand, for example:
 
 ```sh
 # Project metadata, notes, "Saved state" and date of snapshots in .tgj files
-gcc -g -DPROGRAM_NAME='"Tg Expert"' -DVERSION='"test"' -o serializer_metadata \
+gcc -g -DPROGRAM_NAME='"tg-expert"' -DVERSION='"test"' -o serializer_metadata \
     tests/serializer_metadata.c tests/stubs.c \
     src/algo.c src/algorithm_settings.c src/audio.c src/serializer.c src/trend.c \
     $(pkg-config --cflags --libs gtk+-3.0 portaudio-2.0 fftw3f) -lm -lpthread
 ./serializer_metadata
 
 # Proposed file names and safe replacement of a file
-gcc -g -DPROGRAM_NAME='"Tg Expert"' -DVERSION='"test"' -o session_file \
+gcc -g -DPROGRAM_NAME='"tg-expert"' -DVERSION='"test"' -o session_file \
     tests/session_file.c $(pkg-config --cflags --libs gtk+-3.0)
 ./session_file
 
 # The graphs in the three themes and a PDF report of synthetic data:
 # writes render-preview.pdf and report-preview.pdf (add "mono" as a second
 # argument for a monochrome report)
-gcc -g -DPROGRAM_NAME='"Tg Expert"' -DVERSION='"test"' -o render_preview \
+gcc -g -DPROGRAM_NAME='"tg-expert"' -DVERSION='"test"' -o render_preview \
     tests/render_preview.c src/render.c src/correlations.c \
     src/trend.c src/trend_render.c src/waveform_render.c src/paperstrip_render.c \
     src/report.c src/session.c src/serializer.c \
@@ -122,7 +122,7 @@ gcc -g -DPROGRAM_NAME='"Tg Expert"' -DVERSION='"test"' -o render_preview \
 ```
 
 Write the `-D` options as above, each in its own quotes: kept in a shell
-variable, the space in `"Tg Expert"` splits them.
+variable, the space in `"tg-expert"` splits them.
 
 To find a crash, run the debug build under gdb (`pacman -S
 mingw-w64-x86_64-gdb` in MSYS2):

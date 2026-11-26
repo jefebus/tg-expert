@@ -37,7 +37,7 @@ Die Menüleiste am oberen Fensterrand hat vier Menüs:
 / Werkzeuge: #ui[Kalibrierung starten] (#ui[Kalibrierung beenden] während der
   Kalibrierung) und #ui[Projekt- und Notizbereich], der diesen Bereich ein- oder
   ausblendet.
-/ Hilfe: #ui[Benutzerhandbuch] und #ui[Über Tg Expert], mit der Version, der
+/ Hilfe: #ui[Benutzerhandbuch] und #ui[Über tg-expert], mit der Version, der
   Lizenz und einem Link zum Quellcode auf GitHub.
 
 Tastenkürzel, neben den Menüeinträgen angezeigt: Strg+N neue Sitzung, Strg+O

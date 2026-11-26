@@ -36,7 +36,7 @@ The menu bar at the top of the window has four menus:
 / Settings: #ui[Audio settings…] and #ui[Algorithm configuration…].
 / Tools: #ui[Start calibration] (#ui[Stop calibration] while calibrating) and
   #ui[Project and notes panel], which shows or hides that panel.
-/ Help: #ui[User manual] and #ui[About Tg Expert], with the version, the
+/ Help: #ui[User manual] and #ui[About tg-expert], with the version, the
   licence and a link to the source code on GitHub.
 
 Keyboard shortcuts, shown next to the menu entries: Ctrl+N new session,

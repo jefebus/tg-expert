@@ -1648,7 +1648,7 @@ static int session_is_modified(struct main_window *w)
 	return w->session_dirty || (session_in_use(w) && live_trend_changed(w));
 }
 
-/* "Tg Expert <version> — <project> (<file>) *", * with unsaved changes */
+/* "tg-expert <version> — <project> (<file>) *", * with unsaved changes */
 static void session_update_title(struct main_window *w)
 {
 	if(w->zombie || !w->window) return;
@@ -2525,7 +2525,7 @@ static void handle_about(GtkMenuItem *m, struct main_window *w)
 	gchar *comments = g_strdup_printf("%s\n\n%s",
 		_("Timegrapher for mechanical watches, using a microphone and the computer's sound card."),
 		_("Free software under the GNU General Public License, version 2. It comes with absolutely no warranty."));
-	gchar *title = g_strdup(_("About Tg Expert"));
+	gchar *title = g_strdup(_("About tg-expert"));
 	// Without the icon GTK would show its "missing image" picture
 	GdkPixbuf *logo = program_icon(128);
 	gtk_show_about_dialog(GTK_WINDOW(w->window),
@@ -2832,7 +2832,7 @@ static void init_main_window(struct main_window *w)
 
 	gtk_menu_shell_append(GTK_MENU_SHELL(help_menu), gtk_separator_menu_item_new());
 
-	GtkWidget *about_item = gtk_menu_item_new_with_label(_("About Tg Expert"));
+	GtkWidget *about_item = gtk_menu_item_new_with_label(_("About tg-expert"));
 	gtk_menu_shell_append(GTK_MENU_SHELL(help_menu), about_item);
 	g_signal_connect(about_item, "activate", G_CALLBACK(handle_about), w);
 

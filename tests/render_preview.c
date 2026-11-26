@@ -20,7 +20,7 @@
  *   gcc -o render_preview tests/render_preview.c src/render.c src/correlations.c \
  *       src/trend.c src/trend_render.c src/waveform_render.c src/paperstrip_render.c \
  *       src/report.c src/session.c src/serializer.c \
- *       -DPROGRAM_NAME='"Tg Expert"' -DVERSION='"preview"' \
+ *       -DPROGRAM_NAME='"tg-expert"' -DVERSION='"preview"' \
  *       $(pkg-config --cflags --libs gtk+-3.0 cairo-pdf pangocairo) -lm
  * The few functions of the rest of the program that these need are stubbed
  * below. */

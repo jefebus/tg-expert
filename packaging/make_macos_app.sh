@@ -125,12 +125,12 @@ version = Path('version').read_text().strip()
 with open(sys.argv[1], 'wb') as f:
     plistlib.dump(dict(
         CFBundleIdentifier='io.github.jefebus.tg-expert',
-        CFBundleName='TG Expert',
+        CFBundleName='tg-expert',
         CFBundleExecutable='tg-expert',
         CFBundlePackageType='APPL',
         CFBundleVersion=version,
         CFBundleShortVersionString=version,
-        NSMicrophoneUsageDescription='TG Expert uses audio input to measure mechanical watches.',
+        NSMicrophoneUsageDescription='tg-expert uses audio input to measure mechanical watches.',
     ), f)
 PY
 plutil -lint "$c/Info.plist"

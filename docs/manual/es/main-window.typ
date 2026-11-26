@@ -36,7 +36,7 @@ La barra de menús, en la parte superior de la ventana, tiene cuatro menús:
 / Herramientas: #ui[Iniciar calibración] (#ui[Detener calibración] durante la
   calibración) y #ui[Panel de proyecto y notas], que muestra u oculta ese
   panel.
-/ Ayuda: #ui[Manual de usuario] y #ui[Acerca de Tg Expert], con la versión,
+/ Ayuda: #ui[Manual de usuario] y #ui[Acerca de tg-expert], con la versión,
   la licencia y un enlace al código fuente en GitHub.
 
 Atajos de teclado, indicados junto a las entradas del menú: Ctrl+N nueva

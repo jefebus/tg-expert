@@ -1870,8 +1870,8 @@ msgstr "_Herramientas"
 msgid "_Help"
 msgstr "Ay_uda"
 
-msgid "About Tg Expert"
-msgstr "Acerca de Tg Expert"
+msgid "About tg-expert"
+msgstr "Acerca de tg-expert"
 
 msgid "Timegrapher for mechanical watches, using a microphone and the computer's sound card."
 msgstr "Cronocomparador para relojes mecánicos, con un micrófono y la tarjeta de sonido del ordenador."
