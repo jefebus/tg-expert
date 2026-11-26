@@ -10,7 +10,7 @@ if [[ $(uname -m) != "$arch" ]]; then
     echo "Expected runner architecture $arch, found $(uname -m)" >&2
     exit 1
 fi
-lipo -verify_arch "$arch" tg-expert
+lipo tg-expert -verify_arch "$arch"
 app="$PWD/dist/tg-expert.app"
 c="$app/Contents"
 exe="$c/MacOS/tg-expert-bin"
@@ -90,7 +90,7 @@ install_name_tool -id \
 test -f "$libs/$rsvg_name"
 otool -L "$module" | grep -F "@executable_path/../Frameworks/$rsvg_name"
 for binary in "$exe" "$module" "$libs"/*.dylib; do
-    lipo -verify_arch "$arch" "$binary"
+    lipo "$binary" -verify_arch "$arch"
     refs=$(otool -L "$binary")
     printf '%s\n' "$refs"
     if grep -Eq '^[[:space:]]+(/opt/homebrew/|/usr/local/)' <<< "$refs"; then
