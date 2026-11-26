@@ -38,7 +38,7 @@ LIBS = $(GTK_LIBS) \
        -lpthread \
        -lm
 
-AM_CPPFLAGS = -DPROGRAM_NAME=\"Tg\ Expert\" -DVERSION=\"$(PACKAGE_VERSION)\" \
+AM_CPPFLAGS = -DPROGRAM_NAME=\"tg-expert\" -DVERSION=\"$(PACKAGE_VERSION)\" \
 	      -DDOCDIR=\"$(docdir)\" -DLOCALEDIR=\"$(localedir)\"
 tg_expert_dbg_CPPFLAGS = $(AM_CPPFLAGS) -DDEBUG
 
