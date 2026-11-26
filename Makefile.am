@@ -134,8 +134,8 @@ EXTRA_DIST = autogen.sh \
 .rc.o:
 	$(WINDRES) $< -O coff -o $@
 
-test: tg-expert-dbg
-	./tg-expert-dbg test
+test: tg-expert-dbg$(EXEEXT)
+	./tg-expert-dbg$(EXEEXT) test
 .PHONY: test
 
 valgrind: tg-expert-vlg
