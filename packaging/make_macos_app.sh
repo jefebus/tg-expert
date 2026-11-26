@@ -64,6 +64,11 @@ grep -Fq 'image/svg+xml' "$res/pixbuf-loaders.template"
 dylibbundler -of -b -s "$rsvg_libdir" -s "$prefix/lib" \
     -x "$exe" -x "$module" -d "$libs/" \
     -p '@executable_path/../Frameworks/' <<< 'quit'
+
+install_name_tool -id \
+    "@executable_path/../Frameworks/pixbuf-loaders/$(basename "$module")" \
+    "$module"
+
 test -f "$libs/$rsvg_name"
 otool -L "$module" | grep -F "@executable_path/../Frameworks/$rsvg_name"
 for binary in "$exe" "$module" "$libs"/*.dylib; do
