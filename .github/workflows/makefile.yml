@@ -129,8 +129,16 @@ jobs:
           if-no-files-found: error
 
   macos:
-    name: macOS (Apple Silicon)
-    runs-on: macos-15
+    name: macOS (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x86_64
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
@@ -152,9 +160,9 @@ jobs:
           otool -l ./tg-expert | awk '/cmd LC_RPATH/ { getline; getline; print }'
           brew deps --tree gtk+3 portaudio fftw
       - name: Build macOS app preview
-        run: bash packaging/make_macos_app.sh
+        run: bash packaging/make_macos_app.sh "${{ matrix.arch }}"
       - uses: actions/upload-artifact@v4
         with:
-          name: tg-expert-macos-arm64-preview
-          path: dist/tg-expert-macos-arm64-preview.app.zip
+          name: tg-expert-macos-${{ matrix.arch }}-preview
+          path: dist/tg-expert-macos-${{ matrix.arch }}-preview.app.zip
           if-no-files-found: error

@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
+arch=${1:-$(uname -m)}
+case "$arch" in
+    arm64|x86_64) ;;
+    *) echo "Unsupported macOS architecture: $arch" >&2; exit 1 ;;
+esac
+if [[ $(uname -m) != "$arch" ]]; then
+    echo "Expected runner architecture $arch, found $(uname -m)" >&2
+    exit 1
+fi
+lipo -verify_arch "$arch" tg-expert
 app="$PWD/dist/tg-expert.app"
 c="$app/Contents"
 exe="$c/MacOS/tg-expert-bin"
@@ -80,9 +90,10 @@ install_name_tool -id \
 test -f "$libs/$rsvg_name"
 otool -L "$module" | grep -F "@executable_path/../Frameworks/$rsvg_name"
 for binary in "$exe" "$module" "$libs"/*.dylib; do
+    lipo -verify_arch "$arch" "$binary"
     refs=$(otool -L "$binary")
     printf '%s\n' "$refs"
-    if grep -Eq '^[[:space:]]+(/opt/homebrew/|/usr/local/(opt|Cellar)/)' <<< "$refs"; then
+    if grep -Eq '^[[:space:]]+(/opt/homebrew/|/usr/local/)' <<< "$refs"; then
         echo "Homebrew dependency remains in $binary" >&2; exit 1
     fi
 done
@@ -128,6 +139,6 @@ for binary in "$libs"/*.dylib "$module" "$exe"; do
 done
 codesign --force --sign - "$app"
 codesign --verify --deep --strict "$app"
-zip=dist/tg-expert-macos-arm64-preview.app.zip
+zip="dist/tg-expert-macos-${arch}-preview.app.zip"
 rm -f -- "$zip"
 ditto -c -k --keepParent "$app" "$zip"
