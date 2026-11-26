@@ -136,7 +136,8 @@ jobs:
       - name: Install dependencies
         run: |
           brew install gtk+3 portaudio fftw pkg-config \
-            autoconf automake libtool gettext dylibbundler
+            autoconf automake libtool gettext dylibbundler \
+            librsvg adwaita-icon-theme hicolor-icon-theme
           echo "$(brew --prefix gettext)/bin" >> "$GITHUB_PATH"
       - name: Build and test
         run: |
@@ -151,49 +152,7 @@ jobs:
           otool -l ./tg-expert | awk '/cmd LC_RPATH/ { getline; getline; print }'
           brew deps --tree gtk+3 portaudio fftw
       - name: Build macOS app preview
-        run: |
-          set -euo pipefail
-          app=dist/tg-expert.app
-          exe="$app/Contents/MacOS/tg-expert"
-          libs="$app/Contents/Frameworks"
-          mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
-          install -m 0755 ./tg-expert "$exe"
-          install -m 0644 LICENSE "$app/Contents/Resources/LICENSE"
-          python3 - <<'PY'
-          import plistlib
-          from pathlib import Path
-
-          version = Path('version').read_text().strip()
-          with open('dist/tg-expert.app/Contents/Info.plist', 'wb') as f:
-              plistlib.dump({
-                  'CFBundleIdentifier': 'io.github.jefebus.tg-expert',
-                  'CFBundleName': 'TG Expert',
-                  'CFBundleExecutable': 'tg-expert',
-                  'CFBundlePackageType': 'APPL',
-                  'CFBundleShortVersionString': version,
-                  'CFBundleVersion': version,
-                  'NSMicrophoneUsageDescription':
-                      'TG Expert uses audio input to measure mechanical watches.',
-              }, f)
-          PY
-          plutil -lint "$app/Contents/Info.plist"
-          dylibbundler -od -b -x "$exe" -d "$libs/" \
-            -p '@executable_path/../Frameworks/'
-          for binary in "$exe" "$libs"/*.dylib; do
-            refs=$(otool -L "$binary")
-            printf '%s\n' "$refs"
-            otool -l "$binary" | awk '/cmd LC_RPATH/ { getline; getline; print }'
-            if grep -Eq '^[[:space:]]+(/opt/homebrew/|/usr/local/(opt|Cellar)/)' <<< "$refs"; then
-              echo "Homebrew reference remains in $binary" >&2
-              exit 1
-            fi
-          done
-          for library in "$libs"/*.dylib; do
-            codesign --force --sign - "$library"
-          done
-          codesign --force --sign - "$app"
-          codesign --verify --deep --strict "$app"
-          ditto -c -k --keepParent "$app" dist/tg-expert-macos-arm64-preview.app.zip
+        run: bash packaging/make_macos_app.sh
       - uses: actions/upload-artifact@v4
         with:
           name: tg-expert-macos-arm64-preview
