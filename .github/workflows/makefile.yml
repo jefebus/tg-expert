@@ -10,84 +10,165 @@ jobs:
   linux:
     name: Linux (Ubuntu)
     runs-on: ubuntu-24.04
-
     steps:
       - uses: actions/checkout@v4
-
       - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
             build-essential autoconf automake libtool pkg-config gettext \
             libgtk-3-dev libjack-jackd2-dev portaudio19-dev libfftw3-dev \
-            xvfb xauth
-
+            xvfb xauth devscripts debhelper fakeroot
       - name: Build
         run: |
           ./autogen.sh
           ./configure
           make -j2
       - name: Test
+        run: xvfb-run -a make test
+      - uses: typst-community/setup-typst@v4
+      - name: Inspect binary and build Ubuntu package
         run: |
-          xvfb-run -a make test
+          ldd ./tg-expert
+          sudo install -m 0755 "$(command -v typst)" /usr/local/bin/typst
+          bash packaging/make_deb.sh
+          set -- deb/tg-expert_*_amd64.deb
+          test "$#" -eq 1
+          test -f "$1"
+          dpkg-deb -f "$1" Package Version Architecture Depends
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tg-expert-ubuntu-24.04-amd64
+          path: deb/tg-expert_*_amd64.deb
+          if-no-files-found: error
 
   windows:
     name: Windows (MSYS2 MINGW64)
     runs-on: windows-latest
-
     defaults:
       run:
         shell: msys2 {0}
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up MSYS2
-        uses: msys2/setup-msys2@v2
+      - uses: msys2/setup-msys2@v2
         with:
           msystem: MINGW64
+          path-type: inherit
           update: true
           install: >-
-            git
-            make
-            autoconf
-            automake
-            libtool
-            mingw-w64-x86_64-gcc
-            mingw-w64-x86_64-pkgconf
-            mingw-w64-x86_64-gtk3
-            mingw-w64-x86_64-portaudio
-            mingw-w64-x86_64-fftw
-            mingw-w64-x86_64-gettext-tools
-
+            git make autoconf automake libtool util-linux
+            mingw-w64-x86_64-gcc mingw-w64-x86_64-pkgconf
+            mingw-w64-x86_64-gtk3 mingw-w64-x86_64-portaudio
+            mingw-w64-x86_64-fftw mingw-w64-x86_64-gettext-tools
       - name: Build and test
         run: |
+          set -e
           ./autogen.sh
           ./configure
           make -j2
           make test
+      - uses: typst-community/setup-typst@v4
+      - name: Install WiX 3
+        shell: pwsh
+        run: |
+          $zip = Join-Path $env:RUNNER_TEMP 'wix.zip'
+          $dir = Join-Path $env:RUNNER_TEMP 'wix3'
+          Invoke-WebRequest -Uri 'https://github.com/wixtoolset/wix3/releases/download/wix3141rtm/wix314-binaries.zip' -OutFile $zip
+          Expand-Archive -Path $zip -DestinationPath $dir
+          $heat = Get-ChildItem $dir -Filter heat.exe -Recurse | Select-Object -First 1
+          if (-not $heat) { throw 'heat.exe not found' }
+          $heat.DirectoryName | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Inspect Windows imports
+        run: |
+          set -o pipefail
+          objdump -p ./tg-expert.exe | grep 'DLL Name:'
+      - name: Collect Windows runtime DLLs and resources
+        run: |
+          set -euo pipefail
+          script=packaging/make_msi_resources.sh
+          if grep -q '^SOURCE=$(cygpath ' "$script"; then
+            sed -i 's/^SOURCE=$(cygpath .*$/SOURCE=${MSI_RESOURCE_PREFIX:?}/' "$script"
+          fi
+          MSI_RESOURCE_PREFIX="$MINGW_PREFIX" bash "$script"
+      - name: Build Windows MSI
+        run: |
+          set -e
+          for tool in typst uuidgen heat candle light; do command -v "$tool"; done
+          bash packaging/make_msi.sh msi-resources
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tg-expert-windows-x64
+          path: msi/tg-expert_*.msi
+          if-no-files-found: error
 
   macos:
     name: macOS (Apple Silicon)
     runs-on: macos-15
-
     steps:
       - uses: actions/checkout@v4
-
       - name: Install dependencies
         run: |
           brew install gtk+3 portaudio fftw pkg-config \
-            autoconf automake libtool gettext
+            autoconf automake libtool gettext dylibbundler
           echo "$(brew --prefix gettext)/bin" >> "$GITHUB_PATH"
-
       - name: Build and test
         run: |
           ./autogen.sh
           ./configure
           make -j2
           make test
-
-      - name: Inspect macOS binary
+      - name: Inspect macOS runtime dependencies
         run: |
           file ./tg-expert
           otool -L ./tg-expert
+          otool -l ./tg-expert | awk '/cmd LC_RPATH/ { getline; getline; print }'
+          brew deps --tree gtk+3 portaudio fftw
+      - name: Build macOS app preview
+        run: |
+          set -euo pipefail
+          app=dist/tg-expert.app
+          exe="$app/Contents/MacOS/tg-expert"
+          libs="$app/Contents/Frameworks"
+          mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
+          install -m 0755 ./tg-expert "$exe"
+          install -m 0644 LICENSE "$app/Contents/Resources/LICENSE"
+          python3 - <<'PY'
+          import plistlib
+          from pathlib import Path
+
+          version = Path('version').read_text().strip()
+          with open('dist/tg-expert.app/Contents/Info.plist', 'wb') as f:
+              plistlib.dump({
+                  'CFBundleIdentifier': 'io.github.jefebus.tg-expert',
+                  'CFBundleName': 'TG Expert',
+                  'CFBundleExecutable': 'tg-expert',
+                  'CFBundlePackageType': 'APPL',
+                  'CFBundleShortVersionString': version,
+                  'CFBundleVersion': version,
+                  'NSMicrophoneUsageDescription':
+                      'TG Expert uses audio input to measure mechanical watches.',
+              }, f)
+          PY
+          plutil -lint "$app/Contents/Info.plist"
+          dylibbundler -od -b -x "$exe" -d "$libs/" \
+            -p '@executable_path/../Frameworks/'
+          for binary in "$exe" "$libs"/*.dylib; do
+            refs=$(otool -L "$binary")
+            printf '%s\n' "$refs"
+            otool -l "$binary" | awk '/cmd LC_RPATH/ { getline; getline; print }'
+            if grep -Eq '^[[:space:]]+(/opt/homebrew/|/usr/local/(opt|Cellar)/)' <<< "$refs"; then
+              echo "Homebrew reference remains in $binary" >&2
+              exit 1
+            fi
+          done
+          for library in "$libs"/*.dylib; do
+            codesign --force --sign - "$library"
+          done
+          codesign --force --sign - "$app"
+          codesign --verify --deep --strict "$app"
+          ditto -c -k --keepParent "$app" dist/tg-expert-macos-arm64-preview.app.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tg-expert-macos-arm64-preview
+          path: dist/tg-expert-macos-arm64-preview.app.zip
+          if-no-files-found: error
