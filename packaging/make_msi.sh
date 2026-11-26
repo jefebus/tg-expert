@@ -90,7 +90,7 @@ heat dir "$STAGE" -srd -gg -sreg -dr INSTALLDIR -cg Resources -out "$TARGET/Reso
 rm -rf "$STAGE"
 
 # WixUtilExtension provides WixShellExec, which launches the program from the last dialog
-candle -ext WixUtilExtension tg-expert.wxs Resources.wxs
+candle -arch x64 -ext WixUtilExtension tg-expert.wxs Resources.wxs
 light -out tg-expert_${VERSION}.msi -ext WixUIExtension -ext WixUtilExtension tg-expert.wixobj Resources.wixobj
 
 echo "MSI generated at: $TARGET/tg-expert_${VERSION}.msi"
