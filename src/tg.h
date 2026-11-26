@@ -1,3 +1,5 @@
+#ifndef TG_EXPERT_TG_H_INCLUDED
+#define TG_EXPERT_TG_H_INCLUDED
 /*
     tg
     Copyright (C) 2015 Marcello Mamino
@@ -906,3 +908,5 @@ int report_write_pdf(const char *path, const struct report_data *d);
 /* report_dialog.c: File > Export report */
 void report_dialog_open(struct main_window *w);
 int session_write_file_safely(const char *path, int (*writer)(FILE *f, void *data), void *data);
+
+#endif // TG_EXPERT_TG_H_INCLUDED
